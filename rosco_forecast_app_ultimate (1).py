@@ -23,7 +23,7 @@ except ImportError:
 
 st.set_page_config(
     layout="wide", 
-    page_title="ROSCA Forecast Pro", 
+    page_title="BACHAT-ROSCA PRICING & FORECAST", 
     page_icon="🚀", 
     initial_sidebar_state="expanded"
 )
@@ -311,18 +311,35 @@ def create_metric_card(title, value, change, change_type="positive", icon="📊"
     </div>
     """
 
-def format_currency(value):
-    """Format value as currency"""
+def format_currency(value, currency_symbol=None):
+    """Format value as currency with selected symbol"""
+    if currency_symbol is None:
+        currency_symbol = CURRENCY_SYMBOL
+    
     if pd.isna(value) or value == 0:
-        return "₹0"
-    if value >= 10000000:  # 1 crore
-        return f"₹{value/10000000:.1f}Cr"
-    elif value >= 100000:  # 1 lakh
-        return f"₹{value/100000:.1f}L"
-    elif value >= 1000:  # 1 thousand
-        return f"₹{value/1000:.1f}K"
+        return f"{currency_symbol}0"
+    
+    # Different formatting based on currency
+    if selected_currency in ["PKR", "INR"]:
+        # For PKR/INR: Use Lakhs and Crores
+        if value >= 10000000:  # 1 crore
+            return f"{currency_symbol}{value/10000000:.1f}Cr"
+        elif value >= 100000:  # 1 lakh
+            return f"{currency_symbol}{value/100000:.1f}L"
+        elif value >= 1000:  # 1 thousand
+            return f"{currency_symbol}{value/1000:.1f}K"
+        else:
+            return f"{currency_symbol}{value:,.0f}"
     else:
-        return f"₹{value:,.0f}"
+        # For USD/EUR/GBP: Use Millions and Billions
+        if value >= 1000000000:  # 1 billion
+            return f"{currency_symbol}{value/1000000000:.1f}B"
+        elif value >= 1000000:  # 1 million
+            return f"{currency_symbol}{value/1000000:.1f}M"
+        elif value >= 1000:  # 1 thousand
+            return f"{currency_symbol}{value/1000:.1f}K"
+        else:
+            return f"{currency_symbol}{value:,.0f}"
 
 def format_number(value):
     """Format large numbers"""
@@ -384,6 +401,32 @@ for i in range(scenario_count):
 # =============================================================================
 
 st.sidebar.markdown("## ⚙️ Global Configuration")
+
+# Currency Selection
+st.sidebar.markdown("### 💱 Currency Selection")
+currency_options = {
+    "PKR": {"symbol": "₨", "name": "Pakistani Rupee", "flag": "🇵🇰"},
+    "USD": {"symbol": "$", "name": "US Dollar", "flag": "🇺🇸"},
+    "EUR": {"symbol": "€", "name": "Euro", "flag": "🇪🇺"},
+    "GBP": {"symbol": "£", "name": "British Pound", "flag": "🇬🇧"},
+    "INR": {"symbol": "₹", "name": "Indian Rupee", "flag": "🇮🇳"},
+    "AED": {"symbol": "د.إ", "name": "UAE Dirham", "flag": "🇦🇪"},
+    "SAR": {"symbol": "﷼", "name": "Saudi Riyal", "flag": "🇸🇦"}
+}
+
+selected_currency = st.sidebar.selectbox(
+    "Select Currency",
+    list(currency_options.keys()),
+    index=0,  # Default to PKR
+    format_func=lambda x: f"{currency_options[x]['flag']} {x} - {currency_options[x]['name']}",
+    help="Choose the currency for all financial calculations"
+)
+
+# Store currency info globally
+CURRENCY_SYMBOL = currency_options[selected_currency]['symbol']
+CURRENCY_NAME = currency_options[selected_currency]['name']
+
+st.sidebar.success(f"💱 **Selected Currency:** {CURRENCY_SYMBOL} {selected_currency} - {CURRENCY_NAME}")
 
 # Fee Collection Mode
 st.sidebar.markdown("### 💳 Fee Collection Mode")
@@ -466,26 +509,68 @@ for d_config in durations:
         selected_slabs = st.multiselect(f"Select Slabs for {d_config}M", slab_options, default=[1000, 2000, 5000], key=f"slabs_{d_config}")
         slab_map[d_config] = selected_slabs
         
-        # Slot fee configuration with blocking
+        # Ultra-Modern Slot Configuration - Customizable for Each Slab
         st.markdown("**Slot Fee Configuration & Blocking**")
+        st.markdown("*Configure slots separately for each slab amount*")
+        
         slot_fees[d_config] = {}
         slot_distribution[d_config] = {}
         
-        for slot_num in range(1, d_config + 1):
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                fee_pct = st.number_input(f"Slot {slot_num} Fee (%)", min_value=0.0, max_value=100.0, value=2.0, step=0.1, key=f"fee_{d_config}_{slot_num}")
-            with col2:
-                blocked = st.checkbox(f"Block Slot {slot_num}", key=f"block_{d_config}_{slot_num}")
-            with col3:
-                if not blocked:
-                    dist_pct = st.number_input(f"Slot {slot_num} Distribution (%)", min_value=0.0, max_value=100.0, value=100.0/d_config, step=0.1, key=f"dist_{d_config}_{slot_num}")
-                    slot_distribution[d_config][slot_num] = dist_pct
-                else:
-                    slot_distribution[d_config][slot_num] = 0
-                    st.info("Blocked")
+        # Create separate configuration for each selected slab
+        for slab_amount in selected_slabs:
+            st.markdown(f"**💰 Slab {CURRENCY_SYMBOL}{slab_amount:,} - Slot Configuration**")
             
-            slot_fees[d_config][slot_num] = {"fee_pct": fee_pct, "blocked": blocked}
+            # Initialize slot configuration for this slab
+            if slab_amount not in slot_fees[d_config]:
+                slot_fees[d_config][slab_amount] = {}
+            if slot_distribution[d_config].get(slab_amount) is None:
+                slot_distribution[d_config][slab_amount] = {}
+            
+            # Create slots for this specific slab
+            for slot_num in range(1, d_config + 1):
+                st.markdown(f"**🎯 Slot {slot_num} for {CURRENCY_SYMBOL}{slab_amount:,}**")
+                
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    fee_pct = st.number_input(
+                        f"Fee %", 
+                        min_value=0.0, max_value=100.0, 
+                        value=2.0, step=0.1, 
+                        key=f"fee_{d_config}_{slab_amount}_{slot_num}",
+                        help=f"Fee percentage for Slot {slot_num} of {CURRENCY_SYMBOL}{slab_amount:,}"
+                    )
+                
+                with col2:
+                    blocked = st.checkbox(
+                        f"Block", 
+                        key=f"block_{d_config}_{slab_amount}_{slot_num}",
+                        help=f"Block Slot {slot_num} for {CURRENCY_SYMBOL}{slab_amount:,}"
+                    )
+                
+                with col3:
+                    if not blocked:
+                        dist_pct = st.number_input(
+                            f"Distribution %", 
+                            min_value=0.0, max_value=100.0, 
+                            value=100.0/d_config, step=0.1, 
+                            key=f"dist_{d_config}_{slab_amount}_{slot_num}",
+                            help=f"Distribution percentage for Slot {slot_num} of {CURRENCY_SYMBOL}{slab_amount:,}"
+                        )
+                        slot_distribution[d_config][slab_amount][slot_num] = dist_pct
+                    else:
+                        slot_distribution[d_config][slab_amount][slot_num] = 0
+                        st.info("🚫 Blocked")
+                
+                slot_fees[d_config][slab_amount][slot_num] = {"fee_pct": fee_pct, "blocked": blocked}
+            
+            # Validation for this slab's slot distribution
+            unblocked_slots = {k: v for k, v in slot_distribution[d_config][slab_amount].items() 
+                              if not slot_fees[d_config][slab_amount].get(k, {}).get('blocked', False)}
+            total_unblocked_dist_pct = sum(unblocked_slots.values())
+            
+            if total_unblocked_dist_pct > 0 and abs(total_unblocked_dist_pct - 100) > 0.1:
+                st.warning(f"⚠️ Slot distribution for {CURRENCY_SYMBOL}{slab_amount:,} totals {total_unblocked_dist_pct:.1f}%. It should be 100%.")
 
 # Validation for year-by-year duration shares
 for y_config in range(1, 6):
@@ -494,16 +579,18 @@ for y_config in range(1, 6):
         if current_year_total_share > 0 and abs(current_year_total_share - 100) > 0.1:
             validation_messages.append(f"⚠️ Year {y_config} duration share total is {current_year_total_share:.1f}%. It should be 100%.")
 
-# Validation for slot distribution (only unblocked slots)
+# Validation for slot distribution (updated for slab-specific configuration)
 for d_config in durations:
     if d_config in slot_distribution and d_config in slot_fees:
-        # Calculate total distribution for unblocked slots only
-        unblocked_slots = {k: v for k, v in slot_distribution[d_config].items() 
-                          if not slot_fees[d_config].get(k, {}).get('blocked', False)}
-        total_unblocked_dist_pct = sum(unblocked_slots.values())
-        
-        if total_unblocked_dist_pct > 0 and abs(total_unblocked_dist_pct - 100) > 0.1:
-            validation_messages.append(f"⚠️ Slot distribution for unblocked slots in {d_config}M totals {total_unblocked_dist_pct:.1f}%. It should be 100%.")
+        # Check each slab's slot distribution separately
+        for slab_amount in slab_map.get(d_config, []):
+            if slab_amount in slot_distribution[d_config] and slab_amount in slot_fees[d_config]:
+                unblocked_slots = {k: v for k, v in slot_distribution[d_config][slab_amount].items() 
+                                  if not slot_fees[d_config][slab_amount].get(k, {}).get('blocked', False)}
+                total_unblocked_dist_pct = sum(unblocked_slots.values())
+                
+                if total_unblocked_dist_pct > 0 and abs(total_unblocked_dist_pct - 100) > 0.1:
+                    validation_messages.append(f"⚠️ Duration {d_config}M, Slab {CURRENCY_SYMBOL}{slab_amount:,} slot distribution total is {total_unblocked_dist_pct:.1f}%. It should be 100%.")
 
 if validation_messages:
     for msg_val in validation_messages: 
@@ -628,7 +715,9 @@ def run_forecast(config_param_fc, fee_collection_mode_fc="Monthly Fee Collection
                         break
                     
                     current_slab_distributed_users = current_duration_distributed_users
-                    slots_for_this_duration = [s for s in range(1, dur_val_fc + 1) if not slot_fees.get(dur_val_fc, {}).get(s, {}).get('blocked', False)]
+                    # Get unblocked slots for this specific slab
+                    slots_for_this_duration = [s for s in range(1, dur_val_fc + 1) 
+                                             if not slot_fees.get(dur_val_fc, {}).get(slab_val_fc, {}).get(s, {}).get('blocked', False)]
                     
                     if not slots_for_this_duration:
                         continue
@@ -653,7 +742,8 @@ def run_forecast(config_param_fc, fee_collection_mode_fc="Monthly Fee Collection
                         total_commitment_per_user_fc = dur_val_fc * installment_val_fc
                         total_commitment_for_cohort_fc = users_for_this_slot_fc * total_commitment_per_user_fc
                         
-                        fee_pct_for_slot_fc = slot_fees.get(dur_val_fc, {}).get(slot_num_fc, {}).get('fee_pct', 2.0)
+                        # Get fee percentage for this specific slab and slot
+                        fee_pct_for_slot_fc = slot_fees.get(dur_val_fc, {}).get(installment_val_fc, {}).get(slot_num_fc, {}).get('fee_pct', 2.0)
                         
                         # Calculate fee collection based on mode
                         if fee_collection_mode_fc == "Upfront Fee (Entire Pool)":
