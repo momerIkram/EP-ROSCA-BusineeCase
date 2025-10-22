@@ -1334,12 +1334,12 @@ if st.button("🚀 Run Forecast", type="primary"):
                     df_yearly_summary_main = create_yearly_summary(df_monthly_summary_main)
                     df_profit_share_main = create_profit_share_analysis(df_yearly_summary_main)
 
-                    if view_mode == "📊 Dashboard View":
+                                       if view_mode == "📊 Dashboard View":
                         # Dashboard Overview
                         create_dashboard_overview(df_monthly_summary_main, scenario_data_main['name'])
-                
-                # Fee Collection Mode Analysis
-                st.subheader("💳 Fee Collection Analysis")
+                        
+                        # Fee Collection Mode Analysis
+                        st.subheader("💳 Fee Collection Analysis")  # ← Properly indented
                 
                 col1, col2 = st.columns(2)
                 
