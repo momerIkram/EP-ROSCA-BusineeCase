@@ -23,7 +23,7 @@ except ImportError:
 
 st.set_page_config(
     layout="wide", 
-    page_title="BACHAT-ROSCA Forecast", 
+    page_title="ROSCA Forecast Pro", 
     page_icon="🚀", 
     initial_sidebar_state="expanded"
 )
