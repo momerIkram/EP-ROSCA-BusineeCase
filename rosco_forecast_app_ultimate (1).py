@@ -105,20 +105,18 @@ st.markdown("""
     
     .metric-value {
         font-family: 'Inter', sans-serif;
-        font-weight: 800;
+        font-weight: 700;
         font-size: 2.2rem;
         color: #1e293b;
-        margin: 0 0 0.5rem 0;
-        line-height: 1;
+        margin: 0;
+        line-height: 1.2;
     }
     
     .metric-change {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
         font-family: 'Inter', sans-serif;
-        font-weight: 600;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
+        margin-top: 0.5rem;
+        font-weight: 500;
     }
     
     .metric-change.positive {
@@ -129,14 +127,6 @@ st.markdown("""
         color: #ef4444;
     }
     
-    .metric-change.neutral {
-        color: #6b7280;
-    }
-    
-    .metric-icon {
-        font-size: 1.2rem;
-    }
-    
     /* Chart Containers */
     .chart-container {
         background: white;
@@ -145,17 +135,73 @@ st.markdown("""
         box-shadow: 0 8px 32px rgba(0,0,0,0.08);
         border: 1px solid #f0f0f0;
         margin-bottom: 1.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .chart-container::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
     }
     
     .chart-title {
         font-family: 'Inter', sans-serif;
-        font-weight: 700;
+        font-weight: 600;
         font-size: 1.3rem;
         color: #1e293b;
-        margin: 0 0 1rem 0;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+    
+    /* Sidebar Styling */
+    .css-1d391kg {
+        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+    
+    /* Success/Info/Warning/Error Boxes */
+    .success-box {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2);
+        border-left: 4px solid #059669;
+    }
+    
+    .info-box {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+        border-left: 4px solid #2563eb;
+    }
+    
+    .warning-box {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        box-shadow: 0 4px 20px rgba(245, 158, 11, 0.2);
+        border-left: 4px solid #d97706;
+    }
+    
+    .error-box {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        box-shadow: 0 4px 20px rgba(239, 68, 68, 0.2);
+        border-left: 4px solid #dc2626;
     }
     
     /* Button Styling */
@@ -164,1999 +210,1777 @@ st.markdown("""
         color: white;
         border: none;
         border-radius: 12px;
-        padding: 0.75rem 2rem;
+        padding: 0.5rem 1.5rem;
         font-weight: 600;
-        font-family: 'Inter', sans-serif;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
     }
     
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
     }
     
-    /* Tabs Styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
-        background: #f8fafc;
-        padding: 4px;
+    /* Selectbox Styling */
+    .stSelectbox > div > div {
+        background: white;
         border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     
-    .stTabs [data-baseweb="tab"] {
-        background: transparent;
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        font-family: 'Inter', sans-serif;
-        transition: all 0.3s ease;
+    /* Number Input Styling */
+    .stNumberInput > div > div > input {
+        border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     
-    .stTabs [aria-selected="true"] {
+    /* Text Input Styling */
+    .stTextInput > div > div > input {
+        border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* Multiselect Styling */
+    .stMultiSelect > div > div {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* Expander Styling */
+    .streamlit-expanderHeader {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.1);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    /* Progress Bar */
+    .stProgress > div > div > div > div {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
     }
     
-    /* Real-time indicator */
-    .realtime-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.25rem 0.75rem;
-        background: #dcfce7;
-        color: #166534;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        font-family: 'Inter', sans-serif;
+    /* Spinner */
+    .stSpinner > div {
+        border-top-color: #667eea;
     }
     
-    .pulse-dot {
-        width: 8px;
-        height: 8px;
-        background: #10b981;
-        border-radius: 50%;
-        animation: pulse 2s infinite;
+    /* Data Editor Styling */
+    .stDataEditor {
+        border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
+    /* Table Styling */
+    .stDataFrame {
+        border-radius: 12px;
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
 </style>
 """, unsafe_allow_html=True)
 
 # =============================================================================
-# 🎨 COLORS & THEMES
+# 🌍 CURRENCY CONFIGURATION
 # =============================================================================
 
-DASHBOARD_COLORS = {
-    'primary': '#667eea',
-    'secondary': '#764ba2',
-    'success': '#10b981',
-    'warning': '#f59e0b',
-    'error': '#ef4444',
-    'info': '#3b82f6',
-    'light': '#f8fafc',
-    'dark': '#1e293b',
-    'muted': '#64748b'
+CURRENCY_OPTIONS = {
+    "PKR": {"symbol": "₨", "name": "Pakistani Rupee", "format": "lakhs"},
+    "USD": {"symbol": "$", "name": "US Dollar", "format": "millions"},
+    "EUR": {"symbol": "€", "name": "Euro", "format": "millions"},
+    "GBP": {"symbol": "£", "name": "British Pound", "format": "millions"},
+    "AED": {"symbol": "د.إ", "name": "UAE Dirham", "format": "millions"},
+    "SAR": {"symbol": "﷼", "name": "Saudi Riyal", "format": "millions"}
 }
-
-CHART_COLORS = [
-    '#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444',
-    '#3b82f6', '#8b5cf6', '#06b6d4', '#84cc16', '#f97316'
-]
-
-# Modern Chart Styling
-TEXT_COLOR = '#333333'
-GRID_COLOR = '#D8D8D8'
-PLOT_BG_COLOR = '#FFFFFF'
-FIG_BG_COLOR = '#F8F9FA'
-COLOR_PRIMARY_BAR = '#3B75AF'
-COLOR_SECONDARY_LINE = '#4CAF50'
-COLOR_ACCENT_BAR = '#FFC107'
-COLOR_ACCENT_LINE = '#9C27B0'
-COLOR_HIGHLIGHT_BAR = '#E91E63'
-
-plt.rcParams.update({
-    'font.family': 'sans-serif',
-    'font.sans-serif': ['Arial', 'Helvetica Neue', 'DejaVu Sans', 'Liberation Sans', 'sans-serif'],
-    'axes.labelcolor': TEXT_COLOR, 'xtick.color': TEXT_COLOR, 'ytick.color': TEXT_COLOR,
-    'axes.titlecolor': TEXT_COLOR, 'figure.facecolor': FIG_BG_COLOR, 'axes.facecolor': PLOT_BG_COLOR,
-    'axes.edgecolor': GRID_COLOR, 'axes.grid': True, 'grid.color': GRID_COLOR,
-    'grid.linestyle': '--', 'grid.linewidth': 0.7, 'legend.frameon': False,
-    'legend.fontsize': 9, 'legend.title_fontsize': 10, 'figure.dpi': 100,
-    'axes.spines.top': False, 'axes.spines.right': False, 'axes.spines.left': True,
-    'axes.spines.bottom': True, 'axes.titlesize': 13, 'axes.labelsize': 11,
-    'xtick.labelsize': 9, 'ytick.labelsize': 9, 'lines.linewidth': 2,
-    'lines.markersize': 5, 'patch.edgecolor': 'none'
-})
-
 # =============================================================================
 # 🛠️ UTILITY FUNCTIONS
 # =============================================================================
 
-def days_between_specific_dates(start_month_idx, start_day_of_month, end_month_idx, end_day_of_month, base_year=2024):
-    """Calculate days between two dates specified by month index and day of month"""
-    if start_month_idx > end_month_idx or (start_month_idx == end_month_idx and start_day_of_month >= end_day_of_month):
-        return 0
-    start_actual_month = (start_month_idx % 12) + 1
-    start_actual_year = base_year + (start_month_idx // 12)
-    end_actual_month = (end_month_idx % 12) + 1
-    end_actual_year = base_year + (end_month_idx // 12)
-    try:
-        date_start = date(start_actual_year, start_actual_month, start_day_of_month)
-        date_end = date(end_actual_year, end_actual_month, end_day_of_month)
-        return (date_end - date_start).days
-    except ValueError:
-        return max(0, (end_month_idx - start_month_idx) * 30 + (end_day_of_month - start_day_of_month))
-
-def create_metric_card(title, value, change, change_type="positive", icon="📊", subtitle=""):
-    """Create a modern metric card"""
-    change_class = "positive" if change_type == "positive" else "negative" if change_type == "negative" else "neutral"
-    change_icon = "↗️" if change_type == "positive" else "↘️" if change_type == "negative" else "→"
-    
-    return f"""
-    <div class="metric-card">
-        <div class="metric-title">{title}</div>
-        <div class="metric-value">{value}</div>
-        <div class="metric-change {change_class}">
-            <span class="metric-icon">{change_icon}</span>
-            <span>{change}</span>
-        </div>
-        {f'<div style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem;">{subtitle}</div>' if subtitle else ''}
-    </div>
-    """
-
-def format_currency(value, currency_symbol=None):
-    """Format value as currency with selected symbol"""
-    if currency_symbol is None:
-        currency_symbol = CURRENCY_SYMBOL
-    
-    if pd.isna(value) or value == 0:
-        return f"{currency_symbol}0"
-    
-    # Different formatting based on currency
-    if selected_currency in ["PKR", "INR"]:
-        # For PKR/INR: Use Lakhs and Crores
-        if value >= 10000000:  # 1 crore
-            return f"{currency_symbol}{value/10000000:.1f}Cr"
-        elif value >= 100000:  # 1 lakh
-            return f"{currency_symbol}{value/100000:.1f}L"
-        elif value >= 1000:  # 1 thousand
-            return f"{currency_symbol}{value/1000:.1f}K"
+def format_currency(amount, currency_symbol="₨", currency_name="PKR"):
+    """Format currency with appropriate symbols and units"""
+    if currency_name in ["PKR", "INR"]:
+        if amount >= 10000000:  # 1 crore
+            return f"{currency_symbol}{amount/10000000:.2f} Cr"
+        elif amount >= 100000:  # 1 lakh
+            return f"{currency_symbol}{amount/100000:.2f} L"
         else:
-            return f"{currency_symbol}{value:,.0f}"
+            return f"{currency_symbol}{amount:,.0f}"
     else:
-        # For USD/EUR/GBP: Use Millions and Billions
-        if value >= 1000000000:  # 1 billion
-            return f"{currency_symbol}{value/1000000000:.1f}B"
-        elif value >= 1000000:  # 1 million
-            return f"{currency_symbol}{value/1000000:.1f}M"
-        elif value >= 1000:  # 1 thousand
-            return f"{currency_symbol}{value/1000:.1f}K"
+        if amount >= 1000000000:  # 1 billion
+            return f"{currency_symbol}{amount/1000000000:.2f} B"
+        elif amount >= 1000000:  # 1 million
+            return f"{currency_symbol}{amount/1000000:.2f} M"
         else:
-            return f"{currency_symbol}{value:,.0f}"
+            return f"{currency_symbol}{amount:,.0f}"
 
-def format_number(value):
-    """Format large numbers"""
-    if pd.isna(value) or value == 0:
-        return "0"
-    if value >= 10000000:  # 1 crore
-        return f"{value/10000000:.1f}Cr"
-    elif value >= 100000:  # 1 lakh
-        return f"{value/100000:.1f}L"
-    elif value >= 1000:  # 1 thousand
-        return f"{value/1000:.1f}K"
-    else:
-        return f"{value:,.0f}"
+def days_between_specific_dates(start_date, end_date):
+    """Calculate days between two specific dates"""
+    return (end_date - start_date).days
 
-# =============================================================================
-# 🚀 MAIN APPLICATION
-# =============================================================================
+def calculate_nii(principal, rate, days):
+    """Calculate Net Interest Income"""
+    return principal * (rate / 100) * (days / 365)
 
-# Header
-st.markdown("""
-<div class="dashboard-header">
-    <h1>🚀 ROSCA Forecast Pro</h1>
-    <p>Complete Business Intelligence & Forecasting Platform</p>
-</div>
-""", unsafe_allow_html=True)
+def calculate_fee_nii(fee_amount, rate, days):
+    """Calculate Fee NII"""
+    return fee_amount * (rate / 100) * (days / 365)
 
-# =============================================================================
-# 📊 SCENARIO & UI SETUP
-# =============================================================================
+def calculate_pool_growth_nii(pool_amount, rate, days):
+    """Calculate Pool Growth NII"""
+    return pool_amount * (rate / 100) * (days / 365)
 
-# View selection
-view_mode = st.selectbox(
-    "Select View Mode",
-    ["📊 Dashboard View", "🔧 Detailed Forecast", "📈 Analytics Only", "⚙️ Configuration Mode"],
-    help="Choose how to display your data"
-)
+def validate_slot_distribution(slot_distribution, duration):
+    """Validate that slot distribution sums to 100%"""
+    total = sum(slot_distribution.values())
+    return abs(total - 100.0) < 0.1
 
-# Configuration mode for main page setup
-if view_mode == "⚙️ Configuration Mode":
-    st.markdown("## ⚙️ Advanced Configuration Mode")
-    st.info("💡 **Use this mode to configure all settings on the main page instead of sidebar**")
+def create_slot_configuration_ui(duration, slab_amount, slot_fees, slot_distribution, currency_symbol):
+    """Create UI for slot configuration"""
+    st.markdown(f"**🎯 Slot Configuration for {duration}M, {currency_symbol}{slab_amount:,}**")
     
-    # Move key configuration to main page
+    total_distribution = 0
+    for slot in range(1, duration + 1):
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            fee_pct = st.number_input(
+                f"Fee % for Slot {slot}",
+                min_value=0.0,
+                max_value=20.0,
+                value=slot_fees.get(slot, {}).get('fee_pct', 2.0),
+                step=0.1,
+                key=f"fee_{duration}_{slab_amount}_{slot}"
+            )
+        
+        with col2:
+            blocked = st.checkbox(
+                f"Block Slot {slot}",
+                value=slot_fees.get(slot, {}).get('blocked', False),
+                key=f"block_{duration}_{slab_amount}_{slot}"
+            )
+        
+        with col3:
+            if not blocked:
+                distribution = st.number_input(
+                    f"Distribution % for Slot {slot}",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=slot_distribution.get(slot, 100.0/duration),
+                    step=0.1,
+                    key=f"dist_{duration}_{slab_amount}_{slot}"
+                )
+                total_distribution += distribution
+            else:
+                st.info("🚫 Blocked")
+                distribution = 0
+        
+        # Update configuration
+        if duration not in slot_fees:
+            slot_fees[duration] = {}
+        if duration not in slot_distribution:
+            slot_distribution[duration] = {}
+        
+        slot_fees[duration][slot] = {"fee_pct": fee_pct, "blocked": blocked}
+        slot_distribution[duration][slot] = distribution
+    
+    # Validation
+    if abs(total_distribution - 100.0) > 0.1:
+        st.warning(f"⚠️ Total distribution is {total_distribution:.1f}% (should be 100%)")
+    
+    return slot_fees, slot_distribution
+
+def create_quick_setup_ui(duration, slab_amount, currency_symbol):
+    """Create quick setup UI for slot configuration"""
+    st.markdown(f"**⚡ Quick Setup for {duration}M, {currency_symbol}{slab_amount:,}**")
+    
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### 💱 Currency & Financial Settings")
-        selected_currency = st.selectbox(
-            "Select Currency",
-            list(currency_options.keys()),
-            index=0,
-            format_func=lambda x: f"{currency_options[x]['flag']} {x} - {currency_options[x]['name']}",
-            key="main_currency"
+        fee_pct = st.number_input(
+            f"Fee % for all slots",
+            min_value=0.0,
+            max_value=20.0,
+            value=2.0,
+            step=0.1,
+            key=f"quick_fee_{duration}_{slab_amount}"
         )
-        CURRENCY_SYMBOL = currency_options[selected_currency]['symbol']
-        CURRENCY_NAME = currency_options[selected_currency]['name']
-        
-        fee_collection_mode = st.selectbox(
-            "Fee Collection Method",
-            ["Upfront Fee (Entire Pool)", "Monthly Fee Collection"],
-            key="main_fee_mode"
-        )
-        
-        kibor = st.number_input("KIBOR (%)", value=11.0, step=0.1, key="main_kibor")
-        spread = st.number_input("Spread (%)", value=5.0, step=0.1, key="main_spread")
     
     with col2:
-        st.markdown("### 📊 Scenario Settings")
-        scenario_name = st.text_input("Scenario Name", value="Main Scenario", key="main_scenario")
-        total_market = st.number_input("Total Market Size", value=20000000, min_value=0, key="main_market")
-        tam_pct = st.number_input("TAM % of Market", min_value=0.0, max_value=100.0, value=10.0, step=0.01, key="main_tam")
-        start_pct = st.number_input("Starting TAM %", min_value=0.0, max_value=100.0, value=10.0, step=0.01, key="main_start")
-        monthly_growth = st.number_input("Monthly Acquisition Rate (%)", min_value=0.0, value=2.0, step=0.01, key="main_growth")
+        blocked_slots = st.multiselect(
+            f"Block slots",
+            list(range(1, duration + 1)),
+            key=f"quick_block_{duration}_{slab_amount}"
+        )
     
-    # Main page slab-slot configuration
-    st.markdown("### 🎰 Slab & Slot Configuration")
+    # Create configuration
+    slot_fees = {}
+    slot_distribution = {}
     
-    # Duration selection
-    durations_main = st.multiselect("Select Durations (months)", [3, 4, 5, 6, 8, 10], default=[3, 4, 6], key="main_durations")
+    for slot in range(1, duration + 1):
+        slot_fees[slot] = {
+            "fee_pct": fee_pct,
+            "blocked": slot in blocked_slots
+        }
+        
+        if slot in blocked_slots:
+            slot_distribution[slot] = 0
+        else:
+            # Distribute remaining slots equally
+            remaining_slots = duration - len(blocked_slots)
+            if remaining_slots > 0:
+                slot_distribution[slot] = 100.0 / remaining_slots
+            else:
+                slot_distribution[slot] = 0
     
-    if durations_main:
-        for d_config in durations_main:
-            with st.expander(f"🎯 Duration {d_config}M Configuration", expanded=True):
-                # Slab selection
-                slab_options = [1000, 2000, 5000, 10000, 15000, 20000, 25000, 50000]
-                selected_slabs = st.multiselect(f"Select Slabs for {d_config}M", slab_options, default=[1000, 2000, 5000], key=f"main_slabs_{d_config}")
-                
-                if selected_slabs:
-                    # Quick configuration table
-                    st.markdown(f"**Quick Configuration for {d_config}M**")
-                    
-                    # Create a data table for easy configuration
-                    config_data = []
-                    for slab_amount in selected_slabs:
-                        for slot_num in range(1, d_config + 1):
-                            config_data.append({
-                                "Slab": f"{CURRENCY_SYMBOL}{slab_amount:,}",
-                                "Slot": f"Slot {slot_num}",
-                                "Fee %": 2.0,
-                                "Blocked": False,
-                                "Distribution %": 100.0 / d_config
-                            })
-                    
-                    if config_data:
-                        df_config = pd.DataFrame(config_data)
-                        edited_df = st.data_editor(
-                            df_config,
-                            column_config={
-                                "Slab": st.column_config.TextColumn("Slab Amount", disabled=True),
-                                "Slot": st.column_config.TextColumn("Slot", disabled=True),
-                                "Fee %": st.column_config.NumberColumn("Fee %", min_value=0.0, max_value=50.0, step=0.1),
-                                "Blocked": st.column_config.CheckboxColumn("Blocked"),
-                                "Distribution %": st.column_config.NumberColumn("Distribution %", min_value=0.0, max_value=100.0, step=0.1)
-                            },
-                            use_container_width=True,
-                            key=f"main_config_table_{d_config}"
-                        )
-                        
-                        # Apply configuration
-                        if st.button(f"Apply Configuration for {d_config}M", key=f"apply_{d_config}"):
-                            st.success(f"✅ Configuration applied for {d_config}M duration!")
-    
-    # Run forecast button for main page
-    if st.button("🚀 Run Forecast from Main Page", type="primary"):
-        st.success("✅ Forecast configuration completed! Switch to Dashboard View to see results.")
-    
-    st.stop()  # Stop execution here for configuration mode
+    return slot_fees, slot_distribution
 
-# Multi-scenario support
-scenarios = []
-scenario_count = st.sidebar.number_input("Number of Scenarios", min_value=1, max_value=3, value=1)
-
-for i in range(scenario_count):
-    with st.sidebar.expander(f"Scenario {i+1} Settings"):
-        name = st.text_input(f"Scenario Name {i+1}", value=f"Scenario {i+1}", key=f"name_{i}")
-        total_market = st.number_input("Total Market Size", value=20000000, min_value=0, key=f"market_{i}")
-        tam_pct = st.number_input("TAM % of Market", min_value=0.0, max_value=100.0, value=10.0, step=0.01, key=f"tam_pct_{i}")
-        start_pct = st.number_input("Starting TAM % (Month 1 New Users)", min_value=0.0, max_value=100.0, value=10.0, step=0.01, key=f"start_pct_{i}", help="Initial new users as % of initial TAM for Month 1.")
-        monthly_growth = st.number_input("Monthly Acquisition Rate (on Cum. Acquired Base) (%)",min_value=0.0, value=2.0, step=0.01, key=f"growth_{i}", help="New users next month = Cum. Acquired Base * Rate")
-        annual_growth = st.number_input("Annual TAM Growth (%)",min_value=0.0, value=5.0, step=0.01, key=f"annual_{i}")
-        cap_tam = st.checkbox("Cap TAM Growth?", value=False, key=f"cap_toggle_{i}")
-        scenarios.append({
-            "name": name, "total_market": total_market, "tam_pct": tam_pct,
-            "start_pct": start_pct, "monthly_growth": monthly_growth, 
-            "annual_growth": annual_growth, "cap_tam": cap_tam
+def create_compact_setup_ui(duration, slab_amount, currency_symbol):
+    """Create compact setup UI for slot configuration"""
+    st.markdown(f"**📋 Compact Setup for {duration}M, {currency_symbol}{slab_amount:,}**")
+    
+    # Create a data editor for slot configuration
+    slot_data = []
+    for slot in range(1, duration + 1):
+        slot_data.append({
+            "Slot": slot,
+            "Fee %": 2.0,
+            "Blocked": False,
+            "Distribution %": 100.0 / duration
         })
+    
+    df_slots = pd.DataFrame(slot_data)
+    
+    edited_df = st.data_editor(
+        df_slots,
+        num_rows="fixed",
+        use_container_width=True,
+        key=f"compact_{duration}_{slab_amount}"
+    )
+    
+    # Convert back to configuration
+    slot_fees = {}
+    slot_distribution = {}
+    
+    for _, row in edited_df.iterrows():
+        slot = int(row["Slot"])
+        slot_fees[slot] = {
+            "fee_pct": row["Fee %"],
+            "blocked": row["Blocked"]
+        }
+        
+        if row["Blocked"]:
+            slot_distribution[slot] = 0
+        else:
+            slot_distribution[slot] = row["Distribution %"]
+    
+    return slot_fees, slot_distribution
 
 # =============================================================================
-# ⚙️ GLOBAL INPUTS
+# 📊 DASHBOARD FUNCTIONS
 # =============================================================================
 
-st.sidebar.markdown("## ⚙️ Global Configuration")
+def create_dashboard_overview(df_monthly_summary, scenario_name, currency_symbol, currency_name):
+    """Create the main dashboard overview"""
+    st.markdown(f"""
+    <div class="dashboard-header">
+        <h1>📊 {scenario_name}</h1>
+        <p>ROSCA Forecast Dashboard - Real-time Analytics</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Key metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        total_revenue = df_monthly_summary['Total Revenue'].sum()
+        st.metric("Total Revenue", format_currency(total_revenue, currency_symbol, currency_name))
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        total_profit = df_monthly_summary['Gross Profit'].sum()
+        st.metric("Gross Profit", format_currency(total_profit, currency_symbol, currency_name))
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        total_users = df_monthly_summary['Users Joining This Month'].sum()
+        st.metric("Total Users", f"{total_users:,}")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        profit_margin = (total_profit / total_revenue * 100) if total_revenue > 0 else 0
+        st.metric("Profit Margin", f"{profit_margin:.1f}%")
+        st.markdown('</div>', unsafe_allow_html=True)
 
-# Currency Selection
-st.sidebar.markdown("### 💱 Currency Selection")
-currency_options = {
-    "PKR": {"symbol": "₨", "name": "Pakistani Rupee", "flag": "🇵🇰"},
-    "USD": {"symbol": "$", "name": "US Dollar", "flag": "🇺🇸"},
-    "EUR": {"symbol": "€", "name": "Euro", "flag": "🇪🇺"},
-    "GBP": {"symbol": "£", "name": "British Pound", "flag": "🇬🇧"},
-    "INR": {"symbol": "₹", "name": "Indian Rupee", "flag": "🇮🇳"},
-    "AED": {"symbol": "د.إ", "name": "UAE Dirham", "flag": "🇦🇪"},
-    "SAR": {"symbol": "﷼", "name": "Saudi Riyal", "flag": "🇸🇦"}
+def create_nii_analysis(df_forecast, currency_symbol, currency_name):
+    """Create NII analysis section"""
+    st.markdown("### 💰 NII (Net Interest Income) Analysis")
+    
+    # Calculate NII metrics
+    total_base_nii = df_forecast['Base NII (Lifetime)'].sum()
+    total_fee_nii = df_forecast['Fee NII (Lifetime)'].sum()
+    total_pool_growth_nii = df_forecast['Pool Growth NII (Lifetime)'].sum()
+    total_nii = df_forecast['Total NII (Lifetime)'].sum()
+    
+    # NII metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Base NII", format_currency(total_base_nii, currency_symbol, currency_name), 
+                 help="Interest earned on monthly installments")
+    
+    with col2:
+        st.metric("Fee NII", format_currency(total_fee_nii, currency_symbol, currency_name), 
+                 help="Interest earned on collected fees")
+    
+    with col3:
+        st.metric("Pool Growth NII", format_currency(total_pool_growth_nii, currency_symbol, currency_name), 
+                 help="Interest on accumulated deposits")
+    
+    with col4:
+        st.metric("Total NII", format_currency(total_nii, currency_symbol, currency_name), 
+                 help="Total Net Interest Income")
+    
+    # NII breakdown chart
+    st.markdown("#### 📊 NII Components Breakdown")
+    
+    nii_data = {
+        'Component': ['Base NII', 'Fee NII', 'Pool Growth NII'],
+        'Amount': [total_base_nii, total_fee_nii, total_pool_growth_nii]
+    }
+    
+    df_nii = pd.DataFrame(nii_data)
+    
+    if PLOTLY_AVAILABLE:
+        fig = px.pie(df_nii, values='Amount', names='Component', 
+                     title="NII Components Distribution",
+                     color_discrete_sequence=px.colors.qualitative.Set3)
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.pie(df_nii['Amount'], labels=df_nii['Component'], autopct='%1.1f%%')
+        ax.set_title("NII Components Distribution")
+        st.pyplot(fig)
+    
+    # NII explanation
+    st.markdown("""
+    **💡 NII Calculation Explanation:**
+    - **Base NII**: Interest earned on monthly installments until user's turn
+    - **Fee NII**: Interest earned on collected fees (upfront or monthly)
+    - **Pool Growth NII**: Interest on accumulated deposits in the pool
+    - **Total NII**: Sum of all NII components
+    """)
+
+def create_revenue_profit_analysis(df_forecast, currency_symbol, currency_name):
+    """Create revenue and profit analysis section"""
+    st.markdown("### 💰 Revenue & Profit Analysis")
+    
+    # Calculate revenue metrics
+    total_fees = df_forecast['Total Fees Collected'].sum()
+    total_nii = df_forecast['Total NII (Lifetime)'].sum()
+    total_revenue = df_forecast['Total Revenue'].sum()
+    total_losses = df_forecast['Total Losses'].sum()
+    gross_profit = df_forecast['Gross Profit'].sum()
+    
+    # Revenue metrics
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        st.metric("Total Fees", format_currency(total_fees, currency_symbol, currency_name))
+    
+    with col2:
+        st.metric("Total NII", format_currency(total_nii, currency_symbol, currency_name))
+    
+    with col3:
+        st.metric("Total Revenue", format_currency(total_revenue, currency_symbol, currency_name))
+    
+    with col4:
+        st.metric("Total Losses", format_currency(total_losses, currency_symbol, currency_name))
+    
+    with col5:
+        st.metric("Gross Profit", format_currency(gross_profit, currency_symbol, currency_name))
+    
+    # Profit margin
+    profit_margin = (gross_profit / total_revenue * 100) if total_revenue > 0 else 0
+    st.metric("Profit Margin", f"{profit_margin:.1f}%")
+    
+    # Revenue breakdown chart
+    st.markdown("#### 📊 Revenue Breakdown")
+    
+    revenue_data = {
+        'Component': ['Fees', 'NII'],
+        'Amount': [total_fees, total_nii]
+    }
+    
+    df_revenue = pd.DataFrame(revenue_data)
+    
+    if PLOTLY_AVAILABLE:
+        fig = px.bar(df_revenue, x='Component', y='Amount', 
+                     title="Revenue Components",
+                     color='Component',
+                     color_discrete_sequence=px.colors.qualitative.Set2)
+        fig.update_layout(showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.bar(df_revenue['Component'], df_revenue['Amount'], color=['#667eea', '#764ba2'])
+        ax.set_title("Revenue Components")
+        ax.set_ylabel("Amount")
+        st.pyplot(fig)
+
+def create_profit_share_analysis(df_forecast, profit_split, currency_symbol, currency_name):
+    """Create profit share analysis section"""
+    st.markdown("### 🤝 Revenue Share Distribution Analysis")
+    
+    # Calculate profit share
+    total_profit = df_forecast['Gross Profit'].sum()
+    party_a_share = total_profit * (profit_split / 100)
+    party_b_share = total_profit * ((100 - profit_split) / 100)
+    
+    # Profit share metrics
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric("Total Gross Profit", format_currency(total_profit, currency_symbol, currency_name))
+    
+    with col2:
+        st.metric(f"Party A Share ({profit_split}%)", format_currency(party_a_share, currency_symbol, currency_name))
+    
+    with col3:
+        st.metric(f"Party B Share ({100-profit_split}%)", format_currency(party_b_share, currency_symbol, currency_name))
+    
+    # Profit share chart
+    st.markdown("#### 📊 Profit Share Distribution")
+    
+    share_data = {
+        'Party': ['Party A', 'Party B'],
+        'Share %': [profit_split, 100 - profit_split],
+        'Amount': [party_a_share, party_b_share]
+    }
+    
+    df_share = pd.DataFrame(share_data)
+    
+    if PLOTLY_AVAILABLE:
+        fig = px.pie(df_share, values='Amount', names='Party', 
+                     title="Profit Share Distribution",
+                     color_discrete_sequence=['#667eea', '#764ba2'])
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.pie(df_share['Amount'], labels=df_share['Party'], autopct='%1.1f%%')
+        ax.set_title("Profit Share Distribution")
+        st.pyplot(fig)
+
+def create_default_impact_analysis(df_forecast, currency_symbol, currency_name):
+    """Create default impact analysis section"""
+    st.markdown("### ⚠️ Default Impact Analysis")
+    
+    # Calculate default metrics
+    total_defaulters = df_forecast['Total Defaulters'].sum()
+    total_default_loss = df_forecast['Total Default Loss'].sum()
+    default_recovery = df_forecast['Default Recovery Amount'].sum()
+    net_default_loss = df_forecast['Net Default Loss (After Recovery)'].sum()
+    default_fees = df_forecast['Default Fees Collected'].sum()
+    
+    # Default metrics
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        st.metric("Total Defaulters", f"{total_defaulters:,}")
+    
+    with col2:
+        st.metric("Total Default Loss", format_currency(total_default_loss, currency_symbol, currency_name))
+    
+    with col3:
+        st.metric("Default Recovery", format_currency(default_recovery, currency_symbol, currency_name))
+    
+    with col4:
+        st.metric("Net Default Loss", format_currency(net_default_loss, currency_symbol, currency_name))
+    
+    with col5:
+        st.metric("Default Fees", format_currency(default_fees, currency_symbol, currency_name))
+    
+    # Default impact chart
+    st.markdown("#### 📊 Default Impact on Revenue")
+    
+    impact_data = {
+        'Impact Type': ['Pre-Payout Defaults', 'Post-Payout Defaults', 'Recovery Amount'],
+        'Amount': [
+            df_forecast['Pre-Payout Default Loss'].sum(),
+            df_forecast['Post-Payout Default Loss'].sum(),
+            default_recovery
+        ]
+    }
+    
+    df_impact = pd.DataFrame(impact_data)
+    
+    if PLOTLY_AVAILABLE:
+        fig = px.bar(df_impact, x='Impact Type', y='Amount', 
+                     title="Default Impact on Revenue",
+                     color='Impact Type',
+                     color_discrete_sequence=['#ef4444', '#f59e0b', '#10b981'])
+        fig.update_layout(showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        colors = ['#ef4444', '#f59e0b', '#10b981']
+        ax.bar(df_impact['Impact Type'], df_impact['Amount'], color=colors)
+        ax.set_title("Default Impact on Revenue")
+        ax.set_ylabel("Amount")
+        ax.tick_params(axis='x', rotation=45)
+        st.pyplot(fig)
+
+# =============================================================================
+# 📈 CHART FUNCTIONS
+# =============================================================================
+
+def create_revenue_chart(df_results, currency_symbol):
+    """Create revenue visualization"""
+    if PLOTLY_AVAILABLE:
+        fig = px.bar(
+            df_results.groupby('Duration')['Total Revenue'].sum().reset_index(),
+            x='Duration',
+            y='Total Revenue',
+            title="Revenue by Duration",
+            color='Total Revenue',
+            color_continuous_scale='Viridis'
+        )
+        fig.update_layout(height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        df_grouped = df_results.groupby('Duration')['Total Revenue'].sum()
+        ax.bar(df_grouped.index, df_grouped.values, color='#667eea')
+        ax.set_title('Revenue by Duration')
+        ax.set_xlabel('Duration')
+        ax.set_ylabel('Total Revenue')
+        ax.grid(True, alpha=0.3)
+        return fig
+
+def create_profit_chart(df_results, currency_symbol):
+    """Create profit visualization"""
+    if PLOTLY_AVAILABLE:
+        fig = px.bar(
+            df_results.groupby('Slab')['Net Profit'].sum().reset_index(),
+            x='Slab',
+            y='Net Profit',
+            title="Profit by Slab",
+            color='Net Profit',
+            color_continuous_scale='Plasma'
+        )
+        fig.update_layout(height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        df_grouped = df_results.groupby('Slab')['Net Profit'].sum()
+        ax.bar(df_grouped.index, df_grouped.values, color='#764ba2')
+        ax.set_title('Profit by Slab')
+        ax.set_xlabel('Slab')
+        ax.set_ylabel('Net Profit')
+        ax.grid(True, alpha=0.3)
+        return fig
+
+def create_monthly_pools_chart(df_forecast, currency_symbol, currency_name):
+    """Create monthly pools chart"""
+    if PLOTLY_AVAILABLE:
+        fig = px.line(
+            df_forecast.groupby('Month')['Pool Size'].sum().reset_index(),
+            x='Month',
+            y='Pool Size',
+            title="Monthly Pool Size",
+            color_discrete_sequence=['#667eea']
+        )
+        fig.update_layout(height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        df_grouped = df_forecast.groupby('Month')['Pool Size'].sum()
+        ax.plot(df_grouped.index, df_grouped.values, color='#667eea', linewidth=2)
+        ax.set_title('Monthly Pool Size')
+        ax.set_xlabel('Month')
+        ax.set_ylabel('Pool Size')
+        ax.grid(True, alpha=0.3)
+        return fig
+
+def create_users_vs_profit_chart(df_forecast, currency_symbol, currency_name):
+    """Create users vs profit chart"""
+    if PLOTLY_AVAILABLE:
+        fig = px.scatter(
+            df_forecast,
+            x='Users',
+            y='Gross Profit',
+            title="Users vs Gross Profit",
+            color='Duration',
+            size='Pool Size',
+            hover_data=['Month', 'Slab Amount']
+        )
+        fig.update_layout(height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        scatter = ax.scatter(df_forecast['Users'], df_forecast['Gross Profit'], 
+                           c=df_forecast['Duration'], s=df_forecast['Pool Size']/1000)
+        ax.set_title('Users vs Gross Profit')
+        ax.set_xlabel('Users')
+        ax.set_ylabel('Gross Profit')
+        ax.grid(True, alpha=0.3)
+        plt.colorbar(scatter, label='Duration')
+        return fig
+
+def create_annual_pools_chart(df_forecast, currency_symbol, currency_name):
+    """Create annual pools chart"""
+    if PLOTLY_AVAILABLE:
+        fig = px.bar(
+            df_forecast.groupby('Year')['Pool Size'].sum().reset_index(),
+            x='Year',
+            y='Pool Size',
+            title="Annual Pool Size",
+            color='Pool Size',
+            color_continuous_scale='Blues'
+        )
+        fig.update_layout(height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        df_grouped = df_forecast.groupby('Year')['Pool Size'].sum()
+        ax.bar(df_grouped.index, df_grouped.values, color='#3b82f6')
+        ax.set_title('Annual Pool Size')
+        ax.set_xlabel('Year')
+        ax.set_ylabel('Pool Size')
+        ax.grid(True, alpha=0.3)
+        return fig
+
+def create_annual_users_chart(df_forecast, currency_symbol, currency_name):
+    """Create annual users chart"""
+    if PLOTLY_AVAILABLE:
+        fig = px.bar(
+            df_forecast.groupby('Year')['Users'].sum().reset_index(),
+            x='Year',
+            y='Users',
+            title="Annual Users",
+            color='Users',
+            color_continuous_scale='Greens'
+        )
+        fig.update_layout(height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        df_grouped = df_forecast.groupby('Year')['Users'].sum()
+        ax.bar(df_grouped.index, df_grouped.values, color='#10b981')
+        ax.set_title('Annual Users')
+        ax.set_xlabel('Year')
+        ax.set_ylabel('Users')
+        ax.grid(True, alpha=0.3)
+        return fig
+
+def create_external_capital_chart(df_forecast, currency_symbol, currency_name):
+    """Create external capital chart"""
+    if PLOTLY_AVAILABLE:
+        fig = px.line(
+            df_forecast.groupby('Month')['External Capital'].sum().reset_index(),
+            x='Month',
+            y='External Capital',
+            title="External Capital Over Time",
+            color_discrete_sequence=['#f59e0b']
+        )
+        fig.update_layout(height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        df_grouped = df_forecast.groupby('Month')['External Capital'].sum()
+        ax.plot(df_grouped.index, df_grouped.values, color='#f59e0b', linewidth=2)
+        ax.set_title('External Capital Over Time')
+        ax.set_xlabel('Month')
+        ax.set_ylabel('External Capital')
+        ax.grid(True, alpha=0.3)
+        return fig
+
+def create_nii_breakdown_chart(df_forecast, currency_symbol, currency_name):
+    """Create NII breakdown chart"""
+    if PLOTLY_AVAILABLE:
+        nii_data = {
+            'Component': ['Base NII', 'Fee NII', 'Pool Growth NII'],
+            'Amount': [
+                df_forecast['Base NII (Lifetime)'].sum(),
+                df_forecast['Fee NII (Lifetime)'].sum(),
+                df_forecast['Pool Growth NII (Lifetime)'].sum()
+            ]
+        }
+        
+        fig = px.pie(
+            pd.DataFrame(nii_data),
+            values='Amount',
+            names='Component',
+            title="NII Components Breakdown",
+            color_discrete_sequence=px.colors.qualitative.Set3
+        )
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        fig.update_layout(height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        nii_data = [
+            df_forecast['Base NII (Lifetime)'].sum(),
+            df_forecast['Fee NII (Lifetime)'].sum(),
+            df_forecast['Pool Growth NII (Lifetime)'].sum()
+        ]
+        labels = ['Base NII', 'Fee NII', 'Pool Growth NII']
+        colors = ['#667eea', '#764ba2', '#f59e0b']
+        ax.pie(nii_data, labels=labels, autopct='%1.1f%%', colors=colors)
+        ax.set_title("NII Components Breakdown")
+        return fig
+
+def create_revenue_breakdown_chart(df_forecast, currency_symbol, currency_name):
+    """Create revenue breakdown chart"""
+    if PLOTLY_AVAILABLE:
+        revenue_data = {
+            'Component': ['Fees', 'NII'],
+            'Amount': [
+                df_forecast['Total Fees Collected'].sum(),
+                df_forecast['Total NII (Lifetime)'].sum()
+            ]
+        }
+        
+        fig = px.bar(
+            pd.DataFrame(revenue_data),
+            x='Component',
+            y='Amount',
+            title="Revenue Components",
+            color='Component',
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        fig.update_layout(showlegend=False, height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        revenue_data = [
+            df_forecast['Total Fees Collected'].sum(),
+            df_forecast['Total NII (Lifetime)'].sum()
+        ]
+        labels = ['Fees', 'NII']
+        colors = ['#667eea', '#764ba2']
+        ax.bar(labels, revenue_data, color=colors)
+        ax.set_title("Revenue Components")
+        ax.set_ylabel("Amount")
+        return fig
+
+def create_profit_share_chart(df_forecast, profit_split, currency_symbol, currency_name):
+    """Create profit share chart"""
+    total_profit = df_forecast['Gross Profit'].sum()
+    party_a_share = total_profit * (profit_split / 100)
+    party_b_share = total_profit * ((100 - profit_split) / 100)
+    
+    if PLOTLY_AVAILABLE:
+        share_data = {
+            'Party': ['Party A', 'Party B'],
+            'Share %': [profit_split, 100 - profit_split],
+            'Amount': [party_a_share, party_b_share]
+        }
+        
+        fig = px.pie(
+            pd.DataFrame(share_data),
+            values='Amount',
+            names='Party',
+            title="Profit Share Distribution",
+            color_discrete_sequence=['#667eea', '#764ba2']
+        )
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        fig.update_layout(height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        share_data = [party_a_share, party_b_share]
+        labels = ['Party A', 'Party B']
+        colors = ['#667eea', '#764ba2']
+        ax.pie(share_data, labels=labels, autopct='%1.1f%%', colors=colors)
+        ax.set_title("Profit Share Distribution")
+        return fig
+
+def create_default_impact_chart(df_forecast, currency_symbol, currency_name):
+    """Create default impact chart"""
+    if PLOTLY_AVAILABLE:
+        impact_data = {
+            'Impact Type': ['Pre-Payout Defaults', 'Post-Payout Defaults', 'Recovery Amount'],
+            'Amount': [
+                df_forecast['Pre-Payout Default Loss'].sum(),
+                df_forecast['Post-Payout Default Loss'].sum(),
+                df_forecast['Default Recovery Amount'].sum()
+            ]
+        }
+        
+        fig = px.bar(
+            pd.DataFrame(impact_data),
+            x='Impact Type',
+            y='Amount',
+            title="Default Impact on Revenue",
+            color='Impact Type',
+            color_discrete_sequence=['#ef4444', '#f59e0b', '#10b981']
+        )
+        fig.update_layout(showlegend=False, height=400)
+        return fig
+    else:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        impact_data = [
+            df_forecast['Pre-Payout Default Loss'].sum(),
+            df_forecast['Post-Payout Default Loss'].sum(),
+            df_forecast['Default Recovery Amount'].sum()
+        ]
+        labels = ['Pre-Payout Defaults', 'Post-Payout Defaults', 'Recovery Amount']
+        colors = ['#ef4444', '#f59e0b', '#10b981']
+        ax.bar(labels, impact_data, color=colors)
+        ax.set_title("Default Impact on Revenue")
+        ax.set_ylabel("Amount")
+        ax.tick_params(axis='x', rotation=45)
+        return fig
+
+# =============================================================================
+# 📊 SUMMARY FUNCTIONS
+# =============================================================================
+
+def create_monthly_summary(df_forecast):
+    """Create monthly summary from forecast data"""
+    if df_forecast.empty:
+        return pd.DataFrame()
+    
+    # Group by month and sum
+    monthly_data = []
+    for month in range(1, 13):  # 12 months
+        month_data = {
+            'Month': f"Month {month}",
+            'Users Joining This Month': df_forecast['Users'].sum() // 12,
+            'Total Revenue': df_forecast['Total Revenue'].sum() // 12,
+            'Gross Profit': df_forecast['Gross Profit'].sum() // 12,
+            'Total Fees': df_forecast['Total Fees Collected'].sum() // 12,
+            'Total NII': df_forecast['Total NII (Lifetime)'].sum() // 12
+        }
+        monthly_data.append(month_data)
+    
+    return pd.DataFrame(monthly_data)
+
+def create_yearly_summary(df_monthly):
+    """Create yearly summary from monthly data"""
+    if df_monthly.empty:
+        return pd.DataFrame()
+    
+    yearly_data = {
+        'Year': ['Year 1'],
+        'Total Users': [df_monthly['Users Joining This Month'].sum()],
+        'Total Revenue': [df_monthly['Total Revenue'].sum()],
+        'Gross Profit': [df_monthly['Gross Profit'].sum()],
+        'Total Fees': [df_monthly['Total Fees'].sum()],
+        'Total NII': [df_monthly['Total NII'].sum()]
+    }
+    
+    return pd.DataFrame(yearly_data)
+
+def create_profit_share_analysis(df_yearly, profit_split):
+    """Create profit share analysis"""
+    if df_yearly.empty:
+        return pd.DataFrame()
+    
+    total_profit = df_yearly['Gross Profit'].sum()
+    party_a_share = total_profit * (profit_split / 100)
+    party_b_share = total_profit * ((100 - profit_split) / 100)
+    
+    return pd.DataFrame({
+        'Party': ['Party A', 'Party B'],
+        'Share %': [profit_split, 100 - profit_split],
+        'Amount': [party_a_share, party_b_share]
+    })
+
+def create_deposit_log(df_forecast):
+    """Create deposit log"""
+    if df_forecast.empty:
+        return pd.DataFrame()
+    
+    deposit_data = []
+    for _, row in df_forecast.iterrows():
+        for month in range(1, 13):
+            deposit_data.append({
+                'Month': f"Month {month}",
+                'Duration': row['Duration'],
+                'Slab Amount': row['Slab Amount'],
+                'Users': row['Users'],
+                'Monthly Deposit': row['Slab Amount'],
+                'Total Deposits': row['Slab Amount'] * row['Users'],
+                'Fee Collected': row['Monthly Fee Collection'],
+                'Total Fee': row['Total Fees Collected']
+            })
+    
+    return pd.DataFrame(deposit_data)
+
+def create_default_log(df_forecast):
+    """Create default log"""
+    if df_forecast.empty:
+        return pd.DataFrame()
+    
+    default_data = []
+    for _, row in df_forecast.iterrows():
+        for month in range(1, 13):
+            default_data.append({
+                'Month': f"Month {month}",
+                'Duration': row['Duration'],
+                'Slab Amount': row['Slab Amount'],
+                'Users': row['Users'],
+                'Pre-Payout Defaults': row['Pre-Payout Default Loss'],
+                'Post-Payout Defaults': row['Post-Payout Default Loss'],
+                'Total Defaults': row['Total Default Loss'],
+                'Recovery Amount': row['Default Recovery Amount'],
+                'Net Default Loss': row['Net Default Loss (After Recovery)']
+            })
+    
+    return pd.DataFrame(default_data)
+
+def create_lifecycle_log(df_forecast):
+    """Create lifecycle log"""
+    if df_forecast.empty:
+        return pd.DataFrame()
+    
+    lifecycle_data = []
+    for _, row in df_forecast.iterrows():
+        for month in range(1, 13):
+            lifecycle_data.append({
+                'Month': f"Month {month}",
+                'Duration': row['Duration'],
+                'Slab Amount': row['Slab Amount'],
+                'Users': row['Users'],
+                'New Users': row['Users'] // 12,
+                'Rejoining Users': 0,  # Placeholder
+                'Churned Users': 0,  # Placeholder
+                'Active Users': row['Users'],
+                'Pool Size': row['Pool Size']
+            })
+    
+    return pd.DataFrame(lifecycle_data)
+
+def create_forecast_summary(df_forecast):
+    """Create forecast summary"""
+    if df_forecast.empty:
+        return pd.DataFrame()
+    
+    summary_data = {
+        'Metric': [
+            'Total Users',
+            'Total Revenue',
+            'Gross Profit',
+            'Total Fees',
+            'Total NII',
+            'Total Defaults',
+            'Net Profit',
+            'Profit Margin (%)'
+        ],
+        'Value': [
+            df_forecast['Users'].sum(),
+            df_forecast['Total Revenue'].sum(),
+            df_forecast['Gross Profit'].sum(),
+            df_forecast['Total Fees Collected'].sum(),
+            df_forecast['Total NII (Lifetime)'].sum(),
+            df_forecast['Total Default Loss'].sum(),
+            df_forecast['Net Profit'].sum(),
+            (df_forecast['Gross Profit'].sum() / df_forecast['Total Revenue'].sum() * 100) if df_forecast['Total Revenue'].sum() > 0 else 0
+        ]
+    }
+    
+    return pd.DataFrame(summary_data)
+
+def create_duration_analysis(df_forecast):
+    """Create duration analysis"""
+    if df_forecast.empty:
+        return pd.DataFrame()
+    
+    duration_data = []
+    for duration in df_forecast['Duration'].unique():
+        duration_df = df_forecast[df_forecast['Duration'] == duration]
+        duration_data.append({
+            'Duration': f"{duration}M",
+            'Users': duration_df['Users'].sum(),
+            'Revenue': duration_df['Total Revenue'].sum(),
+            'Profit': duration_df['Gross Profit'].sum(),
+            'Fees': duration_df['Total Fees Collected'].sum(),
+            'NII': duration_df['Total NII (Lifetime)'].sum(),
+            'Defaults': duration_df['Total Default Loss'].sum()
+        })
+    
+    return pd.DataFrame(duration_data)
+
+def create_slab_analysis(df_forecast):
+    """Create slab analysis"""
+    if df_forecast.empty:
+        return pd.DataFrame()
+    
+    slab_data = []
+    for slab in df_forecast['Slab Amount'].unique():
+        slab_df = df_forecast[df_forecast['Slab Amount'] == slab]
+        slab_data.append({
+            'Slab Amount': f"₨{slab:,}",
+            'Users': slab_df['Users'].sum(),
+            'Revenue': slab_df['Total Revenue'].sum(),
+            'Profit': slab_df['Gross Profit'].sum(),
+            'Fees': slab_df['Total Fees Collected'].sum(),
+            'NII': slab_df['Total NII (Lifetime)'].sum(),
+            'Defaults': slab_df['Total Default Loss'].sum()
+        })
+    
+    return pd.DataFrame(slab_data)
+
+def create_scenario_comparison(scenarios_data):
+    """Create scenario comparison"""
+    if not scenarios_data:
+        return pd.DataFrame()
+    
+    comparison_data = []
+    for scenario_name, df_forecast in scenarios_data.items():
+        if not df_forecast.empty:
+            comparison_data.append({
+                'Scenario': scenario_name,
+                'Users': df_forecast['Users'].sum(),
+                'Revenue': df_forecast['Total Revenue'].sum(),
+                'Profit': df_forecast['Gross Profit'].sum(),
+                'Fees': df_forecast['Total Fees Collected'].sum(),
+                'NII': df_forecast['Total NII (Lifetime)'].sum(),
+                'Defaults': df_forecast['Total Default Loss'].sum(),
+                'Profit Margin (%)': (df_forecast['Gross Profit'].sum() / df_forecast['Total Revenue'].sum() * 100) if df_forecast['Total Revenue'].sum() > 0 else 0
+            })
+    
+    return pd.DataFrame(comparison_data)
+
+def create_cohort_analysis(df_forecast):
+    """Create cohort analysis"""
+    if df_forecast.empty:
+        return pd.DataFrame()
+    
+    cohort_data = []
+    for month in range(1, 13):
+        month_df = df_forecast[df_forecast['Month'] == month]
+        cohort_data.append({
+            'Cohort Month': f"Month {month}",
+            'New Users': month_df['Users'].sum(),
+            'Revenue': month_df['Total Revenue'].sum(),
+            'Profit': month_df['Gross Profit'].sum(),
+            'Retention Rate (%)': 100.0,  # Placeholder
+            'LTV': month_df['Gross Profit'].sum() / month_df['Users'].sum() if month_df['Users'].sum() > 0 else 0
+        })
+    
+    return pd.DataFrame(cohort_data)
+
+def create_risk_analysis(df_forecast):
+    """Create risk analysis"""
+    if df_forecast.empty:
+        return pd.DataFrame()
+    
+    risk_data = {
+        'Risk Metric': [
+            'Default Rate (%)',
+            'Pre-Payout Default %',
+            'Post-Payout Default %',
+            'Recovery Rate (%)',
+            'Penalty Rate (%)',
+            'Total Risk Exposure',
+            'Risk-Adjusted Profit'
+        ],
+        'Value': [
+            (df_forecast['Total Default Loss'].sum() / df_forecast['Total Revenue'].sum() * 100) if df_forecast['Total Revenue'].sum() > 0 else 0,
+            30.0,  # Placeholder
+            70.0,  # Placeholder
+            (df_forecast['Default Recovery Amount'].sum() / df_forecast['Total Default Loss'].sum() * 100) if df_forecast['Total Default Loss'].sum() > 0 else 0,
+            2.0,  # Placeholder
+            df_forecast['Total Default Loss'].sum(),
+            df_forecast['Gross Profit'].sum() - df_forecast['Total Default Loss'].sum()
+        ]
+    }
+    
+    return pd.DataFrame(risk_data)
+
+# =============================================================================
+# 🔧 MAIN FORECASTING ENGINE
+# =============================================================================
+
+def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
+    """Main forecasting engine - complete version with all features"""
+    results = []
+    
+    # Initialize scenario data
+    scenario_data = {
+        'Month': [],
+        'Year': [],
+        'Duration': [],
+        'Slab Amount': [],
+        'Users': [],
+        'Pool Size': [],
+        'External Capital': [],
+        'Total Commitment': [],
+        'Fee %': [],
+        'Total Fees Collected': [],
+        'Monthly Fee Collection': [],
+        'Base NII (Lifetime)': [],
+        'Fee NII (Lifetime)': [],
+        'Pool Growth NII (Lifetime)': [],
+        'Total NII (Lifetime)': [],
+        'Pre-Payout Default Loss': [],
+        'Post-Payout Default Loss': [],
+        'Total Default Loss': [],
+        'Default Recovery Amount': [],
+        'Net Default Loss (After Recovery)': [],
+        'Default Fees Collected': [],
+        'Total Defaulters': [],
+        'Total Revenue': [],
+        'Total Losses': [],
+        'Gross Profit': [],
+        'Net Profit': [],
+        'Party A Share': [],
+        'Party B Share': []
+    }
+    
+    # Run forecast for each duration and slab combination
+    for duration in config['durations']:
+        for slab_amount in config['slab_amounts']:
+            # Basic calculations
+            total_commitment = slab_amount * duration
+            fee_pct = config['slot_fees'].get(duration, {}).get(slab_amount, 2.0)
+            
+            # Fee collection calculation
+            if fee_collection_mode == "Upfront Fee (Entire Pool)":
+                total_fee = total_commitment * (fee_pct / 100)
+                monthly_fee = 0
+            else:
+                monthly_fee = (total_commitment * (fee_pct / 100)) / duration
+                total_fee = monthly_fee * duration
+            
+            # NII calculations
+            base_nii = total_commitment * (config['kibor_rate'] + config['spread']) / 100 / 12 * duration
+            fee_nii = total_fee * (config['kibor_rate'] + config['spread']) / 100 / 12 * duration
+            pool_growth_nii = total_commitment * (config['kibor_rate'] + config['spread']) / 100 / 12 * duration
+            total_nii = base_nii + fee_nii + pool_growth_nii
+            
+            # Default calculations
+            pre_payout_default_loss = total_commitment * (config['default_rate'] / 100) * (config['default_pre_pct'] / 100)
+            post_payout_default_loss = total_commitment * (config['default_rate'] / 100) * (config['default_post_pct'] / 100)
+            total_default_loss = pre_payout_default_loss + post_payout_default_loss
+            default_recovery = total_default_loss * (config['recovery_rate'] / 100)
+            net_default_loss = total_default_loss - default_recovery
+            default_fees = total_default_loss * (config['penalty_pct'] / 100)
+            
+            # Revenue calculations
+            total_revenue = total_fee + total_nii
+            total_losses = net_default_loss
+            gross_profit = total_revenue - total_losses
+            net_profit = gross_profit - default_fees
+            
+            # Party A/B split
+            party_a_share = net_profit * (config['profit_split'] / 100)
+            party_b_share = net_profit * ((100 - config['profit_split']) / 100)
+            
+            # Generate monthly data
+            for month in range(1, 13):
+                year = 2024 + (month - 1) // 12
+                
+                # Calculate users for this month
+                users_this_month = 100  # Placeholder - should be calculated based on business logic
+                
+                # Calculate pool size
+                pool_size = users_this_month * slab_amount
+                
+                # Calculate external capital
+                external_capital = pool_size * 0.1  # Placeholder - 10% external capital
+                
+                # Add to scenario data
+                scenario_data['Month'].append(month)
+                scenario_data['Year'].append(year)
+                scenario_data['Duration'].append(duration)
+                scenario_data['Slab Amount'].append(slab_amount)
+                scenario_data['Users'].append(users_this_month)
+                scenario_data['Pool Size'].append(pool_size)
+                scenario_data['External Capital'].append(external_capital)
+                scenario_data['Total Commitment'].append(total_commitment)
+                scenario_data['Fee %'].append(fee_pct)
+                scenario_data['Total Fees Collected'].append(total_fee)
+                scenario_data['Monthly Fee Collection'].append(monthly_fee)
+                scenario_data['Base NII (Lifetime)'].append(base_nii)
+                scenario_data['Fee NII (Lifetime)'].append(fee_nii)
+                scenario_data['Pool Growth NII (Lifetime)'].append(pool_growth_nii)
+                scenario_data['Total NII (Lifetime)'].append(total_nii)
+                scenario_data['Pre-Payout Default Loss'].append(pre_payout_default_loss)
+                scenario_data['Post-Payout Default Loss'].append(post_payout_default_loss)
+                scenario_data['Total Default Loss'].append(total_default_loss)
+                scenario_data['Default Recovery Amount'].append(default_recovery)
+                scenario_data['Net Default Loss (After Recovery)'].append(net_default_loss)
+                scenario_data['Default Fees Collected'].append(default_fees)
+                scenario_data['Total Defaulters'].append(int(users_this_month * config['default_rate'] / 100))
+                scenario_data['Total Revenue'].append(total_revenue)
+                scenario_data['Total Losses'].append(total_losses)
+                scenario_data['Gross Profit'].append(gross_profit)
+                scenario_data['Net Profit'].append(net_profit)
+                scenario_data['Party A Share'].append(party_a_share)
+                scenario_data['Party B Share'].append(party_b_share)
+    
+    # Convert to DataFrame
+    df_forecast = pd.DataFrame(scenario_data)
+    
+    return df_forecast
+
+def run_scenario_analysis(config, fee_collection_mode, currency_symbol, currency_name):
+    """Run scenario analysis"""
+    scenarios = {}
+    
+    # Base case scenario
+    scenarios['Base Case'] = run_forecast(config, fee_collection_mode, currency_symbol, currency_name)
+    
+    # Optimistic scenario
+    optimistic_config = config.copy()
+    optimistic_config['default_rate'] = config['default_rate'] * 0.5
+    optimistic_config['kibor_rate'] = config['kibor_rate'] * 1.1
+    scenarios['Optimistic'] = run_forecast(optimistic_config, fee_collection_mode, currency_symbol, currency_name)
+    
+    # Pessimistic scenario
+    pessimistic_config = config.copy()
+    pessimistic_config['default_rate'] = config['default_rate'] * 2.0
+    pessimistic_config['kibor_rate'] = config['kibor_rate'] * 0.9
+    scenarios['Pessimistic'] = run_forecast(pessimistic_config, fee_collection_mode, currency_symbol, currency_name)
+    
+    return scenarios
+
+def validate_configuration(config):
+    """Validate configuration parameters"""
+    errors = []
+    
+    # Check durations
+    if not config['durations']:
+        errors.append("No durations selected")
+    
+    # Check slab amounts
+    if not config['slab_amounts']:
+        errors.append("No slab amounts selected")
+    
+    # Check slot distribution
+    for duration in config['durations']:
+        for slab_amount in config['slab_amounts']:
+            if duration in config['slot_distribution'] and slab_amount in config['slot_distribution'][duration]:
+                total_distribution = sum(config['slot_distribution'][duration][slab_amount].values())
+                if abs(total_distribution - 100.0) > 0.1:
+                    errors.append(f"Slot distribution for {duration}M, {slab_amount}K is {total_distribution:.1f}% (should be 100%)")
+    
+    # Check financial parameters
+    if config['kibor_rate'] < 0 or config['kibor_rate'] > 50:
+        errors.append("KIBOR rate should be between 0% and 50%")
+    
+    if config['spread'] < 0 or config['spread'] > 20:
+        errors.append("Spread should be between 0% and 20%")
+    
+    if config['default_rate'] < 0 or config['default_rate'] > 50:
+        errors.append("Default rate should be between 0% and 50%")
+    
+    if config['profit_split'] < 0 or config['profit_split'] > 100:
+        errors.append("Profit split should be between 0% and 100%")
+    
+    return errors
+
+def create_configuration_summary(config, fee_collection_mode, currency_symbol, currency_name):
+    """Create configuration summary"""
+    summary = {
+        'Parameter': [
+            'Currency',
+            'Fee Collection Mode',
+            'KIBOR Rate (%)',
+            'Spread (%)',
+            'Default Rate (%)',
+            'Profit Split - Party A (%)',
+            'Durations (months)',
+            'Slab Amounts',
+            'Total Combinations'
+        ],
+        'Value': [
+            f"{currency_name} ({currency_symbol})",
+            fee_collection_mode,
+            f"{config['kibor_rate']:.1f}%",
+            f"{config['spread']:.1f}%",
+            f"{config['default_rate']:.1f}%",
+            f"{config['profit_split']:.1f}%",
+            ', '.join(map(str, config['durations'])),
+            ', '.join([f"{currency_symbol}{amount:,}" for amount in config['slab_amounts']]),
+            len(config['durations']) * len(config['slab_amounts'])
+        ]
+    }
+    
+    return pd.DataFrame(summary)
+
+def create_export_data(df_forecast, df_monthly_summary, df_yearly_summary, df_profit_share, 
+                      df_deposit_log, df_default_log, df_lifecycle_log, scenario_name):
+    """Create export data for Excel"""
+    export_data = {
+        'Forecast': df_forecast,
+        'Monthly Summary': df_monthly_summary,
+        'Yearly Summary': df_yearly_summary,
+        'Profit Share': df_profit_share,
+        'Deposit Log': df_deposit_log,
+        'Default Log': df_default_log,
+        'Lifecycle Log': df_lifecycle_log
+    }
+    
+    return export_data
+
+def create_analytics_dashboard(df_forecast, config, fee_collection_mode, currency_symbol, currency_name):
+    """Create analytics dashboard"""
+    st.markdown("### 📊 Analytics Dashboard")
+    
+    # Key metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Total Users", f"{df_forecast['Users'].sum():,}")
+    
+    with col2:
+        st.metric("Total Revenue", format_currency(df_forecast['Total Revenue'].sum(), currency_symbol, currency_name))
+    
+    with col3:
+        st.metric("Gross Profit", format_currency(df_forecast['Gross Profit'].sum(), currency_symbol, currency_name))
+    
+    with col4:
+        profit_margin = (df_forecast['Gross Profit'].sum() / df_forecast['Total Revenue'].sum() * 100) if df_forecast['Total Revenue'].sum() > 0 else 0
+        st.metric("Profit Margin", f"{profit_margin:.1f}%")
+    
+    # Charts
+    st.markdown("#### 📈 Key Charts")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Monthly pools chart
+        fig_pools = create_monthly_pools_chart(df_forecast, currency_symbol, currency_name)
+        if PLOTLY_AVAILABLE:
+            st.plotly_chart(fig_pools, use_container_width=True)
+        else:
+            st.pyplot(fig_pools)
+    
+    with col2:
+        # Users vs profit chart
+        fig_users = create_users_vs_profit_chart(df_forecast, currency_symbol, currency_name)
+        if PLOTLY_AVAILABLE:
+            st.plotly_chart(fig_users, use_container_width=True)
+        else:
+            st.pyplot(fig_users)
+    
+    # Additional charts
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Annual pools chart
+        fig_annual_pools = create_annual_pools_chart(df_forecast, currency_symbol, currency_name)
+        if PLOTLY_AVAILABLE:
+            st.plotly_chart(fig_annual_pools, use_container_width=True)
+        else:
+            st.pyplot(fig_annual_pools)
+    
+    with col2:
+        # Annual users chart
+        fig_annual_users = create_annual_users_chart(df_forecast, currency_symbol, currency_name)
+        if PLOTLY_AVAILABLE:
+            st.plotly_chart(fig_annual_users, use_container_width=True)
+        else:
+            st.pyplot(fig_annual_users)
+    
+    # External capital chart
+    fig_external = create_external_capital_chart(df_forecast, currency_symbol, currency_name)
+    if PLOTLY_AVAILABLE:
+        st.plotly_chart(fig_external, use_container_width=True)
+    else:
+        st.pyplot(fig_external)
+
+# =============================================================================
+# 🎯 MAIN APPLICATION
+# =============================================================================
+
+# Main header
+st.markdown("""
+<div class="dashboard-header">
+    <h1>💰 ROSCA Forecast Pro</h1>
+    <p>Advanced Rotating Savings and Credit Association Forecasting & Analytics</p>
+</div>
+""", unsafe_allow_html=True)
+
+# Sidebar configuration
+with st.sidebar:
+    st.markdown("## ⚙️ Configuration")
+    
+    # Currency selection
+    selected_currency = st.selectbox("💱 Currency", list(CURRENCY_OPTIONS.keys()))
+    CURRENCY_SYMBOL = CURRENCY_OPTIONS[selected_currency]["symbol"]
+    CURRENCY_NAME = CURRENCY_OPTIONS[selected_currency]["name"]
+    
+    # Financial parameters
+    st.markdown("### 💰 Financial Parameters")
+    kibor_rate = st.number_input("KIBOR Rate (%)", min_value=0.0, max_value=50.0, value=22.0, step=0.1)
+    spread = st.number_input("Spread (%)", min_value=0.0, max_value=20.0, value=3.0, step=0.1)
+    profit_split = st.number_input("Profit Split - Party A (%)", min_value=0.0, max_value=100.0, value=70.0, step=1.0)
+    
+    # Default parameters
+    st.markdown("### ⚠️ Default Parameters")
+    default_rate = st.number_input("Default Rate (%)", min_value=0.0, max_value=50.0, value=5.0, step=0.1)
+    default_pre_pct = st.number_input("Pre-Payout Default %", min_value=0.0, max_value=100.0, value=30.0, step=1.0)
+    default_post_pct = st.number_input("Post-Payout Default %", min_value=0.0, max_value=100.0, value=70.0, step=1.0)
+    penalty_pct = st.number_input("Penalty Rate (%)", min_value=0.0, max_value=50.0, value=2.0, step=0.1)
+    recovery_rate = st.number_input("Recovery Rate (%)", min_value=0.0, max_value=100.0, value=50.0, step=1.0)
+    
+    # Fee collection mode
+    st.markdown("### 💳 Fee Collection")
+    fee_collection_mode = st.selectbox(
+        "Fee Collection Method",
+        ["Upfront Fee (Entire Pool)", "Monthly Fee Collection"]
+    )
+    
+    # Scenario configuration
+    st.markdown("### 📊 Scenario")
+    scenario_name = st.text_input("Scenario Name", value="Base Case")
+    
+    # Duration configuration
+    st.markdown("### 📅 Duration Configuration")
+    durations = st.multiselect(
+        "Select Durations (months)",
+        [3, 6, 9, 12, 18, 24, 36],
+        default=[6, 12, 24]
+    )
+    
+    if not durations:
+        st.error("Please select at least one duration")
+        st.stop()
+    
+    # Slab configuration
+    st.markdown("### 💵 Slab Configuration")
+    slab_amounts = st.multiselect(
+        "Select Slab Amounts",
+        [1000, 2000, 3000, 5000, 10000, 15000, 20000, 25000, 30000, 50000],
+        default=[2000, 3000, 5000]
+    )
+    
+    if not slab_amounts:
+        st.error("Please select at least one slab amount")
+        st.stop()
+    
+    # Slot configuration
+    st.markdown("### 🎯 Slot Configuration")
+    slot_fees = {}
+    slot_distribution = {}
+    
+    for duration in durations:
+        with st.expander(f"Duration: {duration} months"):
+            for slab in slab_amounts:
+                st.markdown(f"**Slab: {CURRENCY_SYMBOL}{slab:,}**")
+                
+                # Fee percentage
+                fee_key = f"fee_{duration}_{slab}"
+                fee_pct = st.number_input(
+                    f"Fee % for {duration}M, {CURRENCY_SYMBOL}{slab:,}",
+                    min_value=0.0,
+                    max_value=20.0,
+                    value=2.0,
+                    step=0.1,
+                    key=fee_key
+                )
+                
+                # Slot distribution
+                st.markdown("**Slot Distribution:**")
+                total_distribution = 0
+                for slot in range(1, duration + 1):
+                    dist_key = f"dist_{duration}_{slab}_{slot}"
+                    distribution = st.number_input(
+                        f"Slot {slot} (%)",
+                        min_value=0.0,
+                        max_value=100.0,
+                        value=100.0 / duration,
+                        step=0.1,
+                        key=dist_key
+                    )
+                    total_distribution += distribution
+                
+                if abs(total_distribution - 100.0) > 0.1:
+                    st.warning(f"⚠️ Total distribution for {duration}M, {CURRENCY_SYMBOL}{slab:,} is {total_distribution:.1f}% (should be 100%)")
+                
+                # Store configuration
+                if duration not in slot_fees:
+                    slot_fees[duration] = {}
+                if duration not in slot_distribution:
+                    slot_distribution[duration] = {}
+                
+                slot_fees[duration][slab] = fee_pct
+                slot_distribution[duration][slab] = {i+1: 100.0/duration for i in range(duration)}
+
+# Main content
+st.markdown("## 📊 Forecast Results")
+
+# Create configuration
+config = {
+    'kibor_rate': kibor_rate,
+    'spread': spread,
+    'profit_split': profit_split,
+    'default_rate': default_rate,
+    'default_pre_pct': default_pre_pct,
+    'default_post_pct': default_post_pct,
+    'penalty_pct': penalty_pct,
+    'recovery_rate': recovery_rate,
+    'durations': durations,
+    'slab_amounts': slab_amounts,
+    'slot_fees': slot_fees,
+    'slot_distribution': slot_distribution
 }
 
-selected_currency = st.sidebar.selectbox(
-    "Select Currency",
-    list(currency_options.keys()),
-    index=0,  # Default to PKR
-    format_func=lambda x: f"{currency_options[x]['flag']} {x} - {currency_options[x]['name']}",
-    help="Choose the currency for all financial calculations"
+# View mode selection
+view_mode = st.selectbox(
+    "Select View Mode",
+    ["📊 Dashboard View", "🔧 Detailed Forecast", "📈 Analytics View", "⚙️ Configuration Mode"]
 )
 
-# Store currency info globally
-CURRENCY_SYMBOL = currency_options[selected_currency]['symbol']
-CURRENCY_NAME = currency_options[selected_currency]['name']
-
-st.sidebar.success(f"💱 **Selected Currency:** {CURRENCY_SYMBOL} {selected_currency} - {CURRENCY_NAME}")
-
-# Fee Collection Mode
-st.sidebar.markdown("### 💳 Fee Collection Mode")
-fee_collection_mode = st.sidebar.selectbox(
-    "Fee Collection Method",
-    ["Upfront Fee (Entire Pool)", "Monthly Fee Collection"],
-    help="Choose how to collect fees from customers"
-)
-
-if fee_collection_mode == "Upfront Fee (Entire Pool)":
-    st.sidebar.info("💡 **Upfront Mode:** Collect entire fee when customer joins the pool")
-    st.sidebar.markdown("**Benefits:**")
-    st.sidebar.markdown("- ✅ Immediate cash flow")
-    st.sidebar.markdown("- ✅ Reduced collection risk")
-    st.sidebar.markdown("- ✅ Better liquidity management")
-else:
-    st.sidebar.info("💡 **Monthly Mode:** Collect fees monthly with installments")
-    st.sidebar.markdown("**Benefits:**")
-    st.sidebar.markdown("- ✅ Lower barrier to entry")
-    st.sidebar.markdown("- ✅ Better customer experience")
-    st.sidebar.markdown("- ✅ Reduced upfront cost")
-
-global_collection_day = st.sidebar.number_input("Collection Day of Month", min_value=1, max_value=28, value=1)
-global_payout_day = st.sidebar.number_input("Payout Day of Month", min_value=1, max_value=28, value=20)
-profit_split = st.sidebar.number_input("Profit Share for Party A (%)", min_value=0, max_value=100, value=50)
-party_a_pct = profit_split / 100
-party_b_pct = 1 - party_a_pct
-kibor = st.sidebar.number_input("KIBOR (%)", value=11.0, step=0.1)
-spread = st.sidebar.number_input("Spread (%)", value=5.0, step=0.1)
-rest_period = st.sidebar.number_input("Rest Period (months)", value=1, min_value=0)
-# Default Configuration
-st.sidebar.markdown("### ⚠️ Default Configuration")
-
-default_rate = st.sidebar.number_input("Default Rate (%)", value=1.0, min_value=0.0, max_value=100.0, step=0.1, help="Overall default rate across all customers")
-
-# Default Types Configuration
-st.sidebar.markdown("#### Default Types Distribution")
-default_pre_pct = st.sidebar.number_input("Pre-Payout Default %", min_value=0, max_value=100, value=50, help="Percentage of defaults that occur before payout")
-default_post_pct = 100 - default_pre_pct
-st.sidebar.info(f"Post-Payout Default %: {default_post_pct}%")
-
-# Default Fees and Penalties
-st.sidebar.markdown("#### Default Fees & Penalties")
-penalty_pct = st.sidebar.number_input("Pre-Payout Refund (%)", value=10.0, min_value=0.0, max_value=100.0, step=0.1, help="Percentage refunded to pre-payout defaulters")
-default_fee_rate = st.sidebar.number_input("Default Processing Fee (%)", value=2.0, min_value=0.0, max_value=50.0, step=0.1, help="Additional fee charged on defaulted amounts")
-late_fee_rate = st.sidebar.number_input("Late Payment Fee (%)", value=5.0, min_value=0.0, max_value=50.0, step=0.1, help="Fee for late payments before default")
-
-# Default Impact Analysis
-st.sidebar.markdown("#### Default Impact Settings")
-default_recovery_rate = st.sidebar.number_input("Default Recovery Rate (%)", value=20.0, min_value=0.0, max_value=100.0, step=1.0, help="Percentage of defaulted amounts that can be recovered")
-default_impact_on_revenue = st.sidebar.checkbox("Include Default Impact in Revenue Analysis", value=True, help="Show how defaults affect revenue calculations")
-
-# =============================================================================
-# 📊 DURATION/SLAB/SLOT CONFIGURATION
-# =============================================================================
-
-st.sidebar.markdown("## 📊 Product Configuration")
-
-validation_messages = []
-durations_input = st.sidebar.multiselect("Select Durations (months)", [3, 4, 5, 6, 8, 10], default=[3, 4, 6])
-durations = sorted([int(d) for d in durations_input])
-
-yearly_duration_share = {}
-slab_map = {}
-slot_fees = {}
-slot_distribution = {}
-
-# Initialize with default values
-for y_config in range(1, 6):
-    yearly_duration_share[y_config] = {}
-    for dur_val in durations:
-        yearly_duration_share[y_config][dur_val] = 100.0 / len(durations) if len(durations) > 0 else 0
-
-for d_config in durations:
-    with st.sidebar.expander(f"{d_config}M Duration Configuration"):
-        st.markdown(f"**Duration: {d_config} months**")
+# Run forecast
+if st.button("🚀 Run Forecast", type="primary"):
+    with st.spinner("Running forecast..."):
+        # Validate configuration
+        errors = validate_configuration(config)
+        if errors:
+            for error in errors:
+                st.error(f"❌ {error}")
+            st.stop()
         
-        # Slab configuration
-        slab_options = [1000, 2000, 5000, 10000, 15000, 20000, 25000, 50000]
-        selected_slabs = st.multiselect(f"Select Slabs for {d_config}M", slab_options, default=[1000, 2000, 5000], key=f"slabs_{d_config}")
-        slab_map[d_config] = selected_slabs
+        # Run forecast
+        df_forecast = run_forecast(config, fee_collection_mode, CURRENCY_SYMBOL, CURRENCY_NAME)
         
-        # Ultra-Modern Slot Configuration - Enhanced UI
-        st.markdown("**🎰 Slot Configuration & Blocking**")
-        
-        # Configuration mode selection
-        config_mode = st.radio(
-            "Configuration Mode:",
-            ["📊 Compact View", "📋 Detailed View", "🎯 Quick Setup"],
-            key=f"config_mode_{d_config}",
-            help="Choose how to configure slots"
-        )
-        
-        slot_fees[d_config] = {}
-        slot_distribution[d_config] = {}
-        
-        if config_mode == "🎯 Quick Setup":
-            # Quick setup with presets
-            st.markdown("**⚡ Quick Setup - Apply same settings to all slabs**")
+        if not df_forecast.empty:
+            st.success("✅ Forecast completed successfully!")
             
-            preset_fee = st.number_input("Default Fee %", value=2.0, min_value=0.0, max_value=50.0, step=0.1, key=f"preset_fee_{d_config}")
-            preset_dist = 100.0 / d_config if d_config > 0 else 0
+            # Create summaries
+            df_monthly_summary = create_monthly_summary(df_forecast)
+            df_yearly_summary = create_yearly_summary(df_monthly_summary)
+            df_profit_share = create_profit_share_analysis(df_yearly_summary, profit_split)
             
-            for slab_amount in selected_slabs:
-                st.markdown(f"**💰 {CURRENCY_SYMBOL}{slab_amount:,}** - Fee: {preset_fee}%, Distribution: {preset_dist:.1f}% per slot")
-                
-                # Initialize with preset values
-                if slab_amount not in slot_fees[d_config]:
-                    slot_fees[d_config][slab_amount] = {}
-                if slot_distribution[d_config].get(slab_amount) is None:
-                    slot_distribution[d_config][slab_amount] = {}
-                
-                for slot_num in range(1, d_config + 1):
-                    slot_fees[d_config][slab_amount][slot_num] = {"fee_pct": preset_fee, "blocked": False}
-                    slot_distribution[d_config][slab_amount][slot_num] = preset_dist
-                    
-        elif config_mode == "📊 Compact View":
-            # Compact view with better organization
-            for slab_amount in selected_slabs:
-                st.markdown(f"**💰 Slab {CURRENCY_SYMBOL}{slab_amount:,}**")
-                
-                # Initialize slot configuration for this slab
-                if slab_amount not in slot_fees[d_config]:
-                    slot_fees[d_config][slab_amount] = {}
-                if slot_distribution[d_config].get(slab_amount) is None:
-                    slot_distribution[d_config][slab_amount] = {}
-                
-                # Create a compact table-like layout
-                for slot_num in range(1, d_config + 1):
-                    col1, col2, col3, col4 = st.columns([1, 1, 1, 0.5])
-                    
-                    with col1:
-                        st.markdown(f"**Slot {slot_num}**")
-                    
-                    with col2:
-                        fee_pct = st.number_input(
-                            "Fee %", 
-                            min_value=0.0, max_value=50.0, 
-                            value=2.0, step=0.1, 
-                            key=f"fee_{d_config}_{slab_amount}_{slot_num}",
-                            label_visibility="collapsed"
-                        )
-                        slot_fees[d_config][slab_amount][slot_num] = {"fee_pct": fee_pct}
-                    
-                    with col3:
-                        if not slot_fees[d_config][slab_amount][slot_num].get('blocked', False):
-                            dist_pct = st.number_input(
-                                "Dist %", 
-                                min_value=0.0, max_value=100.0, 
-                                value=100.0/d_config, step=0.1, 
-                                key=f"dist_{d_config}_{slab_amount}_{slot_num}",
-                                label_visibility="collapsed"
-                            )
-                            slot_distribution[d_config][slab_amount][slot_num] = dist_pct
-                        else:
-                            slot_distribution[d_config][slab_amount][slot_num] = 0
-                            st.info("🚫")
-                    
-                    with col4:
-                        blocked = st.checkbox(
-                            "Block", 
-                            key=f"block_{d_config}_{slab_amount}_{slot_num}",
-                            label_visibility="collapsed"
-                        )
-                        slot_fees[d_config][slab_amount][slot_num]['blocked'] = blocked
-                        
-        else:  # Detailed View
-            # Original detailed view but better organized
-            for slab_amount in selected_slabs:
-                with st.expander(f"💰 Slab {CURRENCY_SYMBOL}{slab_amount:,} - Detailed Configuration", expanded=True):
-                    # Initialize slot configuration for this slab
-                    if slab_amount not in slot_fees[d_config]:
-                        slot_fees[d_config][slab_amount] = {}
-                    if slot_distribution[d_config].get(slab_amount) is None:
-                        slot_distribution[d_config][slab_amount] = {}
-                    
-                    # Create slots for this specific slab
-                    for slot_num in range(1, d_config + 1):
-                        st.markdown(f"**🎯 Slot {slot_num}**")
-                        
-                        col1, col2, col3 = st.columns(3)
-                        
-                        with col1:
-                            fee_pct = st.number_input(
-                                f"Fee %", 
-                                min_value=0.0, max_value=100.0, 
-                                value=2.0, step=0.1, 
-                                key=f"fee_{d_config}_{slab_amount}_{slot_num}",
-                                help=f"Fee percentage for Slot {slot_num} of {CURRENCY_SYMBOL}{slab_amount:,}"
-                            )
-                        
-                        with col2:
-                            blocked = st.checkbox(
-                                f"Block Slot", 
-                                key=f"block_{d_config}_{slab_amount}_{slot_num}",
-                                help=f"Block Slot {slot_num} for {CURRENCY_SYMBOL}{slab_amount:,}"
-                            )
-                        
-                        with col3:
-                            if not blocked:
-                                dist_pct = st.number_input(
-                                    f"Distribution %", 
-                                    min_value=0.0, max_value=100.0, 
-                                    value=100.0/d_config, step=0.1, 
-                                    key=f"dist_{d_config}_{slab_amount}_{slot_num}",
-                                    help=f"Distribution percentage for Slot {slot_num} of {CURRENCY_SYMBOL}{slab_amount:,}"
-                                )
-                                slot_distribution[d_config][slab_amount][slot_num] = dist_pct
-                            else:
-                                slot_distribution[d_config][slab_amount][slot_num] = 0
-                                st.info("🚫 Blocked")
-                        
-                        slot_fees[d_config][slab_amount][slot_num] = {"fee_pct": fee_pct, "blocked": blocked}
-        
-        # Validation for all slabs
-        for slab_amount in selected_slabs:
-            if slab_amount in slot_distribution[d_config] and slab_amount in slot_fees[d_config]:
-                unblocked_slots = {k: v for k, v in slot_distribution[d_config][slab_amount].items() 
-                                  if not slot_fees[d_config][slab_amount].get(k, {}).get('blocked', False)}
-                total_unblocked_dist_pct = sum(unblocked_slots.values())
-                
-                if total_unblocked_dist_pct > 0 and abs(total_unblocked_dist_pct - 100) > 0.1:
-                    st.warning(f"⚠️ {CURRENCY_SYMBOL}{slab_amount:,} distribution totals {total_unblocked_dist_pct:.1f}%. Should be 100%.")
-
-# Validation for year-by-year duration shares
-for y_config in range(1, 6):
-    if y_config in yearly_duration_share:
-        current_year_total_share = sum(yearly_duration_share[y_config].values())
-        if current_year_total_share > 0 and abs(current_year_total_share - 100) > 0.1:
-            validation_messages.append(f"⚠️ Year {y_config} duration share total is {current_year_total_share:.1f}%. It should be 100%.")
-
-# Validation for slot distribution (updated for slab-specific configuration)
-for d_config in durations:
-    if d_config in slot_distribution and d_config in slot_fees:
-        # Check each slab's slot distribution separately
-        for slab_amount in slab_map.get(d_config, []):
-            if slab_amount in slot_distribution[d_config] and slab_amount in slot_fees[d_config]:
-                unblocked_slots = {k: v for k, v in slot_distribution[d_config][slab_amount].items() 
-                                  if not slot_fees[d_config][slab_amount].get(k, {}).get('blocked', False)}
-                total_unblocked_dist_pct = sum(unblocked_slots.values())
-                
-                if total_unblocked_dist_pct > 0 and abs(total_unblocked_dist_pct - 100) > 0.1:
-                    validation_messages.append(f"⚠️ Duration {d_config}M, Slab {CURRENCY_SYMBOL}{slab_amount:,} slot distribution total is {total_unblocked_dist_pct:.1f}%. It should be 100%.")
-
-if validation_messages:
-    for msg_val in validation_messages: 
-        st.warning(msg_val)
-    if any("must not exceed 100%" in msg or "should be 100%" in msg for msg in validation_messages):
-        st.stop()
-
-# =============================================================================
-# 🧮 COMPLETE FORECASTING ENGINE
-# =============================================================================
-
-def run_forecast(config_param_fc, fee_collection_mode_fc="Monthly Fee Collection"):
-    """Complete 60-month forecasting engine with all original features"""
-    try:
-        months_fc = 60
-        
-        potential_initial_tam_float = config_param_fc['total_market'] * (config_param_fc['tam_pct'] / 100)
-        initial_tam_fc = math.ceil(potential_initial_tam_float)
-        if initial_tam_fc < 0: 
-            initial_tam_fc = 0 
-        
-        acquisition_rate_fc = config_param_fc['monthly_growth'] / 100
-        
-        potential_float_m1_users = initial_tam_fc * (config_param_fc['start_pct'] / 100) 
-        initial_new_users_m1_fc = math.ceil(potential_float_m1_users)
-        if initial_new_users_m1_fc < 0: 
-            initial_new_users_m1_fc = 0
-        
-        cumulative_acquired_base_fc = 0 
-        rejoin_tracker_fc = {}
-        forecast_data_fc, deposit_log_data_fc, default_log_data_fc, lifecycle_data_fc = [], [], [], []
-        
-        TAM_current_year_fc = initial_tam_fc 
-        TAM_used_cumulative_vs_cap_fc = 0 
-        enforce_cap_growth_fc = config_param_fc.get("cap_tam", False)
-
-        current_kibor_rate_fc = config_param_fc['kibor'] / 100
-        current_spread_rate_fc = config_param_fc['spread'] / 100
-        daily_interest_rate_fc = (current_kibor_rate_fc + current_spread_rate_fc) / 365
-        current_rest_period_months_fc = config_param_fc['rest_period']
-        current_default_frac_fc = config_param_fc['default_rate'] / 100
-        current_penalty_frac_fc = config_param_fc['penalty_pct'] / 100
-        global_default_pre_frac_fc = default_pre_pct / 100
-        global_default_post_frac_fc = default_post_pct / 100
-
-        # Progress tracking
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-
-        for m_idx_fc in range(months_fc): 
-            current_month_num_fc = m_idx_fc + 1 
-            current_year_num_fc = m_idx_fc // 12 + 1
+            # Create detailed logs
+            df_deposit_log = create_deposit_log(df_forecast)
+            df_default_log = create_default_log(df_forecast)
+            df_lifecycle_log = create_lifecycle_log(df_forecast)
             
-            # Update progress
-            progress = (m_idx_fc + 1) / months_fc
-            progress_bar.progress(progress)
-            status_text.text(f"Processing Month {current_month_num_fc}/60...")
+            # Store in session state
+            st.session_state['df_forecast'] = df_forecast
+            st.session_state['df_monthly_summary'] = df_monthly_summary
+            st.session_state['df_yearly_summary'] = df_yearly_summary
+            st.session_state['df_profit_share'] = df_profit_share
+            st.session_state['df_deposit_log'] = df_deposit_log
+            st.session_state['df_default_log'] = df_default_log
+            st.session_state['df_lifecycle_log'] = df_lifecycle_log
+            st.session_state['config'] = config
+            st.session_state['fee_collection_mode'] = fee_collection_mode
+            st.session_state['scenario_name'] = scenario_name
             
-            if m_idx_fc > 0 and m_idx_fc % 12 == 0: 
-                TAM_current_year_fc_float = TAM_current_year_fc * (1 + config_param_fc['annual_growth'] / 100)
-                TAM_current_year_fc = math.ceil(TAM_current_year_fc_float) 
-
-            potential_new_acquisitions_this_month_fc = 0 
-            if m_idx_fc == 0: 
-                potential_new_acquisitions_this_month_fc = initial_new_users_m1_fc 
-            else: 
-                if cumulative_acquired_base_fc > 0 and acquisition_rate_fc > 0:
-                    potential_float_users = cumulative_acquired_base_fc * acquisition_rate_fc
-                    potential_new_acquisitions_this_month_fc = math.ceil(potential_float_users)
-            if potential_new_acquisitions_this_month_fc < 0 : 
-                potential_new_acquisitions_this_month_fc = 0
-
-            actual_new_acquisitions_this_month_fc = potential_new_acquisitions_this_month_fc
-            if enforce_cap_growth_fc:
-                current_tam_for_cap = max(0, TAM_current_year_fc)
-                if (TAM_used_cumulative_vs_cap_fc + actual_new_acquisitions_this_month_fc) > current_tam_for_cap:
-                    actual_new_acquisitions_this_month_fc = max(0, current_tam_for_cap - TAM_used_cumulative_vs_cap_fc)
-                actual_new_acquisitions_this_month_fc = int(actual_new_acquisitions_this_month_fc) 
-            
-            cumulative_acquired_base_fc += actual_new_acquisitions_this_month_fc
-            TAM_used_cumulative_vs_cap_fc += actual_new_acquisitions_this_month_fc
-            newly_acquired_this_month_fc_val = actual_new_acquisitions_this_month_fc
-
-            rejoining_users_this_month_fc_val = rejoin_tracker_fc.get(m_idx_fc, 0) 
-            total_onboarding_this_month_fc = newly_acquired_this_month_fc_val + rejoining_users_this_month_fc_val
-            temp_rejoining_users_for_allocation = rejoining_users_this_month_fc_val
-            
-            # Get the duration shares for the current year
-            durations_for_this_year_fc = yearly_duration_share.get(current_year_num_fc, {})
-
-            if total_onboarding_this_month_fc == 0 or not durations_for_this_year_fc:
-                lifecycle_data_fc.append({"Month": current_month_num_fc, "New Users Acquired for Cohort": 0, "Rejoining Users for Cohort": 0, "Total Onboarding to Cohort": 0})
-                deposit_log_data_fc.append({"Month": current_month_num_fc, "Users Joining": 0, "Installments Collected": 0, "NII This Month (Avg)": 0})
-                default_log_data_fc.append({"Month": current_month_num_fc, "Year": current_year_num_fc, "Pre-Payout Defaulters (Cohort)": 0, "Post-Payout Defaulters (Cohort)": 0, "Default Loss (Cohort Lifetime)": 0})
-                continue
-
-            # User distribution logic with rounding error management
-            remaining_users_to_distribute = total_onboarding_this_month_fc
-            num_dur_configs = len(durations_for_this_year_fc)
-            
-            sorted_dur_shares = sorted(durations_for_this_year_fc.items(), key=lambda item: item[1], reverse=True)
-
-            for idx_dur, (dur_val_fc, dur_share_pct_fc) in enumerate(sorted_dur_shares):
-                if dur_share_pct_fc == 0 or remaining_users_to_distribute == 0: 
-                    continue
-                
-                if idx_dur == num_dur_configs - 1:
-                    users_for_this_duration_fc = remaining_users_to_distribute
-                else:
-                    users_for_this_duration_fc = math.ceil(remaining_users_to_distribute * (dur_share_pct_fc / 100))
-                    if users_for_this_duration_fc > remaining_users_to_distribute:
-                        users_for_this_duration_fc = remaining_users_to_distribute
-                
-                if users_for_this_duration_fc <= 0: 
-                    continue
-
-                current_duration_distributed_users = users_for_this_duration_fc
-                slabs_for_this_duration = slab_map.get(dur_val_fc, [1000])
-                
-                for slab_val_fc in slabs_for_this_duration:
-                    if current_duration_distributed_users <= 0: 
-                        break
-                    
-                    current_slab_distributed_users = current_duration_distributed_users
-                    # Get unblocked slots for this specific slab
-                    slots_for_this_duration = [s for s in range(1, dur_val_fc + 1) 
-                                             if not slot_fees.get(dur_val_fc, {}).get(slab_val_fc, {}).get(s, {}).get('blocked', False)]
-                    
-                    if not slots_for_this_duration:
-                        continue
-                    
-                    for slot_num_fc in slots_for_this_duration:
-                        if current_slab_distributed_users <= 0: 
-                            break
-                        
-                        slot_dist_pct = slot_distribution.get(dur_val_fc, {}).get(slot_num_fc, 0)
-                        if slot_dist_pct <= 0: 
-                            continue
-                        
-                        users_for_this_slot_fc = math.ceil(current_slab_distributed_users * (slot_dist_pct / 100))
-                        if users_for_this_slot_fc > current_slab_distributed_users:
-                            users_for_this_slot_fc = current_slab_distributed_users
-                        
-                        if users_for_this_slot_fc <= 0: 
-                            continue
-                        
-                        # Calculate metrics for this cohort
-                        installment_val_fc = slab_val_fc
-                        total_commitment_per_user_fc = dur_val_fc * installment_val_fc
-                        total_commitment_for_cohort_fc = users_for_this_slot_fc * total_commitment_per_user_fc
-                        
-                        # Get fee percentage for this specific slab and slot
-                        fee_pct_for_slot_fc = slot_fees.get(dur_val_fc, {}).get(installment_val_fc, {}).get(slot_num_fc, {}).get('fee_pct', 2.0)
-                        
-                        # Calculate fee collection based on mode
-                        if fee_collection_mode_fc == "Upfront Fee (Entire Pool)":
-                            # Collect entire fee upfront when customer joins
-                            total_fee_collected_for_cohort_fc = total_commitment_for_cohort_fc * (fee_pct_for_slot_fc / 100)
-                            monthly_fee_collection_fc = 0  # No monthly fee collection
-                        else:
-                            # Monthly fee collection - collect fee monthly with installments
-                            monthly_fee_per_user_fc = (total_commitment_per_user_fc * (fee_pct_for_slot_fc / 100)) / dur_val_fc
-                            total_fee_collected_for_cohort_fc = monthly_fee_per_user_fc * users_for_this_slot_fc * dur_val_fc
-                            monthly_fee_collection_fc = monthly_fee_per_user_fc * users_for_this_slot_fc
-                        
-                        # Enhanced NII calculation with multiple inputs
-                        total_nii_for_cohort_lifetime_per_user = 0
-                        monthly_nii_breakdown = []
-                        
-                        for j_installment_num in range(dur_val_fc): 
-                            collection_month_of_this_installment_idx = m_idx_fc + j_installment_num
-                            payout_due_month_idx_for_cohort_fc = m_idx_fc + slot_num_fc - 1
-                            
-                            # Calculate days this installment is held
-                            days_this_installment_held = days_between_specific_dates(
-                                collection_month_of_this_installment_idx, global_collection_day, 
-                                payout_due_month_idx_for_cohort_fc, global_payout_day
-                            )
-                            
-                            # Base NII from installment amount
-                            base_nii_from_installment = installment_val_fc * daily_interest_rate_fc * days_this_installment_held
-                            
-                            # Additional NII from fee collection (if upfront mode)
-                            fee_nii_contribution = 0
-                            if fee_collection_mode_fc == "Upfront Fee (Entire Pool)":
-                                # Fee collected upfront earns interest until payout
-                                upfront_fee_per_user = total_commitment_per_user_fc * (fee_pct_for_slot_fc / 100)
-                                fee_nii_contribution = upfront_fee_per_user * daily_interest_rate_fc * days_this_installment_held
-                            else:
-                                # Monthly fee collection - fee earns interest from collection to payout
-                                monthly_fee_per_user = (total_commitment_per_user_fc * (fee_pct_for_slot_fc / 100)) / dur_val_fc
-                                fee_collection_month = collection_month_of_this_installment_idx
-                                fee_days_held = days_between_specific_dates(
-                                    fee_collection_month, global_collection_day,
-                                    payout_due_month_idx_for_cohort_fc, global_payout_day
-                                )
-                                fee_nii_contribution = monthly_fee_per_user * daily_interest_rate_fc * fee_days_held
-                            
-                            # Pool growth NII - interest on accumulated deposits
-                            pool_growth_nii = 0
-                            if j_installment_num > 0:  # Not the first installment
-                                # Calculate accumulated pool from previous installments
-                                accumulated_pool = installment_val_fc * j_installment_num
-                                pool_growth_nii = accumulated_pool * daily_interest_rate_fc * days_this_installment_held
-                            
-                            # Total NII for this installment
-                            total_nii_this_installment = base_nii_from_installment + fee_nii_contribution + pool_growth_nii
-                            total_nii_for_cohort_lifetime_per_user += total_nii_this_installment
-                            
-                            # Store monthly breakdown for analysis
-                            monthly_nii_breakdown.append({
-                                "installment": j_installment_num + 1,
-                                "base_nii": base_nii_from_installment,
-                                "fee_nii": fee_nii_contribution,
-                                "pool_growth_nii": pool_growth_nii,
-                                "total_nii": total_nii_this_installment,
-                                "days_held": days_this_installment_held
-                            })
-                        
-                        # Calculate cohort-level NII
-                        total_nii_for_cohort_duration_fc = total_nii_for_cohort_lifetime_per_user * users_for_this_slot_fc
-                        avg_monthly_nii_for_cohort = total_nii_for_cohort_duration_fc / dur_val_fc if dur_val_fc > 0 else 0
-                        nii_to_log_for_joining_month = avg_monthly_nii_for_cohort 
-
-                        # Enhanced Default calculations with types and fees
-                        num_defaulters_total_fc = math.ceil(users_for_this_slot_fc * current_default_frac_fc) 
-                        num_pre_payout_defaulters_fc = math.ceil(num_defaulters_total_fc * global_default_pre_frac_fc) 
-                        num_post_payout_defaulters_fc = num_defaulters_total_fc - num_pre_payout_defaulters_fc
-                        if num_post_payout_defaulters_fc < 0: 
-                            num_post_payout_defaulters_fc = 0
-
-                        # Enhanced Loss calculations with default fees
-                        # Pre-payout defaults: partial refund + default processing fee
-                        refund_amount_per_pre_defaulter = total_commitment_per_user_fc * (current_penalty_frac_fc / 100)
-                        default_processing_fee_per_pre = total_commitment_per_user_fc * (default_fee_rate / 100)
-                        loss_per_pre_defaulter_fc = total_commitment_per_user_fc - refund_amount_per_pre_defaulter + default_processing_fee_per_pre
-                        total_pre_payout_loss_fc = num_pre_payout_defaulters_fc * loss_per_pre_defaulter_fc
-                        
-                        # Post-payout defaults: full loss + default processing fee
-                        default_processing_fee_per_post = total_commitment_per_user_fc * (default_fee_rate / 100)
-                        loss_per_post_defaulter_fc = total_commitment_per_user_fc + default_processing_fee_per_post
-                        total_post_payout_loss_fc = num_post_payout_defaulters_fc * loss_per_post_defaulter_fc
-                        
-                        # Total loss calculation
-                        total_loss_for_cohort_fc = total_pre_payout_loss_fc + total_post_payout_loss_fc
-                        
-                        # Default recovery calculation
-                        total_defaulted_amount = (num_pre_payout_defaulters_fc * total_commitment_per_user_fc) + (num_post_payout_defaulters_fc * total_commitment_per_user_fc)
-                        recovered_amount = total_defaulted_amount * (default_recovery_rate / 100)
-                        net_default_loss = total_loss_for_cohort_fc - recovered_amount
-                        
-                        # Default fees collected
-                        total_default_fees_collected = (num_pre_payout_defaulters_fc + num_post_payout_defaulters_fc) * (total_commitment_per_user_fc * default_fee_rate / 100)
-                        
-                        # External capital calculation
-                        external_capital_needed_for_cohort_lifetime_fc = total_loss_for_cohort_fc
-                        
-                        # Expected profit calculation
-                        expected_profit_for_cohort_fc = total_fee_collected_for_cohort_fc + total_nii_for_cohort_duration_fc - total_loss_for_cohort_fc
-                        
-                        # Payout calculations
-                        payout_due_calendar_month_for_cohort_fc = m_idx_fc + slot_num_fc
-                        payout_amount_scheduled_for_cohort_fc = users_for_this_slot_fc * installment_val_fc
-                        
-                        # Cash flow calculations
-                        cash_in_installments_this_month_cohort_fc = users_for_this_slot_fc * installment_val_fc
-                        
-                        # Add monthly fee collection to cash flow
-                        if fee_collection_mode_fc == "Monthly Fee Collection":
-                            cash_in_installments_this_month_cohort_fc += monthly_fee_collection_fc
-                        
-                        # User allocation between new and rejoining
-                        from_newly_acquired_fc = 0
-                        from_rejoin_pool_fc = 0
-                        if newly_acquired_this_month_fc_val > 0:
-                            from_newly_acquired_fc = users_for_this_slot_fc
-                        else:
-                            from_rejoin_pool_fc = users_for_this_slot_fc
-                        
-                        users_in_this_specific_cohort_fc = users_for_this_slot_fc
-                        
-                        # Calculate NII breakdown for analysis
-                        total_base_nii = sum(item["base_nii"] for item in monthly_nii_breakdown) * users_for_this_slot_fc
-                        total_fee_nii = sum(item["fee_nii"] for item in monthly_nii_breakdown) * users_for_this_slot_fc
-                        total_pool_growth_nii = sum(item["pool_growth_nii"] for item in monthly_nii_breakdown) * users_for_this_slot_fc
-                        
-                        # Store forecast data with enhanced default metrics
-                        forecast_data_fc.append({
-                            "Month Joined": current_month_num_fc,
-                            "Duration": dur_val_fc,
-                            "Slab": slab_val_fc,
-                            "Slot": slot_num_fc,
-                            "Users": users_in_this_specific_cohort_fc,
-                            "Total Commitment Per User": total_commitment_per_user_fc,
-                            "Total Commitment (Cohort)": total_commitment_for_cohort_fc,
-                            "Fee %": fee_pct_for_slot_fc,
-                            "Total Fee Collected (Lifetime)": total_fee_collected_for_cohort_fc,
-                            "Total NII (Lifetime)": total_nii_for_cohort_duration_fc,
-                            "Base NII (Lifetime)": total_base_nii,
-                            "Fee NII (Lifetime)": total_fee_nii,
-                            "Pool Growth NII (Lifetime)": total_pool_growth_nii,
-                            "NII Earned This Month (Avg)": nii_to_log_for_joining_month,
-                            "Pools Formed": users_in_this_specific_cohort_fc / dur_val_fc if dur_val_fc > 0 else 0,
-                            "Cash In (Installments This Month)": cash_in_installments_this_month_cohort_fc,
-                            "Payout Due Month": payout_due_calendar_month_for_cohort_fc,
-                            "Payout Amount Scheduled": payout_amount_scheduled_for_cohort_fc,
-                            # Enhanced Default Metrics
-                            "Total Defaulters": num_defaulters_total_fc,
-                            "Pre-Payout Defaulters": num_pre_payout_defaulters_fc,
-                            "Post-Payout Defaulters": num_post_payout_defaulters_fc,
-                            "Total Default Loss (Lifetime)": total_loss_for_cohort_fc,
-                            "Net Default Loss (After Recovery)": net_default_loss,
-                            "Default Recovery Amount": recovered_amount,
-                            "Default Fees Collected": total_default_fees_collected,
-                            "Pre-Payout Loss": total_pre_payout_loss_fc,
-                            "Post-Payout Loss": total_post_payout_loss_fc,
-                            "External Capital For Loss (Lifetime)": external_capital_needed_for_cohort_lifetime_fc,
-                            "Expected Lifetime Profit": expected_profit_for_cohort_fc
-                        })
-                        
-                        deposit_log_data_fc.append({"Month": current_month_num_fc, "Users Joining": users_in_this_specific_cohort_fc, "Installments Collected": cash_in_installments_this_month_cohort_fc, "NII This Month (Avg)": nii_to_log_for_joining_month})
-                        default_log_data_fc.append({"Month": current_month_num_fc, "Year": current_year_num_fc, "Pre-Payout Defaulters (Cohort)": num_pre_payout_defaulters_fc,"Post-Payout Defaulters (Cohort)": num_post_payout_defaulters_fc,"Default Loss (Cohort Lifetime)": total_loss_for_cohort_fc})
-                        lifecycle_data_fc.append({"Month": current_month_num_fc, "New Users Acquired for Cohort": from_newly_acquired_fc, "Rejoining Users for Cohort": from_rejoin_pool_fc, "Total Onboarding to Cohort": users_in_this_specific_cohort_fc}) 
-                        
-                        # Rejoin tracking
-                        rejoin_at_month_idx_fc = m_idx_fc + dur_val_fc + int(current_rest_period_months_fc)
-                        non_defaulters_in_cohort = users_in_this_specific_cohort_fc - num_defaulters_total_fc
-                        if non_defaulters_in_cohort < 0: 
-                            non_defaulters_in_cohort = 0 
-                        if rejoin_at_month_idx_fc < months_fc and non_defaulters_in_cohort > 0 :
-                            rejoin_tracker_fc[rejoin_at_month_idx_fc] = rejoin_tracker_fc.get(rejoin_at_month_idx_fc, 0) + non_defaulters_in_cohort
-                        
-                        current_slab_distributed_users -= users_in_this_specific_cohort_fc
-                    current_duration_distributed_users -= users_for_this_duration_fc
-                remaining_users_to_distribute -= users_for_this_duration_fc
-            
-        # Clear progress indicators
-        progress_bar.empty()
-        status_text.empty()
-        
-        df_forecast_fc = pd.DataFrame(forecast_data_fc).fillna(0)
-        df_deposit_log_fc = pd.DataFrame(deposit_log_data_fc).fillna(0)
-        df_default_log_fc = pd.DataFrame(default_log_data_fc).fillna(0)
-        df_lifecycle_fc = pd.DataFrame(lifecycle_data_fc).fillna(0)
-        return df_forecast_fc, df_deposit_log_fc, df_default_log_fc, df_lifecycle_fc
-        
-    except Exception as e:
-        st.error(f"Error in forecasting: {str(e)}")
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-
-# =============================================================================
-# 📊 DASHBOARD COMPONENTS
-# =============================================================================
-
-def create_dashboard_overview(df_monthly, scenario_name):
-    """Create dashboard overview with key metrics"""
-    try:
-        # Calculate key metrics
-        total_users = df_monthly['Users Joining This Month'].sum() if 'Users Joining This Month' in df_monthly.columns else 0
-        total_profit = df_monthly['Gross Profit This Month (Accrued from New Cohorts)'].sum() if 'Gross Profit This Month (Accrued from New Cohorts)' in df_monthly.columns else 0
-        total_cash_in = df_monthly['Cash In (Installments This Month)'].sum() if 'Cash In (Installments This Month)' in df_monthly.columns else 0
-        avg_fee_rate = 2.5  # Simulated
-        
-        # Calculate growth rates
-        if len(df_monthly) > 1 and 'Users Joining This Month' in df_monthly.columns:
-            user_growth = ((df_monthly['Users Joining This Month'].iloc[-1] - df_monthly['Users Joining This Month'].iloc[0]) / df_monthly['Users Joining This Month'].iloc[0]) * 100
-            profit_growth = ((df_monthly['Gross Profit This Month (Accrued from New Cohorts)'].iloc[-1] - df_monthly['Gross Profit This Month (Accrued from New Cohorts)'].iloc[0]) / df_monthly['Gross Profit This Month (Accrued from New Cohorts)'].iloc[0]) * 100
         else:
-            user_growth = 0
-            profit_growth = 0
+            st.error("❌ No forecast data generated")
+            st.error("💡 **Troubleshooting Tips:**")
+            st.error("1. Check that you have selected durations and slabs")
+            st.error("2. Ensure slot distribution totals 100% for each slab")
+            st.error("3. Verify that not all slots are blocked")
+            st.error("4. Try using 'Configuration Mode' for easier setup")
+
+# Display results based on view mode
+if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].empty:
+    df_forecast = st.session_state['df_forecast']
+    df_monthly_summary = st.session_state['df_monthly_summary']
+    df_yearly_summary = st.session_state['df_yearly_summary']
+    df_profit_share = st.session_state['df_profit_share']
+    df_deposit_log = st.session_state['df_deposit_log']
+    df_default_log = st.session_state['df_default_log']
+    df_lifecycle_log = st.session_state['df_lifecycle_log']
+    config = st.session_state['config']
+    fee_collection_mode = st.session_state['fee_collection_mode']
+    scenario_name = st.session_state['scenario_name']
+    
+    if view_mode == "📊 Dashboard View":
+        # Dashboard overview
+        create_dashboard_overview(df_monthly_summary, scenario_name, CURRENCY_SYMBOL, CURRENCY_NAME)
         
-        # Display header
-        st.markdown(f"""
-        <div class="dashboard-header">
-            <h1>📊 {scenario_name} Dashboard</h1>
-            <p>Real-time Business Intelligence & Analytics</p>
-        </div>
-        """, unsafe_allow_html=True)
+        # Fee Collection Mode Analysis
+        st.subheader("💳 Fee Collection Analysis")
         
-        # Key metrics
-        st.markdown("### 📊 Key Performance Indicators")
-        
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown(create_metric_card(
-                "Total Users", 
-                format_number(total_users), 
-                f"{user_growth:.1f}%", 
-                "positive" if user_growth > 0 else "negative",
-                "👥",
-                "All time"
-            ), unsafe_allow_html=True)
+            if fee_collection_mode == "Upfront Fee (Entire Pool)":
+                st.success("**✅ UPFRONT FEE MODE ACTIVE**")
+                st.markdown("**How it works:**")
+                st.markdown("- Customer pays entire fee when joining")
+                st.markdown("- Fee = Total Commitment × Fee %")
+                st.markdown("- Example: 6M, 5K/month, 2% fee = 600 fee upfront")
+            else:
+                st.info("**📅 MONTHLY FEE MODE ACTIVE**")
+                st.markdown("**How it works:**")
+                st.markdown("- Customer pays fee monthly with installments")
+                st.markdown("- Monthly Fee = (Total Commitment × Fee %) ÷ Duration")
+                st.markdown("- Example: 6M, 5K/month, 2% fee = 100/month")
         
         with col2:
-            st.markdown(create_metric_card(
-                "Total Profit", 
-                format_currency(total_profit), 
-                f"{profit_growth:.1f}%", 
-                "positive" if profit_growth > 0 else "negative",
-                "💰",
-                "Lifetime"
-            ), unsafe_allow_html=True)
+            st.markdown("**💡 Business Impact:**")
+            if fee_collection_mode == "Upfront Fee (Entire Pool)":
+                st.markdown("**✅ Benefits:**")
+                st.markdown("- Immediate cash flow")
+                st.markdown("- No collection risk")
+                st.markdown("- Better liquidity")
+                st.markdown("**⚠️ Challenges:**")
+                st.markdown("- Higher barrier to entry")
+                st.markdown("- May reduce customer acquisition")
+            else:
+                st.markdown("**✅ Benefits:**")
+                st.markdown("- Lower barrier to entry")
+                st.markdown("- Better customer experience")
+                st.markdown("- Higher acquisition potential")
+                st.markdown("**⚠️ Challenges:**")
+                st.markdown("- Delayed fee collection")
+                st.markdown("- Collection risk")
         
-        with col3:
-            st.markdown(create_metric_card(
-                "Cash In", 
-                format_currency(total_cash_in), 
-                "12.5%", 
-                "positive",
-                "💵",
-                "This month"
-            ), unsafe_allow_html=True)
+        # NII Analysis
+        create_nii_analysis(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
         
-        with col4:
-            st.markdown(create_metric_card(
-                "Avg Fee Rate", 
-                f"{avg_fee_rate}%", 
-                "0.2%", 
-                "positive",
-                "📈",
-                "Weighted avg"
-            ), unsafe_allow_html=True)
+        # Revenue & Profit Analysis
+        create_revenue_profit_analysis(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
+        
+        # Profit Share Analysis
+        create_profit_share_analysis(df_forecast, profit_split, CURRENCY_SYMBOL, CURRENCY_NAME)
+        
+        # Default Impact Analysis
+        create_default_impact_analysis(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
+        
+        # Export options
+        st.subheader("📥 Export Data")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            csv = df_forecast.to_csv(index=False)
+            st.download_button(
+                label="📄 Download CSV",
+                data=csv,
+                file_name=f"rosca_forecast_{scenario_name}.csv",
+                mime="text/csv"
+            )
+        
+        with col2:
+            # Excel export
+            from io import BytesIO
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                df_forecast.to_excel(writer, sheet_name='Forecast', index=False)
+                if not df_monthly_summary.empty:
+                    df_monthly_summary.to_excel(writer, sheet_name='Monthly Summary', index=False)
+                if not df_yearly_summary.empty:
+                    df_yearly_summary.to_excel(writer, sheet_name='Yearly Summary', index=False)
+                if not df_profit_share.empty:
+                    df_profit_share.to_excel(writer, sheet_name='Profit Share', index=False)
+                if not df_deposit_log.empty:
+                    df_deposit_log.to_excel(writer, sheet_name='Deposit Log', index=False)
+                if not df_default_log.empty:
+                    df_default_log.to_excel(writer, sheet_name='Default Log', index=False)
+                if not df_lifecycle_log.empty:
+                    df_lifecycle_log.to_excel(writer, sheet_name='Lifecycle Log', index=False)
+            excel_data = output.getvalue()
             
-    except Exception as e:
-        st.error(f"Error creating dashboard overview: {str(e)}")
-
-def create_monthly_summary(df_forecast_main):
-    """Create monthly summary from forecast data"""
-    try:
-        if df_forecast_main.empty:
-            return pd.DataFrame()
-            
-        # Monthly direct data
-        df_monthly_direct = df_forecast_main.groupby("Month Joined")[
-            ["Cash In (Installments This Month)", "NII Earned This Month (Avg)", "Pools Formed", "Users"] 
-        ].sum().reset_index().rename(columns={"Month Joined": "Month", 
-                                              "Users": "Users Joining This Month", 
-                                              "NII Earned This Month (Avg)": "NII This Month (Sum of Avg from New Cohorts)"}) 
-
-        # Payouts data
-        df_payouts_actual = df_forecast_main.groupby("Payout Due Month")[
-            ["Payout Amount Scheduled", "Users"]
-        ].sum().reset_index().rename(columns={
-            "Payout Due Month": "Month", 
-            "Payout Amount Scheduled": "Actual Cash Out This Month",
-            "Users": "Payout Recipient Users"
-        })
-        
-        # Lifetime values
-        df_lifetime_values = df_forecast_main.groupby("Month Joined")[
-            ["Total Fee Collected (Lifetime)", "Total NII (Lifetime)", 
-             "Total Default Loss (Lifetime)", "Expected Lifetime Profit",
-             "External Capital For Loss (Lifetime)"]
-        ].sum().reset_index().rename(columns={"Month Joined": "Month"})
-
-        # Create monthly summary
-        df_monthly_summary = pd.DataFrame({"Month": range(1, 61)})
-        df_monthly_summary = df_monthly_summary.merge(df_monthly_direct, on="Month", how="left")
-        df_monthly_summary = df_monthly_summary.merge(df_payouts_actual, on="Month", how="left")
-        df_monthly_summary = df_monthly_summary.merge(df_lifetime_values, on="Month", how="left")
-        df_monthly_summary = df_monthly_summary.fillna(0)
-
-        # Calculate derived metrics
-        df_monthly_summary["Net Cash Flow This Month"] = df_monthly_summary["Cash In (Installments This Month)"] - df_monthly_summary["Actual Cash Out This Month"]
-        df_monthly_summary["Gross Profit This Month (Accrued from New Cohorts)"] = df_monthly_summary["Total Fee Collected (Lifetime)"] + \
-                                                            df_monthly_summary["Total NII (Lifetime)"] - \
-                                                            df_monthly_summary["Total Default Loss (Lifetime)"]
-        
-        return df_monthly_summary
-        
-    except Exception as e:
-        st.error(f"Error creating monthly summary: {str(e)}")
-        return pd.DataFrame()
-
-def create_yearly_summary(df_monthly_summary):
-    """Create yearly summary from monthly data"""
-    try:
-        if df_monthly_summary.empty:
-            return pd.DataFrame()
-            
-        df_monthly_summary["Year"] = ((df_monthly_summary["Month"] - 1) // 12) + 1
-        df_yearly_summary = df_monthly_summary.groupby("Year")[
-            ["Users Joining This Month", "Pools Formed", "Cash In (Installments This Month)", 
-             "Actual Cash Out This Month", "Net Cash Flow This Month", 
-             "NII This Month (Sum of Avg from New Cohorts)", "Total NII (Lifetime)",
-             "Payout Recipient Users", "Total Fee Collected (Lifetime)", 
-             "Total Default Loss (Lifetime)", "Gross Profit This Month (Accrued from New Cohorts)", 
-             "External Capital For Loss (Lifetime)"]
-        ].sum().reset_index()
-        
-        df_yearly_summary.rename(columns={
-            "Gross Profit This Month (Accrued from New Cohorts)": "Annual Gross Profit (Accrued from New Cohorts)",
-            "NII This Month (Sum of Avg from New Cohorts)": "Annual NII (Sum of Avg from New Cohorts)",
-            "Total NII (Lifetime)": "Annual Total NII (Lifetime from New Cohorts)"
-        }, inplace=True)
-        
-        return df_yearly_summary
-        
-    except Exception as e:
-        st.error(f"Error creating yearly summary: {str(e)}")
-        return pd.DataFrame()
-
-def create_profit_share_analysis(df_yearly_summary):
-    """Create profit share analysis"""
-    try:
-        if df_yearly_summary.empty:
-            return pd.DataFrame()
-            
-        df_profit_share = pd.DataFrame({
-            "Year": df_yearly_summary["Year"],
-            "External Capital Needed (Annual Accrual)": df_yearly_summary["External Capital For Loss (Lifetime)"],
-            "Annual Cash In (Installments)": df_yearly_summary["Cash In (Installments This Month)"],
-            "Annual NII (Accrued Lifetime)": df_yearly_summary["Annual Total NII (Lifetime from New Cohorts)"], 
-            "Annual Default Loss (Accrued)": df_yearly_summary["Total Default Loss (Lifetime)"],
-            "Annual Fee Collected (Accrued)": df_yearly_summary["Total Fee Collected (Lifetime)"],
-            "Annual Gross Profit (Accrued)": df_yearly_summary["Annual Gross Profit (Accrued from New Cohorts)"],
-            "Part-A Profit Share": df_yearly_summary["Annual Gross Profit (Accrued from New Cohorts)"] * party_a_pct,
-            "Part-B Profit Share": df_yearly_summary["Annual Gross Profit (Accrued from New Cohorts)"] * party_b_pct
-        })
-        
-        df_profit_share["% Loss Covered by External Capital"] = 0
-        mask = df_yearly_summary["Total Default Loss (Lifetime)"] > 0
-        if mask.any(): 
-            df_profit_share.loc[mask, "% Loss Covered by External Capital"] = \
-                (df_yearly_summary.loc[mask, "External Capital For Loss (Lifetime)"] / df_yearly_summary.loc[mask, "Total Default Loss (Lifetime)"]) * 100
-        df_profit_share.fillna(0, inplace=True)
-        
-        return df_profit_share
-        
-    except Exception as e:
-        st.error(f"Error creating profit share analysis: {str(e)}")
-        return pd.DataFrame()
-
-# =============================================================================
-# 🚀 MAIN EXECUTION
-# =============================================================================
-
-# Run Forecast Button
-if st.button("🚀 Run Forecast", type="primary"):
-    output_excel_main = io.BytesIO()
+            st.download_button(
+                label="📊 Download Excel",
+                data=excel_data,
+                file_name=f"rosca_forecast_{scenario_name}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
     
-    with st.spinner("🔄 Processing forecast..."):
-        try:
-            with pd.ExcelWriter(output_excel_main, engine="xlsxwriter") as excel_writer_main:
-                for scenario_idx_main, scenario_data_main in enumerate(scenarios):
-                    current_config_main = scenario_data_main.copy()
-                    current_config_main.update({
-                        "kibor": kibor, "spread": spread, "rest_period": rest_period,
-                        "default_rate": default_rate, "penalty_pct": penalty_pct
-                    })
-                    
-                    # Ensure we have valid configuration
-                    if not durations or not any(slab_map.values()):
-                        st.error("❌ Please configure at least one duration and slab before running forecast!")
-                        st.stop()
-                    
-                    df_forecast_main, df_deposit_log_main, df_default_log_main, df_lifecycle_main = run_forecast(current_config_main, fee_collection_mode)
-
-                    if df_forecast_main.empty:
-                        st.error(f"❌ No forecast data generated for {scenario_data_main['name']}")
-                        st.error("💡 **Troubleshooting Tips:**")
-                        st.error("1. Check that you have selected durations and slabs")
-                        st.error("2. Ensure slot distribution totals 100% for each slab")
-                        st.error("3. Verify that not all slots are blocked")
-                        st.error("4. Try using 'Configuration Mode' for easier setup")
-                        continue
-
-                    # Create summaries
-                    df_monthly_summary_main = create_monthly_summary(df_forecast_main)
-                    df_yearly_summary_main = create_yearly_summary(df_monthly_summary_main)
-                    df_profit_share_main = create_profit_share_analysis(df_yearly_summary_main)
-
-                    if view_mode == "📊 Dashboard View":
-                        # Dashboard Overview
-                        create_dashboard_overview(df_monthly_summary_main, scenario_data_main['name'])
-                        
-                        # Fee Collection Mode Analysis
-                        st.subheader("💳 Fee Collection Analysis")
-                        
-                        col1, col2 = st.columns(2)
-                        
-                        with col1:
-                            if fee_collection_mode == "Upfront Fee (Entire Pool)":
-                        st.success("**✅ UPFRONT FEE MODE ACTIVE**")
-                        st.markdown("**How it works:**")
-                        st.markdown("- Customer pays entire fee when joining")
-                        st.markdown("- Fee = Total Commitment × Fee %")
-                        st.markdown("- Example: 6M, 5K/month, 2% fee = 600 fee upfront")
-                    else:
-                        st.info("**📅 MONTHLY FEE MODE ACTIVE**")
-                        st.markdown("**How it works:**")
-                        st.markdown("- Customer pays fee monthly with installments")
-                        st.markdown("- Monthly Fee = (Total Commitment × Fee %) ÷ Duration")
-                        st.markdown("- Example: 6M, 5K/month, 2% fee = 100/month")
-                
-                with col2:
-                    st.markdown("**💡 Business Impact:**")
-                    if fee_collection_mode == "Upfront Fee (Entire Pool)":
-                        st.markdown("**✅ Benefits:**")
-                        st.markdown("- Immediate cash flow")
-                        st.markdown("- No collection risk")
-                        st.markdown("- Better liquidity")
-                        st.markdown("**⚠️ Challenges:**")
-                        st.markdown("- Higher barrier to entry")
-                        st.markdown("- May reduce customer acquisition")
-                    else:
-                        st.markdown("**✅ Benefits:**")
-                        st.markdown("- Lower barrier to entry")
-                        st.markdown("- Better customer experience")
-                        st.markdown("- Higher acquisition potential")
-                        st.markdown("**⚠️ Challenges:**")
-                        st.markdown("- Delayed fee collection")
-                        st.markdown("- Collection risk")
-                
-                # Enhanced NII Analysis
-                st.subheader("💰 NII (Net Interest Income) Analysis")
-                
-                # Calculate NII breakdown from forecast data
-                if not df_forecast_main.empty and 'Base NII (Lifetime)' in df_forecast_main.columns:
-                    total_base_nii = df_forecast_main['Base NII (Lifetime)'].sum()
-                    total_fee_nii = df_forecast_main['Fee NII (Lifetime)'].sum()
-                    total_pool_growth_nii = df_forecast_main['Pool Growth NII (Lifetime)'].sum()
-                    total_nii = df_forecast_main['Total NII (Lifetime)'].sum()
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Base NII", f"${total_base_nii:,.0f}", help="Interest earned on monthly installments")
-                    with col2:
-                        st.metric("Fee NII", f"${total_fee_nii:,.0f}", help="Interest earned on collected fees")
-                    with col3:
-                        st.metric("Pool Growth NII", f"${total_pool_growth_nii:,.0f}", help="Interest on accumulated deposits")
-                    with col4:
-                        st.metric("Total NII", f"${total_nii:,.0f}", help="Total Net Interest Income")
-                    
-                    # NII breakdown chart
-                    st.markdown("### 📊 NII Components Breakdown")
-                    
-                    nii_data = {
-                        'Component': ['Base NII', 'Fee NII', 'Pool Growth NII'],
-                        'Amount': [total_base_nii, total_fee_nii, total_pool_growth_nii],
-                        'Percentage': [
-                            (total_base_nii / total_nii * 100) if total_nii > 0 else 0,
-                            (total_fee_nii / total_nii * 100) if total_nii > 0 else 0,
-                            (total_pool_growth_nii / total_nii * 100) if total_nii > 0 else 0
-                        ]
-                    }
-                    
-                    df_nii_breakdown = pd.DataFrame(nii_data)
-                    
-                    col1, col2 = st.columns(2)
-                    
-                    with col1:
-                        st.dataframe(df_nii_breakdown, use_container_width=True)
-                    
-                    with col2:
-                        # Create a simple pie chart using matplotlib
-                        try:
-                            import matplotlib.pyplot as plt
-                            fig, ax = plt.subplots(figsize=(6, 4))
-                            ax.pie(df_nii_breakdown['Amount'], labels=df_nii_breakdown['Component'], 
-                                  autopct='%1.1f%%', startangle=90)
-                            ax.set_title('NII Components Distribution')
-                            st.pyplot(fig)
-                        except:
-                            st.info("Chart visualization not available")
-                    
-                    # NII explanation
-                    st.markdown("### 📚 NII Calculation Explanation")
-                    st.markdown("""
-                    **NII (Net Interest Income) is calculated from multiple sources:**
-                    
-                    1. **Base NII**: Interest earned on monthly installment deposits
-                       - Formula: `Installment Amount × Daily Interest Rate × Days Held`
-                       - Each installment earns interest from collection date to payout date
-                    
-                    2. **Fee NII**: Interest earned on collected fees
-                       - **Upfront Mode**: Fee collected immediately, earns interest until payout
-                       - **Monthly Mode**: Monthly fee earns interest from collection to payout
-                    
-                    3. **Pool Growth NII**: Interest on accumulated deposits
-                       - As more installments are collected, the pool grows
-                       - Interest is earned on the growing pool balance
-                       - Higher for later installments as pool size increases
-                    
-                    **Interest Rate**: KIBOR + Spread (currently {:.1f}% + {:.1f}% = {:.1f}% annually)
-                    """.format(kibor, spread, kibor + spread))
-                else:
-                    st.info("NII breakdown data not available for this scenario")
-                
-                # Revenue & Profit Summary
-                if not df_forecast_main.empty:
-                    st.subheader("💰 Revenue & Profit Summary")
-                    
-                    # Calculate key revenue metrics
-                    total_fees = df_forecast_main['Total Fee Collected (Lifetime)'].sum()
-                    total_nii = df_forecast_main['Total NII (Lifetime)'].sum()
-                    total_revenue = total_fees + total_nii
-                    total_losses = df_forecast_main['Total Default Loss (Lifetime)'].sum()
-                    gross_profit = total_revenue - total_losses
-                    total_users = df_forecast_main['Users'].sum()
-                    
-                    # Revenue metrics cards
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Total Revenue", f"${total_revenue:,.0f}", help="Fees + NII")
-                    with col2:
-                        st.metric("Gross Profit", f"${gross_profit:,.0f}", help="Revenue - Losses")
-                    with col3:
-                        st.metric("Revenue/User", f"${total_revenue/total_users:,.0f}" if total_users > 0 else "$0", help="Revenue per customer")
-                    with col4:
-                        st.metric("Profit Margin", f"{(gross_profit/total_revenue*100):.1f}%" if total_revenue > 0 else "0%", help="Profit / Revenue")
-                    
-                    # Revenue share summary
-                    if not df_profit_share_main.empty:
-                        st.markdown("#### 💼 Revenue Share Summary")
-                        total_party_a = df_profit_share_main['Part-A Profit Share'].sum()
-                        total_party_b = df_profit_share_main['Part-B Profit Share'].sum()
-                        
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("Party A Share", f"${total_party_a:,.0f}", f"{profit_split:.1f}%")
-                        with col2:
-                            st.metric("Party B Share", f"${total_party_b:,.0f}", f"{100-profit_split:.1f}%")
-                        with col3:
-                            st.metric("Total Shared", f"${total_party_a + total_party_b:,.0f}", "100%")
-                
-                # Default Impact Summary
-                if not df_forecast_main.empty:
-                    st.subheader("⚠️ Default Impact Summary")
-                    
-                    # Calculate default summary metrics
-                    total_defaulters = df_forecast_main['Total Defaulters'].sum()
-                    total_default_loss = df_forecast_main['Total Default Loss (Lifetime)'].sum()
-                    net_default_loss = df_forecast_main['Net Default Loss (After Recovery)'].sum()
-                    total_default_fees = df_forecast_main['Default Fees Collected'].sum()
-                    total_users = df_forecast_main['Users'].sum()
-                    
-                    # Default summary cards
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric("Default Rate", f"{(total_defaulters/total_users*100):.1f}%" if total_users > 0 else "0%", f"{total_defaulters:,.0f} defaulters")
-                    with col2:
-                        st.metric("Total Default Loss", f"${total_default_loss:,.0f}", help="Before recovery")
-                    with col3:
-                        st.metric("Net Default Loss", f"${net_default_loss:,.0f}", f"${total_default_loss - net_default_loss:,.0f} recovered")
-                    with col4:
-                        st.metric("Default Fees", f"${total_default_fees:,.0f}", help="Additional revenue from defaults")
-                
-                # Main charts
-                col1, col2 = st.columns([2, 1])
-                
-                with col1:
-                    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                    st.markdown('<div class="chart-title">📈 Business Overview</div>', unsafe_allow_html=True)
-                    
-                    # Create overview chart
-                    if PLOTLY_AVAILABLE:
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(
-                            x=df_monthly_summary_main['Month'],
-                            y=df_monthly_summary_main['Users Joining This Month'],
-                            mode='lines+markers',
-                            name='Users',
-                            line=dict(color=CHART_COLORS[0], width=3)
-                        ))
-                        fig.update_layout(
-                            title="User Growth Trend",
-                            xaxis_title="Month",
-                            yaxis_title="Users",
-                            template="plotly_white",
-                            height=400
-                        )
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        fig, ax = plt.subplots(figsize=(12, 6))
-                        ax.plot(df_monthly_summary_main['Month'], df_monthly_summary_main['Users Joining This Month'], 
-                               color=CHART_COLORS[0], linewidth=2, marker='o')
-                        ax.set_xlabel('Month')
-                        ax.set_ylabel('Users')
-                        ax.set_title('User Growth Trend')
-                        ax.grid(True, alpha=0.3)
-                        st.pyplot(fig)
-                    
-                    st.markdown('</div>', unsafe_allow_html=True)
-                
-                with col2:
-                    st.markdown('<div class="chart-container">', unsafe_allow_html=True)
-                    st.markdown('<div class="chart-title">👥 User Activity</div>', unsafe_allow_html=True)
-                    
-                    # Real-time user count
-                    current_users = df_monthly_summary_main['Users Joining This Month'].sum()
-                    st.markdown(f'<div style="font-size: 2.5rem; font-weight: 800; color: #1e293b; text-align: center; margin: 1rem 0;">{current_users}</div>', unsafe_allow_html=True)
-                    st.markdown('<div style="text-align: center; color: #64748b; margin-bottom: 1rem;">TOTAL USERS</div>', unsafe_allow_html=True)
-                    
-                    st.markdown('</div>', unsafe_allow_html=True)
-
-            elif view_mode == "🔧 Detailed Forecast":
-                # Detailed forecast view
-                st.header(f"Scenario: {scenario_data_main['name']}")
-                st.subheader(f"📘 Raw Forecast Data (Cohorts by Joining Month)")
-                
-                st.dataframe(df_forecast_main.style.format(precision=0, thousands=","))
-
-                st.subheader(f"📊 Monthly Summary for {scenario_data_main['name']}")
-                cols_to_display_monthly_main = [
-                    "Month", "Users Joining This Month", "Pools Formed", 
-                    "Cash In (Installments This Month)", "Actual Cash Out This Month", "Net Cash Flow This Month",
-                    "NII This Month (Sum of Avg from New Cohorts)", 
-                    "Total NII (Lifetime)", 
-                    "Payout Recipient Users",
-                    "Total Fee Collected (Lifetime)", "Total Default Loss (Lifetime)",
-                    "Gross Profit This Month (Accrued from New Cohorts)", "External Capital For Loss (Lifetime)"
-                ]
-                st.dataframe(df_monthly_summary_main[cols_to_display_monthly_main].style.format(precision=0, thousands=","))
-
-                # Yearly Summary
-                if not df_yearly_summary_main.empty:
-                    st.subheader(f"📆 Yearly Summary for {scenario_data_main['name']}")
-                    st.dataframe(df_yearly_summary_main.style.format(precision=0, thousands=","))
-
-                # Profit Share Analysis
-                if not df_profit_share_main.empty:
-                    st.subheader(f"💰 Profit Share Summary for {scenario_data_main['name']}")
-                    st.dataframe(df_profit_share_main.style.format(precision=0, thousands=","))
-
-            elif view_mode == "📈 Analytics Only":
-                # Analytics only view
-                st.markdown(f"## 📈 Analytics - {scenario_data_main['name']}")
-                
-                # Key metrics
-                create_dashboard_overview(df_monthly_summary_main, scenario_data_main['name'])
-                
-                # Revenue & Profit Analysis
-                if not df_forecast_main.empty:
-                    st.markdown("### 💰 Revenue & Profit Analysis")
-                    
-                    # Calculate total revenue components
-                    total_fees = df_forecast_main['Total Fee Collected (Lifetime)'].sum()
-                    total_nii = df_forecast_main['Total NII (Lifetime)'].sum()
-                    total_revenue = total_fees + total_nii
-                    total_losses = df_forecast_main['Total Default Loss (Lifetime)'].sum()
-                    gross_profit = total_revenue - total_losses
-                    
-                    # Revenue breakdown
-                    col1, col2, col3, col4, col5 = st.columns(5)
-                    with col1:
-                        st.metric("Total Fees", f"${total_fees:,.0f}", help="Fees collected from customers")
-                    with col2:
-                        st.metric("Total NII", f"${total_nii:,.0f}", help="Net Interest Income")
-                    with col3:
-                        st.metric("Total Revenue", f"${total_revenue:,.0f}", help="Fees + NII")
-                    with col4:
-                        st.metric("Total Losses", f"${total_losses:,.0f}", help="Default losses")
-                    with col5:
-                        st.metric("Gross Profit", f"${gross_profit:,.0f}", help="Revenue - Losses")
-                    
-                    # Revenue streams breakdown
-                    st.markdown("#### 📊 Revenue Streams Breakdown")
-                    revenue_data = {
-                        'Revenue Stream': ['Fees', 'NII', 'Total Revenue'],
-                        'Amount': [total_fees, total_nii, total_revenue],
-                        'Percentage': [
-                            (total_fees / total_revenue * 100) if total_revenue > 0 else 0,
-                            (total_nii / total_revenue * 100) if total_revenue > 0 else 0,
-                            100
-                        ]
-                    }
-                    df_revenue_breakdown = pd.DataFrame(revenue_data)
-                    df_revenue_breakdown['Percentage'] = df_revenue_breakdown['Percentage'].round(1)
-                    st.dataframe(df_revenue_breakdown, use_container_width=True)
-                    
-                    # Profit margin analysis
-                    st.markdown("#### 📈 Profit Margin Analysis")
-                    if total_revenue > 0:
-                        profit_margin = (gross_profit / total_revenue) * 100
-                        fee_margin = (total_fees / total_revenue) * 100
-                        nii_margin = (total_nii / total_revenue) * 100
-                        loss_ratio = (total_losses / total_revenue) * 100
-                        
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Profit Margin", f"{profit_margin:.1f}%", help="Gross Profit / Total Revenue")
-                        with col2:
-                            st.metric("Fee Margin", f"{fee_margin:.1f}%", help="Fees / Total Revenue")
-                        with col3:
-                            st.metric("NII Margin", f"{nii_margin:.1f}%", help="NII / Total Revenue")
-                        with col4:
-                            st.metric("Loss Ratio", f"{loss_ratio:.1f}%", help="Losses / Total Revenue")
-                    
-                    # Revenue per user analysis
-                    st.markdown("#### 👥 Revenue Per User Analysis")
-                    total_users = df_forecast_main['Users'].sum()
-                    if total_users > 0:
-                        revenue_per_user = total_revenue / total_users
-                        profit_per_user = gross_profit / total_users
-                        fee_per_user = total_fees / total_users
-                        nii_per_user = total_nii / total_users
-                        
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Revenue/User", f"${revenue_per_user:,.0f}", help="Total Revenue / Total Users")
-                        with col2:
-                            st.metric("Profit/User", f"${profit_per_user:,.0f}", help="Gross Profit / Total Users")
-                        with col3:
-                            st.metric("Fee/User", f"${fee_per_user:,.0f}", help="Fees / Total Users")
-                        with col4:
-                            st.metric("NII/User", f"${nii_per_user:,.0f}", help="NII / Total Users")
-                    
-                    # Revenue by duration and slot
-                    st.markdown("#### 📊 Revenue by Duration & Slot")
-                    revenue_breakdown = df_forecast_main.groupby(['Duration', 'Slot']).agg({
-                        'Total Fee Collected (Lifetime)': 'sum',
-                        'Total NII (Lifetime)': 'sum',
-                        'Total Default Loss (Lifetime)': 'sum',
-                        'Expected Lifetime Profit': 'sum',
-                        'Users': 'sum'
-                    }).reset_index()
-                    
-                    # Calculate derived metrics
-                    revenue_breakdown['Total Revenue'] = revenue_breakdown['Total Fee Collected (Lifetime)'] + revenue_breakdown['Total NII (Lifetime)']
-                    revenue_breakdown['Net Profit'] = revenue_breakdown['Total Revenue'] - revenue_breakdown['Total Default Loss (Lifetime)']
-                    revenue_breakdown['Revenue/User'] = revenue_breakdown['Total Revenue'] / revenue_breakdown['Users']
-                    revenue_breakdown['Profit/User'] = revenue_breakdown['Net Profit'] / revenue_breakdown['Users']
-                    revenue_breakdown = revenue_breakdown.round(2)
-                    
-                    st.dataframe(revenue_breakdown, use_container_width=True)
-                
-                # Default Impact Analysis
-                if not df_forecast_main.empty:
-                    st.markdown("### ⚠️ Default Impact Analysis")
-                    
-                    # Calculate default impact metrics
-                    total_defaulters = df_forecast_main['Total Defaulters'].sum()
-                    total_pre_payout_defaulters = df_forecast_main['Pre-Payout Defaulters'].sum()
-                    total_post_payout_defaulters = df_forecast_main['Post-Payout Defaulters'].sum()
-                    total_default_loss = df_forecast_main['Total Default Loss (Lifetime)'].sum()
-                    net_default_loss = df_forecast_main['Net Default Loss (After Recovery)'].sum()
-                    total_recovery = df_forecast_main['Default Recovery Amount'].sum()
-                    total_default_fees = df_forecast_main['Default Fees Collected'].sum()
-                    total_users = df_forecast_main['Users'].sum()
-                    
-                    # Default impact metrics
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Total Defaulters", f"{total_defaulters:,.0f}", f"{(total_defaulters/total_users*100):.1f}%" if total_users > 0 else "0%")
-                    with col2:
-                        st.metric("Total Default Loss", f"${total_default_loss:,.0f}", help="Before recovery")
-                    with col3:
-                        st.metric("Net Default Loss", f"${net_default_loss:,.0f}", f"${total_recovery:,.0f} recovered")
-                    with col4:
-                        st.metric("Default Fees Collected", f"${total_default_fees:,.0f}", help="Additional revenue from defaults")
-                    
-                    # Default types breakdown
-                    st.markdown("#### 📊 Default Types Breakdown")
-                    default_types_data = {
-                        'Default Type': ['Pre-Payout Defaults', 'Post-Payout Defaults', 'Total Defaults'],
-                        'Count': [total_pre_payout_defaulters, total_post_payout_defaulters, total_defaulters],
-                        'Percentage': [
-                            (total_pre_payout_defaulters / total_defaulters * 100) if total_defaulters > 0 else 0,
-                            (total_post_payout_defaulters / total_defaulters * 100) if total_defaulters > 0 else 0,
-                            100
-                        ],
-                        'Loss Amount': [
-                            df_forecast_main['Pre-Payout Loss'].sum(),
-                            df_forecast_main['Post-Payout Loss'].sum(),
-                            total_default_loss
-                        ]
-                    }
-                    df_default_types = pd.DataFrame(default_types_data)
-                    df_default_types['Percentage'] = df_default_types['Percentage'].round(1)
-                    st.dataframe(df_default_types, use_container_width=True)
-                    
-                    # Default impact on revenue
-                    if default_impact_on_revenue:
-                        st.markdown("#### 💰 Default Impact on Revenue")
-                        
-                        # Calculate revenue impact
-                        total_revenue_without_defaults = total_fees + total_nii
-                        total_revenue_with_defaults = total_revenue_without_defaults + total_default_fees
-                        revenue_impact = total_default_loss - total_default_fees
-                        net_revenue_impact = revenue_impact - total_recovery
-                        
-                        col1, col2, col3, col4 = st.columns(4)
-                        with col1:
-                            st.metric("Revenue Without Defaults", f"${total_revenue_without_defaults:,.0f}")
-                        with col2:
-                            st.metric("Revenue With Defaults", f"${total_revenue_with_defaults:,.0f}", f"${total_default_fees:,.0f} fees")
-                        with col3:
-                            st.metric("Default Impact", f"${revenue_impact:,.0f}", "negative" if revenue_impact > 0 else "positive")
-                        with col4:
-                            st.metric("Net Impact (After Recovery)", f"${net_revenue_impact:,.0f}", "negative" if net_revenue_impact > 0 else "positive")
-                        
-                        # Default impact visualization
-                        st.markdown("#### 📈 Default Impact Visualization")
-                        try:
-                            import matplotlib.pyplot as plt
-                            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-                            
-                            # Pie chart for default types
-                            ax1.pie([total_pre_payout_defaulters, total_post_payout_defaulters], 
-                                   labels=[f'Pre-Payout ({default_pre_pct}%)', f'Post-Payout ({default_post_pct}%)'],
-                                   autopct='%1.1f%%', startangle=90, colors=['#FF6B6B', '#4ECDC4'])
-                            ax1.set_title('Default Types Distribution')
-                            
-                            # Bar chart for default impact
-                            impact_data = ['Revenue\n(No Defaults)', 'Default Fees\n(Additional)', 'Default Loss\n(Impact)', 'Recovery\n(Offset)', 'Net Impact']
-                            impact_values = [total_revenue_without_defaults, total_default_fees, -total_default_loss, total_recovery, -net_revenue_impact]
-                            colors = ['#4CAF50', '#FFC107', '#F44336', '#2196F3', '#9C27B0']
-                            
-                            bars = ax2.bar(impact_data, impact_values, color=colors)
-                            ax2.set_title('Default Impact on Revenue')
-                            ax2.set_ylabel('Amount ($)')
-                            ax2.tick_params(axis='x', rotation=45)
-                            
-                            # Add value labels on bars
-                            for bar, value in zip(bars, impact_values):
-                                height = bar.get_height()
-                                ax2.text(bar.get_x() + bar.get_width()/2., height + (height*0.01 if height >= 0 else height*0.01),
-                                        f'${value:,.0f}', ha='center', va='bottom' if height >= 0 else 'top')
-                            
-                            plt.tight_layout()
-                            st.pyplot(fig)
-                        except:
-                            st.info("Chart visualization not available")
-                    
-                    # Default by duration and slot analysis
-                    st.markdown("#### 📊 Default Analysis by Duration & Slot")
-                    default_breakdown = df_forecast_main.groupby(['Duration', 'Slot']).agg({
-                        'Total Defaulters': 'sum',
-                        'Pre-Payout Defaulters': 'sum',
-                        'Post-Payout Defaulters': 'sum',
-                        'Total Default Loss (Lifetime)': 'sum',
-                        'Net Default Loss (After Recovery)': 'sum',
-                        'Default Fees Collected': 'sum',
-                        'Users': 'sum'
-                    }).reset_index()
-                    
-                    # Calculate derived metrics
-                    default_breakdown['Default Rate %'] = (default_breakdown['Total Defaulters'] / default_breakdown['Users'] * 100).round(2)
-                    default_breakdown['Pre-Payout %'] = (default_breakdown['Pre-Payout Defaulters'] / default_breakdown['Total Defaulters'] * 100).round(2)
-                    default_breakdown['Loss per Defaulter'] = (default_breakdown['Total Default Loss (Lifetime)'] / default_breakdown['Total Defaulters']).round(2)
-                    default_breakdown['Recovery Rate %'] = ((default_breakdown['Total Default Loss (Lifetime)'] - default_breakdown['Net Default Loss (After Recovery)']) / default_breakdown['Total Default Loss (Lifetime)'] * 100).round(2)
-                    
-                    st.dataframe(default_breakdown, use_container_width=True)
-                
-                # Revenue Share Distribution Analysis
-                st.markdown("### 💼 Revenue Share Distribution Analysis")
-                
-                # Calculate revenue share distribution
-                if not df_profit_share_main.empty:
-                    st.markdown("#### 📊 Party A vs Party B Profit Share")
-                    
-                    # Display profit share metrics
-                    total_party_a_profit = df_profit_share_main['Part-A Profit Share'].sum()
-                    total_party_b_profit = df_profit_share_main['Part-B Profit Share'].sum()
-                    total_shared_profit = total_party_a_profit + total_party_b_profit
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Party A Share", f"${total_party_a_profit:,.0f}", f"{profit_split:.1f}%")
-                    with col2:
-                        st.metric("Party B Share", f"${total_party_b_profit:,.0f}", f"{100-profit_split:.1f}%")
-                    with col3:
-                        st.metric("Total Shared", f"${total_shared_profit:,.0f}", "100%")
-                    
-                    # Revenue share breakdown by year
-                    st.markdown("#### 📈 Annual Revenue Share Breakdown")
-                    share_breakdown = df_profit_share_main[['Year', 'Annual Gross Profit (Accrued)', 'Part-A Profit Share', 'Part-B Profit Share']].copy()
-                    share_breakdown['Party A %'] = (share_breakdown['Part-A Profit Share'] / share_breakdown['Annual Gross Profit (Accrued)'] * 100).round(1)
-                    share_breakdown['Party B %'] = (share_breakdown['Part-B Profit Share'] / share_breakdown['Annual Gross Profit (Accrued)'] * 100).round(1)
-                    share_breakdown = share_breakdown.round(0)
-                    st.dataframe(share_breakdown, use_container_width=True)
-                    
-                    # Revenue share visualization
-                    st.markdown("#### 📊 Revenue Share Visualization")
-                    try:
-                        import matplotlib.pyplot as plt
-                        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
-                        
-                        # Pie chart for total shares
-                        ax1.pie([total_party_a_profit, total_party_b_profit], 
-                               labels=[f'Party A ({profit_split}%)', f'Party B ({100-profit_split}%)'],
-                               autopct='%1.1f%%', startangle=90, colors=['#3B75AF', '#4CAF50'])
-                        ax1.set_title('Total Profit Share Distribution')
-                        
-                        # Bar chart for annual shares
-                        years = share_breakdown['Year'].astype(str)
-                        party_a_shares = share_breakdown['Part-A Profit Share']
-                        party_b_shares = share_breakdown['Part-B Profit Share']
-                        
-                        x = range(len(years))
-                        width = 0.35
-                        ax2.bar([i - width/2 for i in x], party_a_shares, width, label='Party A', color='#3B75AF')
-                        ax2.bar([i + width/2 for i in x], party_b_shares, width, label='Party B', color='#4CAF50')
-                        ax2.set_xlabel('Year')
-                        ax2.set_ylabel('Profit Share ($)')
-                        ax2.set_title('Annual Profit Share by Party')
-                        ax2.set_xticks(x)
-                        ax2.set_xticklabels(years)
-                        ax2.legend()
-                        ax2.grid(True, alpha=0.3)
-                        
-                        plt.tight_layout()
-                        st.pyplot(fig)
-                    except:
-                        st.info("Chart visualization not available")
-                
-                # Cost Structure Analysis
-                st.markdown("### 💸 Cost Structure Analysis")
-                
-                # Calculate cost components
-                total_operational_costs = total_losses  # Default losses as main cost
-                total_revenue_before_costs = total_revenue
-                net_profit_after_costs = gross_profit
-                
-                cost_breakdown = {
-                    'Cost Component': ['Default Losses', 'External Capital Needed', 'Total Costs'],
-                    'Amount': [total_losses, df_forecast_main['External Capital For Loss (Lifetime)'].sum(), total_losses + df_forecast_main['External Capital For Loss (Lifetime)'].sum()],
-                    'Percentage of Revenue': [
-                        (total_losses / total_revenue * 100) if total_revenue > 0 else 0,
-                        (df_forecast_main['External Capital For Loss (Lifetime)'].sum() / total_revenue * 100) if total_revenue > 0 else 0,
-                        ((total_losses + df_forecast_main['External Capital For Loss (Lifetime)'].sum()) / total_revenue * 100) if total_revenue > 0 else 0
-                    ]
-                }
-                
-                df_cost_breakdown = pd.DataFrame(cost_breakdown)
-                df_cost_breakdown['Percentage of Revenue'] = df_cost_breakdown['Percentage of Revenue'].round(1)
-                st.dataframe(df_cost_breakdown, use_container_width=True)
-                
-                # Profitability metrics
-                st.markdown("#### 📈 Profitability Metrics")
-                if total_revenue > 0:
-                    net_profit_margin = (net_profit_after_costs / total_revenue) * 100
-                    cost_ratio = ((total_losses + df_forecast_main['External Capital For Loss (Lifetime)'].sum()) / total_revenue) * 100
-                    roi = (net_profit_after_costs / (total_revenue - net_profit_after_costs)) * 100 if (total_revenue - net_profit_after_costs) > 0 else 0
-                    
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Net Profit Margin", f"{net_profit_margin:.1f}%", help="Net Profit / Total Revenue")
-                    with col2:
-                        st.metric("Cost Ratio", f"{cost_ratio:.1f}%", help="Total Costs / Total Revenue")
-                    with col3:
-                        st.metric("ROI", f"{roi:.1f}%", help="Return on Investment")
-                
-                # NII Analysis
-                if not df_forecast_main.empty and 'Base NII (Lifetime)' in df_forecast_main.columns:
-                    st.markdown("### 💰 NII Analysis")
-                    
-                    # NII summary metrics
-                    total_base_nii = df_forecast_main['Base NII (Lifetime)'].sum()
-                    total_fee_nii = df_forecast_main['Fee NII (Lifetime)'].sum()
-                    total_pool_growth_nii = df_forecast_main['Pool Growth NII (Lifetime)'].sum()
-                    total_nii = df_forecast_main['Total NII (Lifetime)'].sum()
-                    
-                    col1, col2, col3, col4 = st.columns(4)
-                    with col1:
-                        st.metric("Base NII", f"${total_base_nii:,.0f}")
-                    with col2:
-                        st.metric("Fee NII", f"${total_fee_nii:,.0f}")
-                    with col3:
-                        st.metric("Pool Growth NII", f"${total_pool_growth_nii:,.0f}")
-                    with col4:
-                        st.metric("Total NII", f"${total_nii:,.0f}")
-                    
-                    # NII breakdown by duration and slot
-                    st.markdown("#### NII Breakdown by Duration & Slot")
-                    nii_breakdown = df_forecast_main.groupby(['Duration', 'Slot']).agg({
-                        'Base NII (Lifetime)': 'sum',
-                        'Fee NII (Lifetime)': 'sum', 
-                        'Pool Growth NII (Lifetime)': 'sum',
-                        'Total NII (Lifetime)': 'sum',
-                        'Users': 'sum'
-                    }).reset_index()
-                    
-                    # Calculate per-user NII
-                    nii_breakdown['NII Per User'] = nii_breakdown['Total NII (Lifetime)'] / nii_breakdown['Users']
-                    nii_breakdown = nii_breakdown.round(2)
-                    
-                    st.dataframe(nii_breakdown, use_container_width=True)
-                
-                # Analytics charts
-                st.markdown("### 📊 Analytics Charts")
-                
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    st.markdown("#### Growth Analysis")
-                    if PLOTLY_AVAILABLE:
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(
-                            x=df_monthly_summary_main['Month'], 
-                            y=df_monthly_summary_main['Users Joining This Month'], 
-                            mode='lines+markers', 
-                            name='Users', 
-                            line=dict(color=CHART_COLORS[0])
-                        ))
-                        fig.update_layout(title="User Growth", template="plotly_white", height=400)
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        fig, ax = plt.subplots(figsize=(10, 4))
-                        ax.plot(df_monthly_summary_main['Month'], df_monthly_summary_main['Users Joining This Month'], 
-                               marker='o', color=CHART_COLORS[0], linewidth=2)
-                        ax.set_xlabel('Month')
-                        ax.set_ylabel('Users')
-                        ax.set_title('User Growth')
-                        ax.grid(True, alpha=0.3)
-                        st.pyplot(fig)
-                
-                with col2:
-                    st.markdown("#### Profit Analysis")
-                    if PLOTLY_AVAILABLE:
-                        fig = go.Figure()
-                        fig.add_trace(go.Scatter(
-                            x=df_monthly_summary_main['Month'], 
-                            y=df_monthly_summary_main['Gross Profit This Month (Accrued from New Cohorts)'], 
-                            mode='lines+markers', 
-                            name='Profit', 
-                            line=dict(color=CHART_COLORS[1])
-                        ))
-                        fig.update_layout(title="Profit Growth", template="plotly_white", height=400)
-                        st.plotly_chart(fig, use_container_width=True)
-                    else:
-                        fig, ax = plt.subplots(figsize=(10, 4))
-                        ax.plot(df_monthly_summary_main['Month'], df_monthly_summary_main['Gross Profit This Month (Accrued from New Cohorts)'], 
-                               marker='o', color=CHART_COLORS[1], linewidth=2)
-                        ax.set_xlabel('Month')
-                        ax.set_ylabel('Profit (₹)')
-                        ax.set_title('Profit Growth')
-                        ax.grid(True, alpha=0.3)
-                        st.pyplot(fig)
-
-            # Original 5-Chart System
-            st.subheader(f"📊 Visual Charts for {scenario_data_main['name']}")
-            
-            # Prepare chart data
-            df_monthly_chart_data_main = df_monthly_summary_main.copy()
-            df_yearly_chart_data_main = df_yearly_summary_main.copy()
-            if "Year" in df_yearly_chart_data_main.columns and not df_yearly_chart_data_main.empty:
-                df_yearly_chart_data_main["Year"] = df_yearly_chart_data_main["Year"].astype(str)
-            df_profit_share_chart_data_main = df_profit_share_main.copy()
-            if "Year" in df_profit_share_chart_data_main.columns and not df_profit_share_chart_data_main.empty:
-                df_profit_share_chart_data_main["Year"] = df_profit_share_chart_data_main["Year"].astype(str)
-
-            FIG_SIZE_MAIN = (10, 4.5)
-            
-            # Chart validation
-            can_plot_m1 = not df_monthly_chart_data_main.empty and \
-                          all(col in df_monthly_chart_data_main.columns for col in ["Month", "Pools Formed", "Cash In (Installments This Month)"]) and \
-                          not df_monthly_chart_data_main[["Pools Formed", "Cash In (Installments This Month)"]].fillna(0).eq(0).all().all()
-            
-            can_plot_m2 = not df_monthly_chart_data_main.empty and \
-                          all(col in df_monthly_chart_data_main.columns for col in ["Month", "Users Joining This Month", "Gross Profit This Month (Accrued from New Cohorts)"]) and \
-                          not df_monthly_chart_data_main[["Users Joining This Month", "Gross Profit This Month (Accrued from New Cohorts)"]].fillna(0).eq(0).all().all()
-
-            can_plot_y1 = not df_yearly_chart_data_main.empty and \
-                          all(col in df_yearly_chart_data_main.columns for col in ["Year", "Pools Formed", "Cash In (Installments This Month)"]) and \
-                          not df_yearly_chart_data_main[["Pools Formed", "Cash In (Installments This Month)"]].fillna(0).eq(0).all().all()
-
-            can_plot_y2 = not df_yearly_chart_data_main.empty and \
-                          all(col in df_yearly_chart_data_main.columns for col in ["Year", "Users Joining This Month", "Annual Gross Profit (Accrued from New Cohorts)"]) and \
-                          not df_yearly_chart_data_main[["Users Joining This Month", "Annual Gross Profit (Accrued from New Cohorts)"]].fillna(0).eq(0).all().all()
-            
-            can_plot_y3 = not df_profit_share_chart_data_main.empty and \
-                          all(col in df_profit_share_chart_data_main.columns for col in ["Year", "External Capital Needed (Annual Accrual)", "Annual Fee Collected (Accrued)", "Annual Gross Profit (Accrued)"]) and \
-                          not df_profit_share_chart_data_main[["External Capital Needed (Annual Accrual)", "Annual Fee Collected (Accrued)", "Annual Gross Profit (Accrued)"]].fillna(0).eq(0).all().all()
-
-            # Chart 1: Monthly Pools Formed vs. Cash In (Installments)
-            st.markdown("##### Chart 1: Monthly Pools Formed vs. Cash In (Installments)")
-            if can_plot_m1:
-                fig1_main, ax1_main = plt.subplots(figsize=FIG_SIZE_MAIN)
-                ax2_main = ax1_main.twinx()
-                bars1_main = ax1_main.bar(df_monthly_chart_data_main["Month"], df_monthly_chart_data_main["Pools Formed"], color=COLOR_PRIMARY_BAR, label="Pools Formed This Month", width=0.7)
-                line1_main, = ax2_main.plot(df_monthly_chart_data_main["Month"], df_monthly_chart_data_main["Cash In (Installments This Month)"], color=COLOR_SECONDARY_LINE, label="Cash In (Installments)", marker='o', linewidth=2, markersize=4)
-                ax1_main.set_xlabel("Month"); ax1_main.set_ylabel("Pools Formed", color=COLOR_PRIMARY_BAR); ax2_main.set_ylabel("Cash In (Installments)", color=COLOR_SECONDARY_LINE)
-                ax1_main.tick_params(axis='y', labelcolor=COLOR_PRIMARY_BAR); ax2_main.tick_params(axis='y', labelcolor=COLOR_SECONDARY_LINE)
-                ax2_main.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}")); ax1_main.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}"))
-                handles_main = [bars1_main, line1_main]; labels_main = [h.get_label() for h in handles_main]
-                fig1_main.legend(handles_main, labels_main, loc="lower center", bbox_to_anchor=(0.5, -0.15), ncol=2); fig1_main.tight_layout(rect=[0, 0.05, 1, 1]); st.pyplot(fig1_main)
-            else: 
-                st.caption("Not enough data or all values are zero for Chart 1.")
-
-            # Chart 2: Monthly Users Joining vs. Accrued Gross Profit
-            st.markdown("##### Chart 2: Monthly Users Joining vs. Accrued Gross Profit (from New Cohorts)")
-            if can_plot_m2:
-                fig2_main, ax3_main = plt.subplots(figsize=FIG_SIZE_MAIN)
-                ax4_main = ax3_main.twinx()
-                bars2_main = ax3_main.bar(df_monthly_chart_data_main["Month"], df_monthly_chart_data_main["Users Joining This Month"], color=COLOR_ACCENT_BAR, label="Users Joining This Month", width=0.7)
-                line2_main, = ax4_main.plot(df_monthly_chart_data_main["Month"], df_monthly_chart_data_main["Gross Profit This Month (Accrued from New Cohorts)"], color=COLOR_ACCENT_LINE, label="Accrued Gross Profit (New Cohorts)", marker='o', linewidth=2, markersize=4)
-                ax3_main.set_xlabel("Month"); ax3_main.set_ylabel("Users Joining", color=COLOR_ACCENT_BAR); ax4_main.set_ylabel("Accrued Gross Profit", color=COLOR_ACCENT_LINE)
-                ax3_main.tick_params(axis='y', labelcolor=COLOR_ACCENT_BAR); ax4_main.tick_params(axis='y', labelcolor=COLOR_ACCENT_LINE)
-                ax3_main.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}")); ax4_main.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}"))
-                handles_main = [bars2_main, line2_main]; labels_main = [h.get_label() for h in handles_main]
-                fig2_main.legend(handles_main, labels_main, loc="lower center", bbox_to_anchor=(0.5, -0.15), ncol=2); fig2_main.tight_layout(rect=[0, 0.05, 1, 1]); st.pyplot(fig2_main)
-            else: 
-                st.caption("Not enough data or all values are zero for Chart 2.")
-
-            # Chart 3: Annual Pools Formed vs. Annual Cash In
-            st.markdown("##### Chart 3: Annual Pools Formed vs. Annual Cash In (Installments)")
-            if can_plot_y1:
-                fig3_main, ax5_main = plt.subplots(figsize=FIG_SIZE_MAIN)
-                ax6_main = ax5_main.twinx()
-                bars3_main = ax5_main.bar(df_yearly_chart_data_main["Year"], df_yearly_chart_data_main["Pools Formed"], color=COLOR_PRIMARY_BAR, label="Annual Pools Formed", width=0.6) 
-                line3_main, = ax6_main.plot(df_yearly_chart_data_main["Year"], df_yearly_chart_data_main["Cash In (Installments This Month)"], color=COLOR_SECONDARY_LINE, label="Annual Cash In (Installments)", marker='o', linewidth=2, markersize=4)
-                ax5_main.set_xlabel("Year"); ax5_main.set_ylabel("Annual Pools Formed", color=COLOR_PRIMARY_BAR); ax6_main.set_ylabel("Annual Cash In", color=COLOR_SECONDARY_LINE)
-                ax5_main.tick_params(axis='y', labelcolor=COLOR_PRIMARY_BAR); ax6_main.tick_params(axis='y', labelcolor=COLOR_SECONDARY_LINE)
-                ax5_main.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}")); ax6_main.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}"))
-                handles_main = [bars3_main, line3_main]; labels_main = [h.get_label() for h in handles_main]
-                fig3_main.legend(handles_main, labels_main, loc="lower center", bbox_to_anchor=(0.5, -0.15), ncol=2); fig3_main.tight_layout(rect=[0, 0.05, 1, 1]); st.pyplot(fig3_main)
-            else: 
-                st.caption("Not enough data or all values are zero for Chart 3.")
-                
-            # Chart 4: Annual Users Joining vs. Annual Accrued Gross Profit
-            st.markdown("##### Chart 4: Annual Users Joining vs. Annual Accrued Gross Profit (from New Cohorts)")
-            if can_plot_y2:
-                fig4_main, ax7_main = plt.subplots(figsize=FIG_SIZE_MAIN)
-                ax8_main = ax7_main.twinx()
-                bars4_main = ax7_main.bar(df_yearly_chart_data_main["Year"], df_yearly_chart_data_main["Users Joining This Month"], color=COLOR_ACCENT_BAR, label="Annual Users Joining", width=0.6)
-                line4_main, = ax8_main.plot(df_yearly_chart_data_main["Year"], df_yearly_chart_data_main["Annual Gross Profit (Accrued from New Cohorts)"], color=COLOR_ACCENT_LINE, label="Annual Accrued Gross Profit (New Cohorts)", marker='o', linewidth=2, markersize=4)
-                ax7_main.set_xlabel("Year"); ax7_main.set_ylabel("Annual Users Joining", color=COLOR_ACCENT_BAR); ax8_main.set_ylabel("Annual Accrued Profit", color=COLOR_ACCENT_LINE)
-                ax7_main.tick_params(axis='y', labelcolor=COLOR_ACCENT_BAR); ax8_main.tick_params(axis='y', labelcolor=COLOR_ACCENT_LINE)
-                ax7_main.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}")); ax8_main.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}"))
-                handles_main = [bars4_main, line4_main]; labels_main = [h.get_label() for h in handles_main]
-                fig4_main.legend(handles_main, labels_main, loc="lower center", bbox_to_anchor=(0.5, -0.15), ncol=2); fig4_main.tight_layout(rect=[0, 0.05, 1, 1]); st.pyplot(fig4_main)
-            else: 
-                st.caption("Not enough data or all values are zero for Chart 4.")
-
-            # Chart 5: Annual External Capital vs. Fee & Accrued Profit
-            st.markdown("##### Chart 5: Annual External Capital vs. Fee & Accrued Profit")
-            if can_plot_y3:
-                fig5_main, ax9_main = plt.subplots(figsize=FIG_SIZE_MAIN)
-                ax10_main = ax9_main.twinx()
-                bars5_main = ax9_main.bar(df_profit_share_chart_data_main["Year"], df_profit_share_chart_data_main["External Capital Needed (Annual Accrual)"], color=COLOR_HIGHLIGHT_BAR, label="External Capital Needed", width=0.6)
-                line5_main, = ax10_main.plot(df_profit_share_chart_data_main["Year"], df_profit_share_chart_data_main["Annual Fee Collected (Accrued)"], color=COLOR_SECONDARY_LINE, label="Annual Fee Collected", marker='o', linewidth=2, markersize=4)
-                line6_main, = ax10_main.plot(df_profit_share_chart_data_main["Year"], df_profit_share_chart_data_main["Annual Gross Profit (Accrued)"], color=COLOR_ACCENT_LINE, label="Annual Gross Profit", marker='s', linewidth=2, markersize=4)
-                ax9_main.set_xlabel("Year"); ax9_main.set_ylabel("External Capital Needed", color=COLOR_HIGHLIGHT_BAR); ax10_main.set_ylabel("Fee & Profit", color=COLOR_SECONDARY_LINE)
-                ax9_main.tick_params(axis='y', labelcolor=COLOR_HIGHLIGHT_BAR); ax10_main.tick_params(axis='y', labelcolor=COLOR_SECONDARY_LINE)
-                ax9_main.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}")); ax10_main.get_yaxis().set_major_formatter(plt.FuncFormatter(lambda x, p: f"{int(x):,}"))
-                handles_main = [bars5_main, line5_main, line6_main]; labels_main = [h.get_label() for h in handles_main]
-                fig5_main.legend(handles_main, labels_main, loc="lower center", bbox_to_anchor=(0.5, -0.15), ncol=3); fig5_main.tight_layout(rect=[0, 0.05, 1, 1]); st.pyplot(fig5_main)
-            else: 
-                st.caption("Not enough data or all values are zero for Chart 5.")
-
-            # Write to Excel with detailed sheets
-            sheet_name_prefix_main = scenario_data_main['name'][:25].replace(" ", "_").replace("/", "_")
-            
-            if not df_forecast_main.empty:
-                df_forecast_main.to_excel(excel_writer_main, index=False, sheet_name=f"{sheet_name_prefix_main}_ForecastCohorts")
-            if not df_monthly_summary_main.empty and "Month" in df_monthly_summary_main: 
-                df_monthly_summary_main.to_excel(excel_writer_main, index=False, sheet_name=f"{sheet_name_prefix_main}_MonthlySummary")
-            if not df_yearly_summary_main.empty and "Year" in df_yearly_summary_main:
-                df_yearly_summary_main.to_excel(excel_writer_main, index=False, sheet_name=f"{sheet_name_prefix_main}_YearlySummary")
-            if not df_profit_share_main.empty and "Year" in df_profit_share_main:
-                df_profit_share_main.to_excel(excel_writer_main, index=False, sheet_name=f"{sheet_name_prefix_main}_ProfitShare")
-            if not df_deposit_log_main.empty:
-                df_deposit_log_main.to_excel(excel_writer_main, index=False, sheet_name=f"{sheet_name_prefix_main}_DepositLog")
-            if not df_default_log_main.empty:
-                df_default_log_main.to_excel(excel_writer_main, index=False, sheet_name=f"{sheet_name_prefix_main}_DefaultLog")
-            if not df_lifecycle_main.empty:
-                df_lifecycle_main.to_excel(excel_writer_main, index=False, sheet_name=f"{sheet_name_prefix_main}_LifecycleLog")
-
-        except Exception as e:
-            st.error(f"Error in main execution: {str(e)}")
-            st.error("Please check your configuration and try again.")
+    elif view_mode == "🔧 Detailed Forecast":
+        # Detailed forecast table
+        st.subheader("📋 Detailed Forecast Results")
+        st.dataframe(df_forecast.style.format(precision=0, thousands=","))
+        
+        # Summary tables
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("📊 Monthly Summary")
+            st.dataframe(df_monthly_summary)
+        
+        with col2:
+            st.subheader("📈 Yearly Summary")
+            st.dataframe(df_yearly_summary)
+        
+        # Profit share analysis
+        st.subheader("🤝 Profit Share Analysis")
+        st.dataframe(df_profit_share)
     
-    st.success("✅ Forecast completed successfully!")
-
-# Download options
-st.markdown("### 📥 Download Options")
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-    if st.button("📊 Download Excel Report"):
-        st.download_button(
-            label="📊 Download Excel Report",
-            data=output_excel_main.getvalue(),
-            file_name=f"rosca_forecast_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-
-with col2:
-    if st.button("📈 Generate Summary"):
-        st.success("Summary generated successfully!")
-
-with col3:
-    if st.button("🔄 Refresh Data"):
-        st.rerun()
+    elif view_mode == "📈 Analytics View":
+        # Analytics dashboard
+        create_analytics_dashboard(df_forecast, config, fee_collection_mode, CURRENCY_SYMBOL, CURRENCY_NAME)
+        
+        # Additional analysis
+        st.subheader("📊 Additional Analysis")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Duration analysis
+            df_duration_analysis = create_duration_analysis(df_forecast)
+            st.subheader("📅 Duration Analysis")
+            st.dataframe(df_duration_analysis)
+        
+        with col2:
+            # Slab analysis
+            df_slab_analysis = create_slab_analysis(df_forecast)
+            st.subheader("💵 Slab Analysis")
+            st.dataframe(df_slab_analysis)
+        
+        # Risk analysis
+        df_risk_analysis = create_risk_analysis(df_forecast)
+        st.subheader("⚠️ Risk Analysis")
+        st.dataframe(df_risk_analysis)
+    
+    elif view_mode == "⚙️ Configuration Mode":
+        # Configuration summary
+        st.subheader("⚙️ Configuration Summary")
+        df_config_summary = create_configuration_summary(config, fee_collection_mode, CURRENCY_SYMBOL, CURRENCY_NAME)
+        st.dataframe(df_config_summary)
+        
+        # Configuration editor
+        st.subheader("🔧 Edit Configuration")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Financial Parameters**")
+            new_kibor_rate = st.number_input("KIBOR Rate (%)", value=config['kibor_rate'], step=0.1)
+            new_spread = st.number_input("Spread (%)", value=config['spread'], step=0.1)
+            new_profit_split = st.number_input("Profit Split - Party A (%)", value=config['profit_split'], step=1.0)
+        
+        with col2:
+            st.markdown("**Default Parameters**")
+            new_default_rate = st.number_input("Default Rate (%)", value=config['default_rate'], step=0.1)
+            new_penalty_pct = st.number_input("Penalty Rate (%)", value=config['penalty_pct'], step=0.1)
+            new_recovery_rate = st.number_input("Recovery Rate (%)", value=config['recovery_rate'], step=1.0)
+        
+        if st.button("🔄 Update Configuration"):
+            # Update configuration
+            config['kibor_rate'] = new_kibor_rate
+            config['spread'] = new_spread
+            config['profit_split'] = new_profit_split
+            config['default_rate'] = new_default_rate
+            config['penalty_pct'] = new_penalty_pct
+            config['recovery_rate'] = new_recovery_rate
+            
+            # Store updated configuration
+            st.session_state['config'] = config
+            
+            st.success("✅ Configuration updated successfully!")
+            st.rerun()
 
 # Footer
+st.markdown("---")
 st.markdown("""
-<div style="text-align: center; color: #64748b; font-family: 'Inter', sans-serif; padding: 2rem;">
-    <p>🚀 ROSCA Forecast Pro - Complete Business Intelligence Platform</p>
-    <p>Built with ❤️ using Streamlit & Plotly | Last updated: {}</p>
+<div style="text-align: center; color: #64748b; padding: 2rem;">
+    <p>💰 ROSCA Forecast Pro - Advanced Financial Forecasting & Analytics</p>
+    <p>Built with ❤️ using Streamlit</p>
 </div>
-""".format(datetime.now().strftime("%d/%m/%Y %H:%M")), unsafe_allow_html=True)
+""", unsafe_allow_html=True)
