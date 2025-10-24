@@ -2618,6 +2618,12 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
             slot_fees = config['slot_fees'].get(duration, {}).get(slab_amount, {})
             slot_distribution = config['slot_distribution'].get(duration, {}).get(slab_amount, {})
             
+            # Ensure slot_fees and slot_distribution are not None
+            if slot_fees is None:
+                slot_fees = {}
+            if slot_distribution is None:
+                slot_distribution = {}
+            
             # Calculate slot-wise fees
             total_fee = 0
             monthly_fee = 0
@@ -2636,6 +2642,12 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                         if slot_distribution_pct > 0:  # Only if slot is not blocked
                             slot_fee = (slab_amount * duration * (slot_fee_pct / 100) * (slot_distribution_pct / 100))
                             total_fee += slot_fee
+                    else:
+                        # Fallback: use default fee if slot configuration is missing
+                        default_fee_pct = 2.0  # Default 2% fee
+                        default_distribution = 100.0 / duration  # Equal distribution
+                        slot_fee = (slab_amount * duration * (default_fee_pct / 100) * (default_distribution / 100))
+                        total_fee += slot_fee
             else:
                 # Calculate monthly fee based on slot distribution
                 for slot in range(1, duration + 1):
@@ -2650,6 +2662,12 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                         if slot_distribution_pct > 0:  # Only if slot is not blocked
                             slot_monthly_fee = (slab_amount * (slot_fee_pct / 100) * (slot_distribution_pct / 100))
                             monthly_fee += slot_monthly_fee
+                    else:
+                        # Fallback: use default fee if slot configuration is missing
+                        default_fee_pct = 2.0  # Default 2% fee
+                        default_distribution = 100.0 / duration  # Equal distribution
+                        slot_monthly_fee = (slab_amount * (default_fee_pct / 100) * (default_distribution / 100))
+                        monthly_fee += slot_monthly_fee
                 total_fee = monthly_fee * duration
             
             # Basic calculations
@@ -2961,7 +2979,7 @@ with st.sidebar:
     # Customer Lifecycle Configuration
     st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 🔄 Customer Lifecycle")
-    starting_users = st.number_input("Starting Users", min_value=100, max_value=10000, value=1000, step=100, help="Initial number of users in month 1")
+    starting_users = st.number_input("Starting Users", min_value=100, value=1000, step=100, help="Initial number of users in month 1")
     monthly_growth_rate = st.number_input("Monthly Growth Rate (%)", min_value=0.0, max_value=50.0, value=2.0, step=0.1, help="Month-on-month growth rate for total user base")
     rest_period_months = st.number_input("Rest Period (months)", min_value=0, max_value=24, value=1, step=1, help="Months users rest between ROSCA cycles")
     returning_user_rate = st.number_input("Returning User Rate (%)", min_value=0.0, max_value=100.0, value=100.0, step=1.0, help="Percentage of users who return after rest period")
