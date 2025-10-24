@@ -23,7 +23,7 @@ except ImportError:
 
 st.set_page_config(
     layout="wide", 
-    page_title="ROSCA Forecast Pro", 
+    page_title="BACHAT ROSCA PRICING", 
     page_icon="🚀", 
     initial_sidebar_state="expanded"
 )
@@ -282,6 +282,40 @@ st.markdown("""
         border: 1px solid rgba(102, 126, 234, 0.2);
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
+    
+    /* Sidebar Section Headers */
+    .sidebar-section {
+        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        padding: 1rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+        border: 1px solid rgba(102, 126, 234, 0.1);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    }
+    
+    .sidebar-section h3 {
+        color: #1e293b;
+        font-size: 1.1rem;
+        margin: 0 0 1rem 0;
+        font-weight: 600;
+    }
+    
+    /* Slot Configuration Cards */
+    .slot-card {
+        background: white;
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 0.5rem 0;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .slot-card h4 {
+        color: #374151;
+        font-size: 0.9rem;
+        margin: 0 0 0.5rem 0;
+        font-weight: 500;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -294,9 +328,11 @@ CURRENCY_OPTIONS = {
     "USD": {"symbol": "$", "name": "US Dollar", "format": "millions"},
     "EUR": {"symbol": "€", "name": "Euro", "format": "millions"},
     "GBP": {"symbol": "£", "name": "British Pound", "format": "millions"},
+    "INR": {"symbol": "₹", "name": "Indian Rupee", "format": "lakhs"},
     "AED": {"symbol": "د.إ", "name": "UAE Dirham", "format": "millions"},
     "SAR": {"symbol": "﷼", "name": "Saudi Riyal", "format": "millions"}
 }
+
 # =============================================================================
 # 🛠️ UTILITY FUNCTIONS
 # =============================================================================
@@ -638,7 +674,7 @@ def create_revenue_profit_analysis(df_forecast, currency_symbol, currency_name):
         st.pyplot(fig)
 
 def create_profit_share_analysis(df_forecast, profit_split, currency_symbol, currency_name):
-    """Create profit share analysis section"""
+    """Create profit share analysis section - FIXED VERSION"""
     st.markdown("### 🤝 Revenue Share Distribution Analysis")
     
     # Calculate profit share
@@ -905,144 +941,6 @@ def create_external_capital_chart(df_forecast, currency_symbol, currency_name):
         ax.grid(True, alpha=0.3)
         return fig
 
-def create_nii_breakdown_chart(df_forecast, currency_symbol, currency_name):
-    """Create NII breakdown chart"""
-    if PLOTLY_AVAILABLE:
-        nii_data = {
-            'Component': ['Base NII', 'Fee NII', 'Pool Growth NII'],
-            'Amount': [
-                df_forecast['Base NII (Lifetime)'].sum(),
-                df_forecast['Fee NII (Lifetime)'].sum(),
-                df_forecast['Pool Growth NII (Lifetime)'].sum()
-            ]
-        }
-        
-        fig = px.pie(
-            pd.DataFrame(nii_data),
-            values='Amount',
-            names='Component',
-            title="NII Components Breakdown",
-            color_discrete_sequence=px.colors.qualitative.Set3
-        )
-        fig.update_traces(textposition='inside', textinfo='percent+label')
-        fig.update_layout(height=400)
-        return fig
-    else:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        nii_data = [
-            df_forecast['Base NII (Lifetime)'].sum(),
-            df_forecast['Fee NII (Lifetime)'].sum(),
-            df_forecast['Pool Growth NII (Lifetime)'].sum()
-        ]
-        labels = ['Base NII', 'Fee NII', 'Pool Growth NII']
-        colors = ['#667eea', '#764ba2', '#f59e0b']
-        ax.pie(nii_data, labels=labels, autopct='%1.1f%%', colors=colors)
-        ax.set_title("NII Components Breakdown")
-        return fig
-
-def create_revenue_breakdown_chart(df_forecast, currency_symbol, currency_name):
-    """Create revenue breakdown chart"""
-    if PLOTLY_AVAILABLE:
-        revenue_data = {
-            'Component': ['Fees', 'NII'],
-            'Amount': [
-                df_forecast['Total Fees Collected'].sum(),
-                df_forecast['Total NII (Lifetime)'].sum()
-            ]
-        }
-        
-        fig = px.bar(
-            pd.DataFrame(revenue_data),
-            x='Component',
-            y='Amount',
-            title="Revenue Components",
-            color='Component',
-            color_discrete_sequence=px.colors.qualitative.Set2
-        )
-        fig.update_layout(showlegend=False, height=400)
-        return fig
-    else:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        revenue_data = [
-            df_forecast['Total Fees Collected'].sum(),
-            df_forecast['Total NII (Lifetime)'].sum()
-        ]
-        labels = ['Fees', 'NII']
-        colors = ['#667eea', '#764ba2']
-        ax.bar(labels, revenue_data, color=colors)
-        ax.set_title("Revenue Components")
-        ax.set_ylabel("Amount")
-        return fig
-
-def create_profit_share_chart(df_forecast, profit_split, currency_symbol, currency_name):
-    """Create profit share chart"""
-    total_profit = df_forecast['Gross Profit'].sum()
-    party_a_share = total_profit * (profit_split / 100)
-    party_b_share = total_profit * ((100 - profit_split) / 100)
-    
-    if PLOTLY_AVAILABLE:
-        share_data = {
-            'Party': ['Party A', 'Party B'],
-            'Share %': [profit_split, 100 - profit_split],
-            'Amount': [party_a_share, party_b_share]
-        }
-        
-        fig = px.pie(
-            pd.DataFrame(share_data),
-            values='Amount',
-            names='Party',
-            title="Profit Share Distribution",
-            color_discrete_sequence=['#667eea', '#764ba2']
-        )
-        fig.update_traces(textposition='inside', textinfo='percent+label')
-        fig.update_layout(height=400)
-        return fig
-    else:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        share_data = [party_a_share, party_b_share]
-        labels = ['Party A', 'Party B']
-        colors = ['#667eea', '#764ba2']
-        ax.pie(share_data, labels=labels, autopct='%1.1f%%', colors=colors)
-        ax.set_title("Profit Share Distribution")
-        return fig
-
-def create_default_impact_chart(df_forecast, currency_symbol, currency_name):
-    """Create default impact chart"""
-    if PLOTLY_AVAILABLE:
-        impact_data = {
-            'Impact Type': ['Pre-Payout Defaults', 'Post-Payout Defaults', 'Recovery Amount'],
-            'Amount': [
-                df_forecast['Pre-Payout Default Loss'].sum(),
-                df_forecast['Post-Payout Default Loss'].sum(),
-                df_forecast['Default Recovery Amount'].sum()
-            ]
-        }
-        
-        fig = px.bar(
-            pd.DataFrame(impact_data),
-            x='Impact Type',
-            y='Amount',
-            title="Default Impact on Revenue",
-            color='Impact Type',
-            color_discrete_sequence=['#ef4444', '#f59e0b', '#10b981']
-        )
-        fig.update_layout(showlegend=False, height=400)
-        return fig
-    else:
-        fig, ax = plt.subplots(figsize=(10, 6))
-        impact_data = [
-            df_forecast['Pre-Payout Default Loss'].sum(),
-            df_forecast['Post-Payout Default Loss'].sum(),
-            df_forecast['Default Recovery Amount'].sum()
-        ]
-        labels = ['Pre-Payout Defaults', 'Post-Payout Defaults', 'Recovery Amount']
-        colors = ['#ef4444', '#f59e0b', '#10b981']
-        ax.bar(labels, impact_data, color=colors)
-        ax.set_title("Default Impact on Revenue")
-        ax.set_ylabel("Amount")
-        ax.tick_params(axis='x', rotation=45)
-        return fig
-
 # =============================================================================
 # 📊 SUMMARY FUNCTIONS
 # =============================================================================
@@ -1083,8 +981,8 @@ def create_yearly_summary(df_monthly):
     
     return pd.DataFrame(yearly_data)
 
-def create_profit_share_analysis(df_yearly, profit_split):
-    """Create profit share analysis"""
+def create_profit_share_analysis_simple(df_yearly, profit_split):
+    """Create profit share analysis - simple version"""
     if df_yearly.empty:
         return pd.DataFrame()
     
@@ -1617,31 +1515,40 @@ with st.sidebar:
     CURRENCY_NAME = CURRENCY_OPTIONS[selected_currency]["name"]
     
     # Financial parameters
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 💰 Financial Parameters")
     kibor_rate = st.number_input("KIBOR Rate (%)", min_value=0.0, max_value=50.0, value=22.0, step=0.1)
     spread = st.number_input("Spread (%)", min_value=0.0, max_value=20.0, value=3.0, step=0.1)
     profit_split = st.number_input("Profit Split - Party A (%)", min_value=0.0, max_value=100.0, value=70.0, step=1.0)
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Default parameters
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### ⚠️ Default Parameters")
     default_rate = st.number_input("Default Rate (%)", min_value=0.0, max_value=50.0, value=5.0, step=0.1)
     default_pre_pct = st.number_input("Pre-Payout Default %", min_value=0.0, max_value=100.0, value=30.0, step=1.0)
     default_post_pct = st.number_input("Post-Payout Default %", min_value=0.0, max_value=100.0, value=70.0, step=1.0)
     penalty_pct = st.number_input("Penalty Rate (%)", min_value=0.0, max_value=50.0, value=2.0, step=0.1)
     recovery_rate = st.number_input("Recovery Rate (%)", min_value=0.0, max_value=100.0, value=50.0, step=1.0)
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Fee collection mode
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 💳 Fee Collection")
     fee_collection_mode = st.selectbox(
         "Fee Collection Method",
         ["Upfront Fee (Entire Pool)", "Monthly Fee Collection"]
     )
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Scenario configuration
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 📊 Scenario")
     scenario_name = st.text_input("Scenario Name", value="Base Case")
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Duration configuration
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 📅 Duration Configuration")
     durations = st.multiselect(
         "Select Durations (months)",
@@ -1652,8 +1559,10 @@ with st.sidebar:
     if not durations:
         st.error("Please select at least one duration")
         st.stop()
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Slab configuration
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 💵 Slab Configuration")
     slab_amounts = st.multiselect(
         "Select Slab Amounts",
@@ -1664,54 +1573,171 @@ with st.sidebar:
     if not slab_amounts:
         st.error("Please select at least one slab amount")
         st.stop()
+    st.markdown('</div>', unsafe_allow_html=True)
     
-    # Slot configuration
+    # Slot configuration - BEAUTIFUL UI RESTORED
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 🎯 Slot Configuration")
+    
+    # Configuration mode selection
+    config_mode = st.radio(
+        "Configuration Mode",
+        ["⚡ Quick Setup", "📋 Compact View", "🔧 Detailed View"],
+        help="Choose how to configure slots"
+    )
+    
     slot_fees = {}
     slot_distribution = {}
     
     for duration in durations:
-        with st.expander(f"Duration: {duration} months"):
+        with st.expander(f"📅 Duration: {duration} months", expanded=True):
             for slab in slab_amounts:
-                st.markdown(f"**Slab: {CURRENCY_SYMBOL}{slab:,}**")
+                st.markdown(f"**💰 Slab: {CURRENCY_SYMBOL}{slab:,}**")
                 
-                # Fee percentage
-                fee_key = f"fee_{duration}_{slab}"
-                fee_pct = st.number_input(
-                    f"Fee % for {duration}M, {CURRENCY_SYMBOL}{slab:,}",
-                    min_value=0.0,
-                    max_value=20.0,
-                    value=2.0,
-                    step=0.1,
-                    key=fee_key
-                )
+                if config_mode == "⚡ Quick Setup":
+                    # Quick setup - simple interface
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        fee_pct = st.number_input(
+                            f"Fee % for all slots",
+                            min_value=0.0,
+                            max_value=20.0,
+                            value=2.0,
+                            step=0.1,
+                            key=f"quick_fee_{duration}_{slab}"
+                        )
+                    
+                    with col2:
+                        blocked_slots = st.multiselect(
+                            f"Block slots",
+                            list(range(1, duration + 1)),
+                            key=f"quick_block_{duration}_{slab}"
+                        )
+                    
+                    # Create configuration
+                    if duration not in slot_fees:
+                        slot_fees[duration] = {}
+                    if duration not in slot_distribution:
+                        slot_distribution[duration] = {}
+                    
+                    slot_fees[duration][slab] = fee_pct
+                    
+                    # Distribute remaining slots equally
+                    remaining_slots = duration - len(blocked_slots)
+                    if remaining_slots > 0:
+                        equal_distribution = 100.0 / remaining_slots
+                    else:
+                        equal_distribution = 0
+                    
+                    slot_distribution[duration][slab] = {}
+                    for slot in range(1, duration + 1):
+                        if slot in blocked_slots:
+                            slot_distribution[duration][slab][slot] = 0
+                        else:
+                            slot_distribution[duration][slab][slot] = equal_distribution
                 
-                # Slot distribution
-                st.markdown("**Slot Distribution:**")
-                total_distribution = 0
-                for slot in range(1, duration + 1):
-                    dist_key = f"dist_{duration}_{slab}_{slot}"
-                    distribution = st.number_input(
-                        f"Slot {slot} (%)",
-                        min_value=0.0,
-                        max_value=100.0,
-                        value=100.0 / duration,
-                        step=0.1,
-                        key=dist_key
+                elif config_mode == "📋 Compact View":
+                    # Compact view - data editor
+                    slot_data = []
+                    for slot in range(1, duration + 1):
+                        slot_data.append({
+                            "Slot": slot,
+                            "Fee %": 2.0,
+                            "Blocked": False,
+                            "Distribution %": 100.0 / duration
+                        })
+                    
+                    df_slots = pd.DataFrame(slot_data)
+                    
+                    edited_df = st.data_editor(
+                        df_slots,
+                        num_rows="fixed",
+                        use_container_width=True,
+                        key=f"compact_{duration}_{slab}"
                     )
-                    total_distribution += distribution
+                    
+                    # Convert back to configuration
+                    if duration not in slot_fees:
+                        slot_fees[duration] = {}
+                    if duration not in slot_distribution:
+                        slot_distribution[duration] = {}
+                    
+                    slot_fees[duration][slab] = edited_df['Fee %'].iloc[0]  # Use first row's fee
+                    slot_distribution[duration][slab] = {}
+                    
+                    for _, row in edited_df.iterrows():
+                        slot = int(row["Slot"])
+                        if row["Blocked"]:
+                            slot_distribution[duration][slab][slot] = 0
+                        else:
+                            slot_distribution[duration][slab][slot] = row["Distribution %"]
                 
-                if abs(total_distribution - 100.0) > 0.1:
-                    st.warning(f"⚠️ Total distribution for {duration}M, {CURRENCY_SYMBOL}{slab:,} is {total_distribution:.1f}% (should be 100%)")
-                
-                # Store configuration
-                if duration not in slot_fees:
-                    slot_fees[duration] = {}
-                if duration not in slot_distribution:
-                    slot_distribution[duration] = {}
-                
-                slot_fees[duration][slab] = fee_pct
-                slot_distribution[duration][slab] = {i+1: 100.0/duration for i in range(duration)}
+                else:  # Detailed View
+                    # Detailed view - individual slot configuration
+                    fee_pct = st.number_input(
+                        f"Fee % for {duration}M, {CURRENCY_SYMBOL}{slab:,}",
+                        min_value=0.0,
+                        max_value=20.0,
+                        value=2.0,
+                        step=0.1,
+                        key=f"fee_{duration}_{slab}"
+                    )
+                    
+                    st.markdown("**🎯 Slot Distribution:**")
+                    total_distribution = 0
+                    
+                    for slot in range(1, duration + 1):
+                        col1, col2, col3 = st.columns([1, 1, 2])
+                        
+                        with col1:
+                            blocked = st.checkbox(
+                                f"Block",
+                                key=f"block_{duration}_{slab}_{slot}",
+                                help=f"Block Slot {slot}"
+                            )
+                        
+                        with col2:
+                            if not blocked:
+                                distribution = st.number_input(
+                                    f"Slot {slot} (%)",
+                                    min_value=0.0,
+                                    max_value=100.0,
+                                    value=100.0 / duration,
+                                    step=0.1,
+                                    key=f"dist_{duration}_{slab}_{slot}"
+                                )
+                                total_distribution += distribution
+                            else:
+                                distribution = 0
+                                st.info("🚫 Blocked")
+                        
+                        with col3:
+                            if not blocked:
+                                st.metric(f"Slot {slot}", f"{distribution:.1f}%")
+                            else:
+                                st.metric(f"Slot {slot}", "🚫 Blocked")
+                    
+                    # Validation
+                    if abs(total_distribution - 100.0) > 0.1:
+                        st.warning(f"⚠️ Total distribution is {total_distribution:.1f}% (should be 100%)")
+                    
+                    # Store configuration
+                    if duration not in slot_fees:
+                        slot_fees[duration] = {}
+                    if duration not in slot_distribution:
+                        slot_distribution[duration] = {}
+                    
+                    slot_fees[duration][slab] = fee_pct
+                    slot_distribution[duration][slab] = {}
+                    
+                    for slot in range(1, duration + 1):
+                        if not blocked:
+                            slot_distribution[duration][slab][slot] = distribution
+                        else:
+                            slot_distribution[duration][slab][slot] = 0
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # Main content
 st.markdown("## 📊 Forecast Results")
@@ -1757,7 +1783,7 @@ if st.button("🚀 Run Forecast", type="primary"):
             # Create summaries
             df_monthly_summary = create_monthly_summary(df_forecast)
             df_yearly_summary = create_yearly_summary(df_monthly_summary)
-            df_profit_share = create_profit_share_analysis(df_yearly_summary, profit_split)
+            df_profit_share = create_profit_share_analysis_simple(df_yearly_summary, profit_split)
             
             # Create detailed logs
             df_deposit_log = create_deposit_log(df_forecast)
@@ -1845,7 +1871,7 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         # Revenue & Profit Analysis
         create_revenue_profit_analysis(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
         
-        # Profit Share Analysis
+        # Profit Share Analysis - FIXED VERSION
         create_profit_share_analysis(df_forecast, profit_split, CURRENCY_SYMBOL, CURRENCY_NAME)
         
         # Default Impact Analysis
