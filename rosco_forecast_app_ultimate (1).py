@@ -1751,41 +1751,41 @@ with st.sidebar:
                         else:
                             slot_distribution[duration][slab][slot] = equal_distribution
                 
-elif config_mode == "📋 Compact View":
-    # Compact view - data editor
-    slot_data = []  # <-- Now properly indented under elif
-    for slot in range(1, duration + 1):
-        slot_data.append({
-            "Slot": slot,
-            "Fee %": 2.0,
-            "Blocked": False,
-            "Distribution %": 100.0 / duration
-        })
-    
-    df_slots = pd.DataFrame(slot_data)
-    
-    edited_df = st.data_editor(
-        df_slots,
-        num_rows="fixed",
-        use_container_width=True,
-        key=f"compact_{duration}_{slab}"
-    )
-    
-    # Convert back to configuration
-    if duration not in slot_fees:
-        slot_fees[duration] = {}
-    if duration not in slot_distribution:
-        slot_distribution[duration] = {}
-    
-    slot_fees[duration][slab] = edited_df['Fee %'].iloc[0]  # Use first row's fee
-    slot_distribution[duration][slab] = {}
-    
-    for _, row in edited_df.iterrows():
-        slot = int(row["Slot"])
-        if row["Blocked"]:
-            slot_distribution[duration][slab][slot] = 0
-        else:
-            slot_distribution[duration][slab][slot] = row["Distribution %"]
+                    elif config_mode == "📋 Compact View":
+                        # Compact view - data editor
+                        slot_data = []  # <-- Now properly indented under elif
+                        for slot in range(1, duration + 1):
+                            slot_data.append({
+                                "Slot": slot,
+                                "Fee %": 2.0,
+                                "Blocked": False,
+                                "Distribution %": 100.0 / duration
+                            })
+                        
+                        df_slots = pd.DataFrame(slot_data)
+                        
+                        edited_df = st.data_editor(
+                            df_slots,
+                            num_rows="fixed",
+                            use_container_width=True,
+                            key=f"compact_{duration}_{slab}"
+                        )
+                        
+                        # Convert back to configuration
+                        if duration not in slot_fees:
+                            slot_fees[duration] = {}
+                        if duration not in slot_distribution:
+                            slot_distribution[duration] = {}
+                        
+                        slot_fees[duration][slab] = edited_df['Fee %'].iloc[0]  # Use first row's fee
+                        slot_distribution[duration][slab] = {}
+                        
+                        for _, row in edited_df.iterrows():
+                            slot = int(row["Slot"])
+                            if row["Blocked"]:
+                                slot_distribution[duration][slab][slot] = 0
+                            else:
+                                slot_distribution[duration][slab][slot] = row["Distribution %"]
 
 else:  # Detailed View
     # Detailed view - individual slot configuration
