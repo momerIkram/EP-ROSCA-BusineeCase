@@ -1752,42 +1752,106 @@ with st.sidebar:
                             slot_distribution[duration][slab][slot] = equal_distribution
                 
                 elif config_mode == "📋 Compact View":
-                    # Compact view - data editor
-                    slot_data = []
-                    for slot in range(1, duration + 1):
-                        slot_data.append({
-                            "Slot": slot,
-                            "Fee %": 2.0,
-                            "Blocked": False,
-                            "Distribution %": 100.0 / duration
-                        })
-                    
-                    df_slots = pd.DataFrame(slot_data)
-                    
-                    edited_df = st.data_editor(
-                        df_slots,
-                        num_rows="fixed",
-                        use_container_width=True,
-                        key=f"compact_{duration}_{slab}"
-                    )
-                    
-                    # Convert back to configuration
-                    if duration not in slot_fees:
-                        slot_fees[duration] = {}
-                    if duration not in slot_distribution:
-                        slot_distribution[duration] = {}
-                    
-                    slot_fees[duration][slab] = edited_df['Fee %'].iloc[0]  # Use first row's fee
-                    slot_distribution[duration][slab] = {}
-                    
-                    for _, row in edited_df.iterrows():
-                        slot = int(row["Slot"])
-                        if row["Blocked"]:
-                            slot_distribution[duration][slab][slot] = 0
-                        else:
-                            slot_distribution[duration][slab][slot] = row["Distribution %"]
-                
-                        else:  # Detailed View
+    # Compact view - data editor
+    slot_data = []
+    for slot in range(1, duration + 1):
+        slot_data.append({
+            "Slot": slot,
+            "Fee %": 2.0,
+            "Blocked": False,
+            "Distribution %": 100.0 / duration
+        })
+    
+    df_slots = pd.DataFrame(slot_data)
+    
+    edited_df = st.data_editor(
+        df_slots,
+        num_rows="fixed",
+        use_container_width=True,
+        key=f"compact_{duration}_{slab}"
+    )
+    
+    # Convert back to configuration
+    if duration not in slot_fees:
+        slot_fees[duration] = {}
+    if duration not in slot_distribution:
+        slot_distribution[duration] = {}
+    
+    slot_fees[duration][slab] = edited_df['Fee %'].iloc[0]  # Use first row's fee
+    slot_distribution[duration][slab] = {}
+    
+    for _, row in edited_df.iterrows():
+        slot = int(row["Slot"])
+        if row["Blocked"]:
+            slot_distribution[duration][slab][slot] = 0
+        else:
+            slot_distribution[duration][slab][slot] = row["Distribution %"]
+
+else:  # Detailed View
+    # Detailed view - individual slot configuration
+    st.markdown(f"**🔧 Detailed Configuration for {duration}M, {CURRENCY_SYMBOL}{slab:,}**")
+    
+    # Fee configuration for each slot
+    st.markdown("**💰 Slot-wise Fee Configuration:**")
+    
+    total_distribution = 0
+    slot_configs = {}
+    
+    for slot in range(1, duration + 1):
+        st.markdown(f"**Slot {slot}:**")
+        col1, col2, col3 = st.columns([2, 1, 2])
+        
+        with col1:
+            fee_pct = st.number_input(
+                f"Fee %",
+                min_value=0.0,
+                max_value=20.0,
+                value=2.0,
+                step=0.1,
+                key=f"fee_{duration}_{slab}_{slot}"
+            )
+        
+        with col2:
+            blocked = st.checkbox(
+                f"Block",
+                key=f"block_{duration}_{slab}_{slot}",
+                help=f"Block Slot {slot}"
+            )
+        
+        with col3:
+            if not blocked:
+                distribution = st.number_input(
+                    f"Distribution %",
+                    min_value=0.0,
+                    max_value=100.0,
+                    value=100.0 / duration,
+                    step=0.1,
+                    key=f"dist_{duration}_{slab}_{slot}"
+                )
+                total_distribution += distribution
+            else:
+                distribution = 0
+                st.info("🚫 Blocked")
+        
+        # Store slot configuration
+        slot_configs[slot] = {
+            'fee_pct': fee_pct,
+            'blocked': blocked,
+            'distribution': distribution
+        }
+    
+    # Validation
+    if abs(total_distribution - 100.0) > 0.1:
+        st.warning(f"⚠️ Total distribution is {total_distribution:.1f}% (should be 100%)")
+    
+    # Store configuration
+    if duration not in slot_fees:
+        slot_fees[duration] = {}
+    if duration not in slot_distribution:
+        slot_distribution[duration] = {}
+    
+    slot_fees[duration][slab] = {slot: config['fee_pct'] for slot, config in slot_configs.items()}
+    slot_distribution[duration][slab] = {slot: config['distribution'] for slot, config in slot_configs.items()}
                             # Detailed view - individual slot configuration
                             st.markdown(f"**🔧 Detailed Configuration for {duration}M, {CURRENCY_SYMBOL}{slab:,}**")
                             
