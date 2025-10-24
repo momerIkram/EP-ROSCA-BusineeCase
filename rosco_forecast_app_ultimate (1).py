@@ -2618,10 +2618,10 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
             slot_fees = config['slot_fees'].get(duration, {}).get(slab_amount, {})
             slot_distribution = config['slot_distribution'].get(duration, {}).get(slab_amount, {})
             
-            # Ensure slot_fees and slot_distribution are not None
-            if slot_fees is None:
+            # Ensure slot_fees and slot_distribution are not None and are dictionaries
+            if slot_fees is None or not isinstance(slot_fees, dict):
                 slot_fees = {}
-            if slot_distribution is None:
+            if slot_distribution is None or not isinstance(slot_distribution, dict):
                 slot_distribution = {}
             
             # Calculate slot-wise fees
@@ -2631,7 +2631,11 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
             if fee_collection_mode == "Upfront Fee (Entire Pool)":
                 # Calculate upfront fee based on slot distribution
                 for slot in range(1, duration + 1):
-                    if slot in slot_fees and slot in slot_distribution:
+                    # Check if slot configuration exists and is valid
+                    has_slot_fee = slot in slot_fees and slot_fees[slot] is not None
+                    has_slot_distribution = slot in slot_distribution and slot_distribution[slot] is not None
+                    
+                    if has_slot_fee and has_slot_distribution:
                         # Handle both dictionary and float formats for slot_fees
                         if isinstance(slot_fees[slot], dict):
                             slot_fee_pct = slot_fees[slot]['fee_pct']
@@ -2651,7 +2655,11 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
             else:
                 # Calculate monthly fee based on slot distribution
                 for slot in range(1, duration + 1):
-                    if slot in slot_fees and slot in slot_distribution:
+                    # Check if slot configuration exists and is valid
+                    has_slot_fee = slot in slot_fees and slot_fees[slot] is not None
+                    has_slot_distribution = slot in slot_distribution and slot_distribution[slot] is not None
+                    
+                    if has_slot_fee and has_slot_distribution:
                         # Handle both dictionary and float formats for slot_fees
                         if isinstance(slot_fees[slot], dict):
                             slot_fee_pct = slot_fees[slot]['fee_pct']
