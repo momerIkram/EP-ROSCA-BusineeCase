@@ -1170,7 +1170,81 @@ def create_cohort_analysis(df_forecast):
         })
     
     return pd.DataFrame(cohort_data)
-
+def create_market_analysis(market_size, sam_size, som_size, market_growth_rate, df_forecast, currency_symbol, currency_name):
+    """Create market analysis section"""
+    st.markdown("### 🌍 Market Analysis")
+    
+    # Market metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("TAM", format_currency(market_size, currency_symbol, currency_name))
+    
+    with col2:
+        st.metric("SAM", format_currency(sam_size, currency_symbol, currency_name))
+    
+    with col3:
+        st.metric("SOM", format_currency(som_size, currency_symbol, currency_name))
+    
+    with col4:
+        st.metric("Growth Rate", f"{market_growth_rate:.1f}%")
+    
+    # Market penetration
+    if not df_forecast.empty:
+        total_revenue = df_forecast['Total Revenue'].sum()
+        market_penetration = (total_revenue / som_size * 100) if som_size > 0 else 0
+        
+        st.metric("Market Penetration", f"{market_penetration:.2f}%")
+    
+    # Market analysis chart
+    st.markdown("#### 📊 Market Size Breakdown")
+    
+    market_data = {
+        'Market Segment': ['TAM', 'SAM', 'SOM'],
+        'Size': [market_size, sam_size, som_size]
+    }
+    
+    df_market = pd.DataFrame(market_data)
+    
+    if PLOTLY_AVAILABLE:
+        fig = px.bar(df_market, x='Market Segment', y='Size', 
+                     title="Market Size Analysis",
+                     color='Market Segment',
+                     color_discrete_sequence=['#667eea', '#764ba2', '#f59e0b'])
+        fig.update_layout(showlegend=False)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        colors = ['#667eea', '#764ba2', '#f59e0b']
+        ax.bar(df_market['Market Segment'], df_market['Size'], color=colors)
+        ax.set_title("Market Size Analysis")
+        ax.set_ylabel("Market Size")
+        st.pyplot(fig)
+    
+    # Market opportunity analysis
+    st.markdown("#### 💡 Market Opportunity Analysis")
+    
+    opportunity_data = {
+        'Metric': [
+            'TAM Opportunity',
+            'SAM Opportunity', 
+            'SOM Opportunity',
+            'Current Revenue',
+            'Market Penetration %',
+            'Growth Potential'
+        ],
+        'Value': [
+            format_currency(market_size, currency_symbol, currency_name),
+            format_currency(sam_size, currency_symbol, currency_name),
+            format_currency(som_size, currency_symbol, currency_name),
+            format_currency(total_revenue, currency_symbol, currency_name) if not df_forecast.empty else "N/A",
+            f"{market_penetration:.2f}%" if not df_forecast.empty else "N/A",
+            f"{market_growth_rate:.1f}%"
+        ]
+    }
+    
+    df_opportunity = pd.DataFrame(opportunity_data)
+    st.dataframe(df_opportunity, use_container_width=True)
 def create_risk_analysis(df_forecast):
     """Create risk analysis"""
     if df_forecast.empty:
@@ -1202,6 +1276,8 @@ def create_risk_analysis(df_forecast):
 # =============================================================================
 # 🔧 MAIN FORECASTING ENGINE
 # =============================================================================
+
+# In the run_forecast function, replace the fee calculation section:
 
 def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
     """Main forecasting engine - complete version with all features"""
@@ -1242,17 +1318,36 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
     # Run forecast for each duration and slab combination
     for duration in config['durations']:
         for slab_amount in config['slab_amounts']:
+            # Get slot-specific fees and distribution
+            slot_fees = config['slot_fees'].get(duration, {}).get(slab_amount, {})
+            slot_distribution = config['slot_distribution'].get(duration, {}).get(slab_amount, {})
+            
+            # Calculate slot-wise fees
+            total_fee = 0
+            monthly_fee = 0
+            
+            if fee_collection_mode == "Upfront Fee (Entire Pool)":
+                # Calculate upfront fee based on slot distribution
+                for slot in range(1, duration + 1):
+                    if slot in slot_fees and slot in slot_distribution:
+                        slot_fee_pct = slot_fees[slot]['fee_pct']
+                        slot_distribution_pct = slot_distribution[slot]
+                        if slot_distribution_pct > 0:  # Only if slot is not blocked
+                            slot_fee = (slab_amount * duration * (slot_fee_pct / 100) * (slot_distribution_pct / 100))
+                            total_fee += slot_fee
+            else:
+                # Calculate monthly fee based on slot distribution
+                for slot in range(1, duration + 1):
+                    if slot in slot_fees and slot in slot_distribution:
+                        slot_fee_pct = slot_fees[slot]['fee_pct']
+                        slot_distribution_pct = slot_distribution[slot]
+                        if slot_distribution_pct > 0:  # Only if slot is not blocked
+                            slot_monthly_fee = (slab_amount * (slot_fee_pct / 100) * (slot_distribution_pct / 100))
+                            monthly_fee += slot_monthly_fee
+                total_fee = monthly_fee * duration
+            
             # Basic calculations
             total_commitment = slab_amount * duration
-            fee_pct = config['slot_fees'].get(duration, {}).get(slab_amount, 2.0)
-            
-            # Fee collection calculation
-            if fee_collection_mode == "Upfront Fee (Entire Pool)":
-                total_fee = total_commitment * (fee_pct / 100)
-                monthly_fee = 0
-            else:
-                monthly_fee = (total_commitment * (fee_pct / 100)) / duration
-                total_fee = monthly_fee * duration
             
             # NII calculations
             base_nii = total_commitment * (config['kibor_rate'] + config['spread']) / 100 / 12 * duration
@@ -1300,7 +1395,7 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                 scenario_data['Pool Size'].append(pool_size)
                 scenario_data['External Capital'].append(external_capital)
                 scenario_data['Total Commitment'].append(total_commitment)
-                scenario_data['Fee %'].append(fee_pct)
+                scenario_data['Fee %'].append(sum([slot_fees.get(slot, {}).get('fee_pct', 0) for slot in range(1, duration + 1)]) / duration)
                 scenario_data['Total Fees Collected'].append(total_fee)
                 scenario_data['Monthly Fee Collection'].append(monthly_fee)
                 scenario_data['Base NII (Lifetime)'].append(base_nii)
@@ -1531,6 +1626,16 @@ with st.sidebar:
     penalty_pct = st.number_input("Penalty Rate (%)", min_value=0.0, max_value=50.0, value=2.0, step=0.1)
     recovery_rate = st.number_input("Recovery Rate (%)", min_value=0.0, max_value=100.0, value=50.0, step=1.0)
     st.markdown('</div>', unsafe_allow_html=True)
+    # Add this after the Default Parameters section in the sidebar:
+
+    # Market & TAM Configuration
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("### 🌍 Market & TAM Configuration")
+    market_size = st.number_input("Total Addressable Market (TAM)", min_value=0, value=1000000, step=10000, help="Total market size in your currency")
+    sam_size = st.number_input("Serviceable Addressable Market (SAM)", min_value=0, value=500000, step=10000, help="Addressable market size")
+    som_size = st.number_input("Serviceable Obtainable Market (SOM)", min_value=0, value=50000, step=1000, help="Realistic market capture")
+    market_growth_rate = st.number_input("Market Growth Rate (%)", min_value=0.0, max_value=100.0, value=15.0, step=0.1, help="Annual market growth rate")
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Fee collection mode
     st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
@@ -1540,7 +1645,16 @@ with st.sidebar:
         ["Upfront Fee (Entire Pool)", "Monthly Fee Collection"]
     )
     st.markdown('</div>', unsafe_allow_html=True)
-    
+
+    # Market & TAM Configuration
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("### 🌍 Market & TAM Configuration")
+    market_size = st.number_input("Total Addressable Market (TAM)", min_value=0, value=1000000, step=10000, help="Total market size in your currency")
+    sam_size = st.number_input("Serviceable Addressable Market (SAM)", min_value=0, value=500000, step=10000, help="Addressable market size")
+    som_size = st.number_input("Serviceable Obtainable Market (SOM)", min_value=0, value=50000, step=1000, help="Realistic market capture")
+    market_growth_rate = st.number_input("Market Growth Rate (%)", min_value=0.0, max_value=100.0, value=15.0, step=0.1, help="Annual market growth rate")
+    st.markdown('</div>', unsafe_allow_html=True)
+
     # Scenario configuration
     st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 📊 Scenario")
@@ -1673,69 +1787,71 @@ with st.sidebar:
                         else:
                             slot_distribution[duration][slab][slot] = row["Distribution %"]
                 
-                else:  # Detailed View
-                    # Detailed view - individual slot configuration
-                    fee_pct = st.number_input(
-                        f"Fee % for {duration}M, {CURRENCY_SYMBOL}{slab:,}",
-                        min_value=0.0,
-                        max_value=20.0,
-                        value=2.0,
-                        step=0.1,
-                        key=f"fee_{duration}_{slab}"
-                    )
-                    
-                    st.markdown("**🎯 Slot Distribution:**")
-                    total_distribution = 0
-                    
-                    for slot in range(1, duration + 1):
-                        col1, col2, col3 = st.columns([1, 1, 2])
-                        
-                        with col1:
-                            blocked = st.checkbox(
-                                f"Block",
-                                key=f"block_{duration}_{slab}_{slot}",
-                                help=f"Block Slot {slot}"
-                            )
-                        
-                        with col2:
-                            if not blocked:
-                                distribution = st.number_input(
-                                    f"Slot {slot} (%)",
-                                    min_value=0.0,
-                                    max_value=100.0,
-                                    value=100.0 / duration,
-                                    step=0.1,
-                                    key=f"dist_{duration}_{slab}_{slot}"
-                                )
-                                total_distribution += distribution
-                            else:
-                                distribution = 0
-                                st.info("🚫 Blocked")
-                        
-                        with col3:
-                            if not blocked:
-                                st.metric(f"Slot {slot}", f"{distribution:.1f}%")
-                            else:
-                                st.metric(f"Slot {slot}", "🚫 Blocked")
-                    
-                    # Validation
-                    if abs(total_distribution - 100.0) > 0.1:
-                        st.warning(f"⚠️ Total distribution is {total_distribution:.1f}% (should be 100%)")
-                    
-                    # Store configuration
-                    if duration not in slot_fees:
-                        slot_fees[duration] = {}
-                    if duration not in slot_distribution:
-                        slot_distribution[duration] = {}
-                    
-                    slot_fees[duration][slab] = fee_pct
-                    slot_distribution[duration][slab] = {}
-                    
-                    for slot in range(1, duration + 1):
-                        if not blocked:
-                            slot_distribution[duration][slab][slot] = distribution
-                        else:
-                            slot_distribution[duration][slab][slot] = 0
+                        else:  # Detailed View
+                            # Detailed view - individual slot configuration
+                            st.markdown(f"**🔧 Detailed Configuration for {duration}M, {CURRENCY_SYMBOL}{slab:,}**")
+                            
+                            # Fee configuration for each slot
+                            st.markdown("**💰 Slot-wise Fee Configuration:**")
+                            
+                            total_distribution = 0
+                            slot_configs = {}
+                            
+                            for slot in range(1, duration + 1):
+                                st.markdown(f"**Slot {slot}:**")
+                                col1, col2, col3 = st.columns([2, 1, 2])
+                                
+                                with col1:
+                                    fee_pct = st.number_input(
+                                        f"Fee %",
+                                        min_value=0.0,
+                                        max_value=20.0,
+                                        value=2.0,
+                                        step=0.1,
+                                        key=f"fee_{duration}_{slab}_{slot}"
+                                    )
+                                
+                                with col2:
+                                    blocked = st.checkbox(
+                                        f"Block",
+                                        key=f"block_{duration}_{slab}_{slot}",
+                                        help=f"Block Slot {slot}"
+                                    )
+                                
+                                with col3:
+                                    if not blocked:
+                                        distribution = st.number_input(
+                                            f"Distribution %",
+                                            min_value=0.0,
+                                            max_value=100.0,
+                                            value=100.0 / duration,
+                                            step=0.1,
+                                            key=f"dist_{duration}_{slab}_{slot}"
+                                        )
+                                        total_distribution += distribution
+                                    else:
+                                        distribution = 0
+                                        st.info("🚫 Blocked")
+                                
+                                # Store slot configuration
+                                slot_configs[slot] = {
+                                    'fee_pct': fee_pct,
+                                    'blocked': blocked,
+                                    'distribution': distribution
+                                }
+                            
+                            # Validation
+                            if abs(total_distribution - 100.0) > 0.1:
+                                st.warning(f"⚠️ Total distribution is {total_distribution:.1f}% (should be 100%)")
+                            
+                            # Store configuration
+                            if duration not in slot_fees:
+                                slot_fees[duration] = {}
+                            if duration not in slot_distribution:
+                                slot_distribution[duration] = {}
+                            
+                            slot_fees[duration][slab] = {slot: config['fee_pct'] for slot, config in slot_configs.items()}
+                            slot_distribution[duration][slab] = {slot: config['distribution'] for slot, config in slot_configs.items()}
     
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -1801,6 +1917,12 @@ if st.button("🚀 Run Forecast", type="primary"):
             st.session_state['config'] = config
             st.session_state['fee_collection_mode'] = fee_collection_mode
             st.session_state['scenario_name'] = scenario_name
+            
+            # Store market data in session state
+            st.session_state['market_size'] = market_size
+            st.session_state['sam_size'] = sam_size
+            st.session_state['som_size'] = som_size
+            st.session_state['market_growth_rate'] = market_growth_rate
             
         else:
             st.error("❌ No forecast data generated")
@@ -1876,7 +1998,17 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         
         # Default Impact Analysis
         create_default_impact_analysis(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
-        
+        # Market Analysis
+            if 'market_size' in st.session_state:
+                create_market_analysis(
+                    st.session_state['market_size'],
+                    st.session_state['sam_size'], 
+                    st.session_state['som_size'],
+                    st.session_state['market_growth_rate'],
+                    df_forecast,
+                    CURRENCY_SYMBOL,
+                    CURRENCY_NAME
+                )
         # Export options
         st.subheader("📥 Export Data")
         
