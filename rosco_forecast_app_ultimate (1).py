@@ -1170,6 +1170,1226 @@ def create_cohort_analysis(df_forecast):
         })
     
     return pd.DataFrame(cohort_data)
+def create_user_lifecycle_summary(config, duration):
+    """Create a comprehensive 12-month user lifecycle summary"""
+    user_lifecycle = calculate_user_lifecycle(config, duration)
+    
+    # Create summary DataFrame
+    summary_data = []
+    for month in range(1, 13):
+        summary_data.append({
+            'Month': f"Month {month}",
+            'New Users': user_lifecycle['new_users'][month],
+            'Returning Users': user_lifecycle['returning_users'][month],
+            'Resting Users': user_lifecycle['resting_users'][month],
+            'Active Users': user_lifecycle['active_users'][month],
+            'Total Users to Date': user_lifecycle['total_users'][month]
+        })
+    
+    return pd.DataFrame(summary_data)
+
+def create_monthly_view(df_forecast, currency_symbol, currency_name):
+    """Create detailed monthly view"""
+    st.markdown("#### 📅 Monthly Detailed View")
+    
+    # Get the first duration for the summary
+    if not df_forecast.empty:
+        first_duration = df_forecast['Duration'].iloc[0]
+        lifecycle_summary = create_user_lifecycle_summary(st.session_state.get('config', {}), first_duration)
+        
+        # Add additional metrics
+        monthly_data = df_forecast.groupby('Month').agg({
+            'New Users': 'sum',
+            'Returning Users': 'sum',
+            'Churned Users': 'sum',
+            'Rest Period Users': 'sum',
+            'Users': 'sum',
+            'Total Users to Date': 'sum',
+            'Pool Size': 'sum',
+            'Total Revenue': 'sum',
+            'Gross Profit': 'sum'
+        }).reset_index()
+        
+        # Calculate month-over-month growth rates
+        monthly_data['New Users Growth %'] = monthly_data['New Users'].pct_change() * 100
+        monthly_data['Total Users Growth %'] = monthly_data['Total Users to Date'].pct_change() * 100
+        monthly_data['Revenue Growth %'] = monthly_data['Total Revenue'].pct_change() * 100
+        
+        # Format the data
+        monthly_data['New Users Growth %'] = monthly_data['New Users Growth %'].fillna(0).round(1)
+        monthly_data['Total Users Growth %'] = monthly_data['Total Users Growth %'].fillna(0).round(1)
+        monthly_data['Revenue Growth %'] = monthly_data['Revenue Growth %'].fillna(0).round(1)
+        
+        # Display the table
+        st.dataframe(monthly_data, use_container_width=True)
+        
+        # Monthly metrics summary
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            avg_monthly_growth = monthly_data['New Users Growth %'].mean()
+            st.metric("Avg Monthly Growth", f"{avg_monthly_growth:.1f}%")
+        
+        with col2:
+            peak_month = monthly_data.loc[monthly_data['Users'].idxmax(), 'Month']
+            peak_users = monthly_data['Users'].max()
+            st.metric("Peak Month", f"Month {peak_month}")
+        
+        with col3:
+            total_revenue = monthly_data['Total Revenue'].sum()
+            st.metric("Total Revenue", format_currency(total_revenue, currency_symbol, currency_name))
+        
+        with col4:
+            avg_revenue_per_user = total_revenue / monthly_data['Users'].sum() if monthly_data['Users'].sum() > 0 else 0
+            st.metric("Revenue per User", format_currency(avg_revenue_per_user, currency_symbol, currency_name))
+        
+        # Fancy Monthly Charts
+        st.markdown("#### 📊 Monthly Trend Charts")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # User Trends Chart
+            if PLOTLY_AVAILABLE:
+                fig_users = go.Figure()
+                
+                # Add traces with trendy colors
+                fig_users.add_trace(go.Scatter(
+                    x=monthly_data['Month'], 
+                    y=monthly_data['New Users'],
+                    mode='lines+markers',
+                    name='New Users',
+                    line=dict(color='#667eea', width=3),
+                    marker=dict(size=8, color='#667eea')
+                ))
+                
+                fig_users.add_trace(go.Scatter(
+                    x=monthly_data['Month'], 
+                    y=monthly_data['Returning Users'],
+                    mode='lines+markers',
+                    name='Returning Users',
+                    line=dict(color='#764ba2', width=3),
+                    marker=dict(size=8, color='#764ba2')
+                ))
+                
+                fig_users.add_trace(go.Scatter(
+                    x=monthly_data['Month'], 
+                    y=monthly_data['Users'],
+                    mode='lines+markers',
+                    name='Active Users',
+                    line=dict(color='#f093fb', width=3),
+                    marker=dict(size=8, color='#f093fb')
+                ))
+                
+                fig_users.update_layout(
+                    title="📈 Monthly User Trends",
+                    xaxis_title="Month",
+                    yaxis_title="Number of Users",
+                    height=400,
+                    template="plotly_white",
+                    showlegend=True,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                
+                st.plotly_chart(fig_users, use_container_width=True)
+            else:
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.plot(monthly_data['Month'], monthly_data['New Users'], 'o-', color='#667eea', linewidth=3, markersize=8, label='New Users')
+                ax.plot(monthly_data['Month'], monthly_data['Returning Users'], 'o-', color='#764ba2', linewidth=3, markersize=8, label='Returning Users')
+                ax.plot(monthly_data['Month'], monthly_data['Users'], 'o-', color='#f093fb', linewidth=3, markersize=8, label='Active Users')
+                ax.set_title("📈 Monthly User Trends", fontsize=16, fontweight='bold')
+                ax.set_xlabel("Month", fontsize=12)
+                ax.set_ylabel("Number of Users", fontsize=12)
+                ax.legend(fontsize=10)
+                ax.grid(True, alpha=0.3)
+                st.pyplot(fig)
+        
+        with col2:
+            # Revenue Trends Chart
+            if PLOTLY_AVAILABLE:
+                fig_revenue = go.Figure()
+                
+                fig_revenue.add_trace(go.Scatter(
+                    x=monthly_data['Month'], 
+                    y=monthly_data['Total Revenue'],
+                    mode='lines+markers',
+                    name='Total Revenue',
+                    line=dict(color='#4facfe', width=3),
+                    marker=dict(size=8, color='#4facfe'),
+                    fill='tonexty'
+                ))
+                
+                fig_revenue.add_trace(go.Scatter(
+                    x=monthly_data['Month'], 
+                    y=monthly_data['Gross Profit'],
+                    mode='lines+markers',
+                    name='Gross Profit',
+                    line=dict(color='#00f2fe', width=3),
+                    marker=dict(size=8, color='#00f2fe')
+                ))
+                
+                fig_revenue.update_layout(
+                    title="💰 Monthly Revenue Trends",
+                    xaxis_title="Month",
+                    yaxis_title="Amount",
+                    height=400,
+                    template="plotly_white",
+                    showlegend=True,
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                
+                st.plotly_chart(fig_revenue, use_container_width=True)
+            else:
+                fig, ax = plt.subplots(figsize=(10, 6))
+                ax.plot(monthly_data['Month'], monthly_data['Total Revenue'], 'o-', color='#4facfe', linewidth=3, markersize=8, label='Total Revenue')
+                ax.plot(monthly_data['Month'], monthly_data['Gross Profit'], 'o-', color='#00f2fe', linewidth=3, markersize=8, label='Gross Profit')
+                ax.set_title("💰 Monthly Revenue Trends", fontsize=16, fontweight='bold')
+                ax.set_xlabel("Month", fontsize=12)
+                ax.set_ylabel("Amount", fontsize=12)
+                ax.legend(fontsize=10)
+                ax.grid(True, alpha=0.3)
+                st.pyplot(fig)
+        
+        # Growth Rate Chart
+        if PLOTLY_AVAILABLE:
+            fig_growth = go.Figure()
+            
+            fig_growth.add_trace(go.Scatter(
+                x=monthly_data['Month'], 
+                y=monthly_data['New Users Growth %'],
+                mode='lines+markers',
+                name='New Users Growth %',
+                line=dict(color='#fa709a', width=3),
+                marker=dict(size=8, color='#fa709a')
+            ))
+            
+            fig_growth.add_trace(go.Scatter(
+                x=monthly_data['Month'], 
+                y=monthly_data['Revenue Growth %'],
+                mode='lines+markers',
+                name='Revenue Growth %',
+                line=dict(color='#fee140', width=3),
+                marker=dict(size=8, color='#fee140')
+            ))
+            
+            fig_growth.update_layout(
+                title="📈 Monthly Growth Rates",
+                xaxis_title="Month",
+                yaxis_title="Growth %",
+                height=400,
+                template="plotly_white",
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            
+            st.plotly_chart(fig_growth, use_container_width=True)
+        else:
+            fig, ax = plt.subplots(figsize=(12, 6))
+            ax.plot(monthly_data['Month'], monthly_data['New Users Growth %'], 'o-', color='#fa709a', linewidth=3, markersize=8, label='New Users Growth %')
+            ax.plot(monthly_data['Month'], monthly_data['Revenue Growth %'], 'o-', color='#fee140', linewidth=3, markersize=8, label='Revenue Growth %')
+            ax.set_title("📈 Monthly Growth Rates", fontsize=16, fontweight='bold')
+            ax.set_xlabel("Month", fontsize=12)
+            ax.set_ylabel("Growth %", fontsize=12)
+            ax.legend(fontsize=10)
+            ax.grid(True, alpha=0.3)
+            st.pyplot(fig)
+
+def create_yearly_view(df_forecast, currency_symbol, currency_name):
+    """Create yearly summary view"""
+    st.markdown("#### 📆 Yearly Summary View")
+    
+    # Group by year
+    yearly_data = df_forecast.groupby('Year').agg({
+        'New Users': 'sum',
+        'Returning Users': 'sum',
+        'Churned Users': 'sum',
+        'Rest Period Users': 'sum',
+        'Users': 'sum',
+        'Total Users to Date': 'sum',
+        'Pool Size': 'sum',
+        'Total Revenue': 'sum',
+        'Gross Profit': 'sum',
+        'Total Fees Collected': 'sum',
+        'Total NII (Lifetime)': 'sum'
+    }).reset_index()
+    
+    # Calculate yearly metrics
+    yearly_data['User Growth %'] = yearly_data['Total Users to Date'].pct_change() * 100
+    yearly_data['Revenue Growth %'] = yearly_data['Total Revenue'].pct_change() * 100
+    yearly_data['Profit Margin %'] = (yearly_data['Gross Profit'] / yearly_data['Total Revenue'] * 100).round(1)
+    yearly_data['Revenue per User'] = (yearly_data['Total Revenue'] / yearly_data['Users']).round(0)
+    
+    # Fill NaN values
+    yearly_data['User Growth %'] = yearly_data['User Growth %'].fillna(0)
+    yearly_data['Revenue Growth %'] = yearly_data['Revenue Growth %'].fillna(0)
+    
+    # Display yearly table
+    st.dataframe(yearly_data, use_container_width=True)
+    
+    # Yearly metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        total_years = len(yearly_data)
+        st.metric("Total Years", f"{total_years}")
+    
+    with col2:
+        avg_yearly_growth = yearly_data['User Growth %'].mean()
+        st.metric("Avg Yearly Growth", f"{avg_yearly_growth:.1f}%")
+    
+    with col3:
+        total_revenue = yearly_data['Total Revenue'].sum()
+        st.metric("Total Revenue", format_currency(total_revenue, currency_symbol, currency_name))
+    
+    with col4:
+        total_profit = yearly_data['Gross Profit'].sum()
+        st.metric("Total Profit", format_currency(total_profit, currency_symbol, currency_name))
+    
+    # Fancy Yearly Charts
+    st.markdown("#### 📊 Yearly Analysis Charts")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Yearly User Distribution Pie Chart
+        if PLOTLY_AVAILABLE:
+            fig_pie = go.Figure(data=[go.Pie(
+                labels=['New Users', 'Returning Users', 'Churned Users', 'Rest Period Users'],
+                values=[
+                    yearly_data['New Users'].sum(),
+                    yearly_data['Returning Users'].sum(),
+                    yearly_data['Churned Users'].sum(),
+                    yearly_data['Rest Period Users'].sum()
+                ],
+                hole=0.4,
+                marker_colors=['#667eea', '#764ba2', '#ef4444', '#f59e0b']
+            )])
+            
+            fig_pie.update_layout(
+                title="👥 Yearly User Distribution",
+                height=400,
+                template="plotly_white",
+                showlegend=True
+            )
+            
+            st.plotly_chart(fig_pie, use_container_width=True)
+        else:
+            fig, ax = plt.subplots(figsize=(8, 8))
+            labels = ['New Users', 'Returning Users', 'Churned Users', 'Rest Period Users']
+            values = [
+                yearly_data['New Users'].sum(),
+                yearly_data['Returning Users'].sum(),
+                yearly_data['Churned Users'].sum(),
+                yearly_data['Rest Period Users'].sum()
+            ]
+            colors = ['#667eea', '#764ba2', '#ef4444', '#f59e0b']
+            
+            wedges, texts, autotexts = ax.pie(values, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
+            ax.set_title("👥 Yearly User Distribution", fontsize=16, fontweight='bold')
+            st.pyplot(fig)
+    
+    with col2:
+        # Revenue vs Profit Bar Chart
+        if PLOTLY_AVAILABLE:
+            fig_bar = go.Figure()
+            
+            fig_bar.add_trace(go.Bar(
+                x=yearly_data['Year'],
+                y=yearly_data['Total Revenue'],
+                name='Total Revenue',
+                marker_color='#4facfe',
+                text=yearly_data['Total Revenue'],
+                textposition='auto'
+            ))
+            
+            fig_bar.add_trace(go.Bar(
+                x=yearly_data['Year'],
+                y=yearly_data['Gross Profit'],
+                name='Gross Profit',
+                marker_color='#00f2fe',
+                text=yearly_data['Gross Profit'],
+                textposition='auto'
+            ))
+            
+            fig_bar.update_layout(
+                title="💰 Yearly Revenue vs Profit",
+                xaxis_title="Year",
+                yaxis_title="Amount",
+                height=400,
+                template="plotly_white",
+                barmode='group'
+            )
+            
+            st.plotly_chart(fig_bar, use_container_width=True)
+        else:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            x = yearly_data['Year']
+            width = 0.35
+            
+            ax.bar(x - width/2, yearly_data['Total Revenue'], width, label='Total Revenue', color='#4facfe')
+            ax.bar(x + width/2, yearly_data['Gross Profit'], width, label='Gross Profit', color='#00f2fe')
+            
+            ax.set_title("💰 Yearly Revenue vs Profit", fontsize=16, fontweight='bold')
+            ax.set_xlabel("Year", fontsize=12)
+            ax.set_ylabel("Amount", fontsize=12)
+            ax.legend(fontsize=10)
+            ax.grid(True, alpha=0.3)
+            st.pyplot(fig)
+    
+    # Profit Margin Trend
+    if PLOTLY_AVAILABLE:
+        fig_margin = go.Figure()
+        
+        fig_margin.add_trace(go.Scatter(
+            x=yearly_data['Year'],
+            y=yearly_data['Profit Margin %'],
+            mode='lines+markers',
+            name='Profit Margin %',
+            line=dict(color='#fa709a', width=4),
+            marker=dict(size=12, color='#fa709a')
+        ))
+        
+        fig_margin.update_layout(
+            title="📈 Yearly Profit Margin Trend",
+            xaxis_title="Year",
+            yaxis_title="Profit Margin %",
+            height=400,
+            template="plotly_white",
+            showlegend=True
+        )
+        
+        st.plotly_chart(fig_margin, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(yearly_data['Year'], yearly_data['Profit Margin %'], 'o-', color='#fa709a', linewidth=4, markersize=12, label='Profit Margin %')
+        ax.set_title("📈 Yearly Profit Margin Trend", fontsize=16, fontweight='bold')
+        ax.set_xlabel("Year", fontsize=12)
+        ax.set_ylabel("Profit Margin %", fontsize=12)
+        ax.legend(fontsize=10)
+        ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+
+def create_mom_growth_view(df_forecast, currency_symbol, currency_name):
+    """Create month-on-month growth analysis"""
+    st.markdown("#### 📈 Month-on-Month Growth Analysis")
+    
+    # Calculate month-over-month metrics
+    monthly_data = df_forecast.groupby('Month').agg({
+        'New Users': 'sum',
+        'Returning Users': 'sum',
+        'Users': 'sum',
+        'Total Users to Date': 'sum',
+        'Pool Size': 'sum',
+        'Total Revenue': 'sum',
+        'Gross Profit': 'sum'
+    }).reset_index()
+    
+    # Calculate growth rates
+    monthly_data['New Users MoM %'] = monthly_data['New Users'].pct_change() * 100
+    monthly_data['Returning Users MoM %'] = monthly_data['Returning Users'].pct_change() * 100
+    monthly_data['Active Users MoM %'] = monthly_data['Users'].pct_change() * 100
+    monthly_data['Total Users MoM %'] = monthly_data['Total Users to Date'].pct_change() * 100
+    monthly_data['Revenue MoM %'] = monthly_data['Total Revenue'].pct_change() * 100
+    monthly_data['Profit MoM %'] = monthly_data['Gross Profit'].pct_change() * 100
+    
+    # Fill NaN values and round
+    growth_columns = ['New Users MoM %', 'Returning Users MoM %', 'Active Users MoM %', 
+                     'Total Users MoM %', 'Revenue MoM %', 'Profit MoM %']
+    for col in growth_columns:
+        monthly_data[col] = monthly_data[col].fillna(0).round(1)
+    
+    # Display growth table
+    st.dataframe(monthly_data, use_container_width=True)
+    
+    # Growth analysis metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        avg_new_users_growth = monthly_data['New Users MoM %'].mean()
+        st.metric("Avg New Users MoM", f"{avg_new_users_growth:.1f}%")
+    
+    with col2:
+        avg_revenue_growth = monthly_data['Revenue MoM %'].mean()
+        st.metric("Avg Revenue MoM", f"{avg_revenue_growth:.1f}%")
+    
+    with col3:
+        max_growth_month = monthly_data.loc[monthly_data['Revenue MoM %'].idxmax(), 'Month']
+        max_growth_rate = monthly_data['Revenue MoM %'].max()
+        st.metric("Peak Growth Month", f"Month {max_growth_month}")
+    
+    with col4:
+        min_growth_month = monthly_data.loc[monthly_data['Revenue MoM %'].idxmin(), 'Month']
+        min_growth_rate = monthly_data['Revenue MoM %'].min()
+        st.metric("Lowest Growth Month", f"Month {min_growth_month}")
+    
+    # Fancy MoM Growth Charts
+    st.markdown("#### 📊 Month-on-Month Growth Charts")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # User Growth Rates Chart
+        if PLOTLY_AVAILABLE:
+            fig_user_growth = go.Figure()
+            
+            fig_user_growth.add_trace(go.Scatter(
+                x=monthly_data['Month'],
+                y=monthly_data['New Users MoM %'],
+                mode='lines+markers',
+                name='New Users MoM %',
+                line=dict(color='#667eea', width=3),
+                marker=dict(size=8, color='#667eea')
+            ))
+            
+            fig_user_growth.add_trace(go.Scatter(
+                x=monthly_data['Month'],
+                y=monthly_data['Returning Users MoM %'],
+                mode='lines+markers',
+                name='Returning Users MoM %',
+                line=dict(color='#764ba2', width=3),
+                marker=dict(size=8, color='#764ba2')
+            ))
+            
+            fig_user_growth.add_trace(go.Scatter(
+                x=monthly_data['Month'],
+                y=monthly_data['Active Users MoM %'],
+                mode='lines+markers',
+                name='Active Users MoM %',
+                line=dict(color='#f093fb', width=3),
+                marker=dict(size=8, color='#f093fb')
+            ))
+            
+            fig_user_growth.update_layout(
+                title="👥 User Growth Rates (MoM)",
+                xaxis_title="Month",
+                yaxis_title="Growth %",
+                height=400,
+                template="plotly_white",
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            
+            st.plotly_chart(fig_user_growth, use_container_width=True)
+        else:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(monthly_data['Month'], monthly_data['New Users MoM %'], 'o-', color='#667eea', linewidth=3, markersize=8, label='New Users MoM %')
+            ax.plot(monthly_data['Month'], monthly_data['Returning Users MoM %'], 'o-', color='#764ba2', linewidth=3, markersize=8, label='Returning Users MoM %')
+            ax.plot(monthly_data['Month'], monthly_data['Active Users MoM %'], 'o-', color='#f093fb', linewidth=3, markersize=8, label='Active Users MoM %')
+            ax.set_title("👥 User Growth Rates (MoM)", fontsize=16, fontweight='bold')
+            ax.set_xlabel("Month", fontsize=12)
+            ax.set_ylabel("Growth %", fontsize=12)
+            ax.legend(fontsize=10)
+            ax.grid(True, alpha=0.3)
+            st.pyplot(fig)
+    
+    with col2:
+        # Financial Growth Rates Chart
+        if PLOTLY_AVAILABLE:
+            fig_financial_growth = go.Figure()
+            
+            fig_financial_growth.add_trace(go.Scatter(
+                x=monthly_data['Month'],
+                y=monthly_data['Revenue MoM %'],
+                mode='lines+markers',
+                name='Revenue MoM %',
+                line=dict(color='#4facfe', width=3),
+                marker=dict(size=8, color='#4facfe')
+            ))
+            
+            fig_financial_growth.add_trace(go.Scatter(
+                x=monthly_data['Month'],
+                y=monthly_data['Profit MoM %'],
+                mode='lines+markers',
+                name='Profit MoM %',
+                line=dict(color='#00f2fe', width=3),
+                marker=dict(size=8, color='#00f2fe')
+            ))
+            
+            fig_financial_growth.update_layout(
+                title="💰 Financial Growth Rates (MoM)",
+                xaxis_title="Month",
+                yaxis_title="Growth %",
+                height=400,
+                template="plotly_white",
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            
+            st.plotly_chart(fig_financial_growth, use_container_width=True)
+        else:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(monthly_data['Month'], monthly_data['Revenue MoM %'], 'o-', color='#4facfe', linewidth=3, markersize=8, label='Revenue MoM %')
+            ax.plot(monthly_data['Month'], monthly_data['Profit MoM %'], 'o-', color='#00f2fe', linewidth=3, markersize=8, label='Profit MoM %')
+            ax.set_title("💰 Financial Growth Rates (MoM)", fontsize=16, fontweight='bold')
+            ax.set_xlabel("Month", fontsize=12)
+            ax.set_ylabel("Growth %", fontsize=12)
+            ax.legend(fontsize=10)
+            ax.grid(True, alpha=0.3)
+            st.pyplot(fig)
+    
+    # Growth Heatmap
+    if PLOTLY_AVAILABLE:
+        fig_heatmap = go.Figure(data=go.Heatmap(
+            z=[
+                monthly_data['New Users MoM %'].tolist(),
+                monthly_data['Returning Users MoM %'].tolist(),
+                monthly_data['Active Users MoM %'].tolist(),
+                monthly_data['Revenue MoM %'].tolist(),
+                monthly_data['Profit MoM %'].tolist()
+            ],
+            x=monthly_data['Month'].tolist(),
+            y=['New Users', 'Returning Users', 'Active Users', 'Revenue', 'Profit'],
+            colorscale='RdYlBu_r',
+            showscale=True
+        ))
+        
+        fig_heatmap.update_layout(
+            title="🔥 Growth Rate Heatmap (MoM)",
+            xaxis_title="Month",
+            yaxis_title="Metric",
+            height=400,
+            template="plotly_white"
+        )
+        
+        st.plotly_chart(fig_heatmap, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        data = [
+            monthly_data['New Users MoM %'].tolist(),
+            monthly_data['Returning Users MoM %'].tolist(),
+            monthly_data['Active Users MoM %'].tolist(),
+            monthly_data['Revenue MoM %'].tolist(),
+            monthly_data['Profit MoM %'].tolist()
+        ]
+        im = ax.imshow(data, cmap='RdYlBu_r', aspect='auto')
+        ax.set_xticks(range(len(monthly_data['Month'])))
+        ax.set_xticklabels(monthly_data['Month'])
+        ax.set_yticks(range(5))
+        ax.set_yticklabels(['New Users', 'Returning Users', 'Active Users', 'Revenue', 'Profit'])
+        ax.set_title("🔥 Growth Rate Heatmap (MoM)", fontsize=16, fontweight='bold')
+        ax.set_xlabel("Month", fontsize=12)
+        ax.set_ylabel("Metric", fontsize=12)
+        plt.colorbar(im, ax=ax)
+        st.pyplot(fig)
+
+def create_yoy_comparison_view(df_forecast, currency_symbol, currency_name):
+    """Create year-over-year comparison view"""
+    st.markdown("#### 🔄 Year-over-Year Comparison")
+    
+    # Since we only have one year of data, create a simulated comparison
+    # This would normally compare different years
+    
+    # Group by year and month for comparison
+    monthly_yearly_data = df_forecast.groupby(['Year', 'Month']).agg({
+        'New Users': 'sum',
+        'Returning Users': 'sum',
+        'Users': 'sum',
+        'Total Users to Date': 'sum',
+        'Total Revenue': 'sum',
+        'Gross Profit': 'sum'
+    }).reset_index()
+    
+    # Create comparison table (simulated for demonstration)
+    comparison_data = []
+    for month in range(1, 13):
+        month_data = monthly_yearly_data[monthly_yearly_data['Month'] == month]
+        if not month_data.empty:
+            current_year_data = month_data.iloc[0]
+            
+            # Simulate previous year data (for demonstration)
+            prev_year_multiplier = 0.85  # Assume 15% growth year-over-year
+            comparison_data.append({
+                'Month': f"Month {month}",
+                'Current Year Users': int(current_year_data['Users']),
+                'Previous Year Users': int(current_year_data['Users'] * prev_year_multiplier),
+                'YoY Growth %': ((current_year_data['Users'] - current_year_data['Users'] * prev_year_multiplier) / (current_year_data['Users'] * prev_year_multiplier) * 100),
+                'Current Year Revenue': current_year_data['Total Revenue'],
+                'Previous Year Revenue': current_year_data['Total Revenue'] * prev_year_multiplier,
+                'Revenue YoY Growth %': ((current_year_data['Total Revenue'] - current_year_data['Total Revenue'] * prev_year_multiplier) / (current_year_data['Total Revenue'] * prev_year_multiplier) * 100)
+            })
+    
+    comparison_df = pd.DataFrame(comparison_data)
+    comparison_df['YoY Growth %'] = comparison_df['YoY Growth %'].round(1)
+    comparison_df['Revenue YoY Growth %'] = comparison_df['Revenue YoY Growth %'].round(1)
+    
+    # Display comparison table
+    st.dataframe(comparison_df, use_container_width=True)
+    
+    # YoY metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        avg_yoy_growth = comparison_df['YoY Growth %'].mean()
+        st.metric("Avg YoY Growth", f"{avg_yoy_growth:.1f}%")
+    
+    with col2:
+        avg_revenue_yoy = comparison_df['Revenue YoY Growth %'].mean()
+        st.metric("Avg Revenue YoY", f"{avg_revenue_yoy:.1f}%")
+    
+    with col3:
+        best_yoy_month = comparison_df.loc[comparison_df['YoY Growth %'].idxmax(), 'Month']
+        best_yoy_rate = comparison_df['YoY Growth %'].max()
+        st.metric("Best YoY Month", f"{best_yoy_month}")
+    
+    with col4:
+        total_yoy_impact = comparison_df['Current Year Users'].sum() - comparison_df['Previous Year Users'].sum()
+        st.metric("Total YoY Impact", f"{total_yoy_impact:,} users")
+    
+    # Fancy YoY Comparison Charts
+    st.markdown("#### 📊 Year-over-Year Comparison Charts")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # User Comparison Chart
+        if PLOTLY_AVAILABLE:
+            fig_users_yoy = go.Figure()
+            
+            fig_users_yoy.add_trace(go.Scatter(
+                x=comparison_df['Month'],
+                y=comparison_df['Current Year Users'],
+                mode='lines+markers',
+                name='Current Year Users',
+                line=dict(color='#667eea', width=3),
+                marker=dict(size=8, color='#667eea')
+            ))
+            
+            fig_users_yoy.add_trace(go.Scatter(
+                x=comparison_df['Month'],
+                y=comparison_df['Previous Year Users'],
+                mode='lines+markers',
+                name='Previous Year Users',
+                line=dict(color='#764ba2', width=3, dash='dash'),
+                marker=dict(size=8, color='#764ba2')
+            ))
+            
+            fig_users_yoy.update_layout(
+                title="👥 User Count Comparison (YoY)",
+                xaxis_title="Month",
+                yaxis_title="Number of Users",
+                height=400,
+                template="plotly_white",
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            
+            st.plotly_chart(fig_users_yoy, use_container_width=True)
+        else:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(comparison_df['Month'], comparison_df['Current Year Users'], 'o-', color='#667eea', linewidth=3, markersize=8, label='Current Year Users')
+            ax.plot(comparison_df['Month'], comparison_df['Previous Year Users'], 'o--', color='#764ba2', linewidth=3, markersize=8, label='Previous Year Users')
+            ax.set_title("👥 User Count Comparison (YoY)", fontsize=16, fontweight='bold')
+            ax.set_xlabel("Month", fontsize=12)
+            ax.set_ylabel("Number of Users", fontsize=12)
+            ax.legend(fontsize=10)
+            ax.grid(True, alpha=0.3)
+            st.pyplot(fig)
+    
+    with col2:
+        # Revenue Comparison Chart
+        if PLOTLY_AVAILABLE:
+            fig_revenue_yoy = go.Figure()
+            
+            fig_revenue_yoy.add_trace(go.Scatter(
+                x=comparison_df['Month'],
+                y=comparison_df['Current Year Revenue'],
+                mode='lines+markers',
+                name='Current Year Revenue',
+                line=dict(color='#4facfe', width=3),
+                marker=dict(size=8, color='#4facfe')
+            ))
+            
+            fig_revenue_yoy.add_trace(go.Scatter(
+                x=comparison_df['Month'],
+                y=comparison_df['Previous Year Revenue'],
+                mode='lines+markers',
+                name='Previous Year Revenue',
+                line=dict(color='#00f2fe', width=3, dash='dash'),
+                marker=dict(size=8, color='#00f2fe')
+            ))
+            
+            fig_revenue_yoy.update_layout(
+                title="💰 Revenue Comparison (YoY)",
+                xaxis_title="Month",
+                yaxis_title="Revenue",
+                height=400,
+                template="plotly_white",
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            
+            st.plotly_chart(fig_revenue_yoy, use_container_width=True)
+        else:
+            fig, ax = plt.subplots(figsize=(10, 6))
+            ax.plot(comparison_df['Month'], comparison_df['Current Year Revenue'], 'o-', color='#4facfe', linewidth=3, markersize=8, label='Current Year Revenue')
+            ax.plot(comparison_df['Month'], comparison_df['Previous Year Revenue'], 'o--', color='#00f2fe', linewidth=3, markersize=8, label='Previous Year Revenue')
+            ax.set_title("💰 Revenue Comparison (YoY)", fontsize=16, fontweight='bold')
+            ax.set_xlabel("Month", fontsize=12)
+            ax.set_ylabel("Revenue", fontsize=12)
+            ax.legend(fontsize=10)
+            ax.grid(True, alpha=0.3)
+            st.pyplot(fig)
+    
+    # YoY Growth Rates Chart
+    if PLOTLY_AVAILABLE:
+        fig_growth_yoy = go.Figure()
+        
+        fig_growth_yoy.add_trace(go.Scatter(
+            x=comparison_df['Month'],
+            y=comparison_df['YoY Growth %'],
+            mode='lines+markers',
+            name='User YoY Growth %',
+            line=dict(color='#fa709a', width=3),
+            marker=dict(size=8, color='#fa709a')
+        ))
+        
+        fig_growth_yoy.add_trace(go.Scatter(
+            x=comparison_df['Month'],
+            y=comparison_df['Revenue YoY Growth %'],
+            mode='lines+markers',
+            name='Revenue YoY Growth %',
+            line=dict(color='#fee140', width=3),
+            marker=dict(size=8, color='#fee140')
+        ))
+        
+        fig_growth_yoy.update_layout(
+            title="📈 Year-over-Year Growth Rates",
+            xaxis_title="Month",
+            yaxis_title="Growth %",
+            height=400,
+            template="plotly_white",
+            showlegend=True,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        
+        st.plotly_chart(fig_growth_yoy, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(comparison_df['Month'], comparison_df['YoY Growth %'], 'o-', color='#fa709a', linewidth=3, markersize=8, label='User YoY Growth %')
+        ax.plot(comparison_df['Month'], comparison_df['Revenue YoY Growth %'], 'o-', color='#fee140', linewidth=3, markersize=8, label='Revenue YoY Growth %')
+        ax.set_title("📈 Year-over-Year Growth Rates", fontsize=16, fontweight='bold')
+        ax.set_xlabel("Month", fontsize=12)
+        ax.set_ylabel("Growth %", fontsize=12)
+        ax.legend(fontsize=10)
+        ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+    
+    # YoY Impact Bar Chart
+    if PLOTLY_AVAILABLE:
+        fig_impact = go.Figure()
+        
+        # Calculate monthly impact
+        monthly_impact = comparison_df['Current Year Users'] - comparison_df['Previous Year Users']
+        
+        fig_impact.add_trace(go.Bar(
+            x=comparison_df['Month'],
+            y=monthly_impact,
+            name='Monthly User Impact',
+            marker_color='#667eea',
+            text=monthly_impact,
+            textposition='auto'
+        ))
+        
+        fig_impact.update_layout(
+            title="📊 Monthly YoY User Impact",
+            xaxis_title="Month",
+            yaxis_title="Additional Users",
+            height=400,
+            template="plotly_white",
+            showlegend=False
+        )
+        
+        st.plotly_chart(fig_impact, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        monthly_impact = comparison_df['Current Year Users'] - comparison_df['Previous Year Users']
+        ax.bar(comparison_df['Month'], monthly_impact, color='#667eea', alpha=0.8)
+        ax.set_title("📊 Monthly YoY User Impact", fontsize=16, fontweight='bold')
+        ax.set_xlabel("Month", fontsize=12)
+        ax.set_ylabel("Additional Users", fontsize=12)
+        ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+
+def create_customer_lifecycle_analysis(df_forecast, currency_symbol, currency_name):
+    """Create customer lifecycle analysis section"""
+    st.markdown("### 🔄 Customer Lifecycle Analysis")
+    
+    # Calculate lifecycle metrics
+    total_new_users = df_forecast['New Users'].sum()
+    total_returning_users = df_forecast['Returning Users'].sum()
+    total_churned_users = df_forecast['Churned Users'].sum()
+    total_rest_period_users = df_forecast['Rest Period Users'].sum()
+    total_users = df_forecast['Users'].sum()
+    
+    # Calculate growth and churn metrics
+    monthly_growth_rate = ((df_forecast['New Users'].iloc[-1] / df_forecast['New Users'].iloc[0]) ** (1/11) - 1) * 100 if len(df_forecast) > 1 else 0
+    overall_churn_rate = (total_churned_users / total_new_users * 100) if total_new_users > 0 else 0
+    retention_rate = (total_returning_users / total_new_users * 100) if total_new_users > 0 else 0
+    
+    # Lifecycle metrics
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        st.metric("New Users", f"{total_new_users:,}")
+    
+    with col2:
+        st.metric("Returning Users", f"{total_returning_users:,}")
+    
+    with col3:
+        st.metric("Churned Users", f"{total_churned_users:,}")
+    
+    with col4:
+        st.metric("Retention Rate", f"{retention_rate:.1f}%")
+    
+    with col5:
+        st.metric("Churn Rate", f"{overall_churn_rate:.1f}%")
+    
+    # Growth and churn analysis
+    st.markdown("#### 📈 Growth & Churn Analysis")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.metric("Monthly Growth Rate", f"{monthly_growth_rate:.1f}%")
+    
+    with col2:
+        st.metric("Rest Period Users", f"{total_rest_period_users:,}")
+    
+    # View Mode Selector
+    st.markdown("#### 📊 Analysis View Options")
+    view_mode = st.selectbox(
+        "Select Analysis View",
+        ["📅 Monthly View", "📆 Yearly View", "📈 Month-on-Month Growth", "🔄 Year-over-Year Comparison"],
+        help="Choose how to view the user lifecycle data"
+    )
+    
+    # Display based on selected view mode
+    if view_mode == "📅 Monthly View":
+        create_monthly_view(df_forecast, currency_symbol, currency_name)
+    elif view_mode == "📆 Yearly View":
+        create_yearly_view(df_forecast, currency_symbol, currency_name)
+    elif view_mode == "📈 Month-on-Month Growth":
+        create_mom_growth_view(df_forecast, currency_symbol, currency_name)
+    elif view_mode == "🔄 Year-over-Year Comparison":
+        create_yoy_comparison_view(df_forecast, currency_symbol, currency_name)
+    
+    # Lifecycle breakdown chart
+    st.markdown("#### 📊 User Lifecycle Breakdown")
+    
+    lifecycle_data = {
+        'User Type': ['New Users', 'Returning Users', 'Churned Users', 'Rest Period Users'],
+        'Count': [total_new_users, total_returning_users, total_churned_users, total_rest_period_users]
+    }
+    
+    df_lifecycle = pd.DataFrame(lifecycle_data)
+    
+    if PLOTLY_AVAILABLE:
+        fig = px.pie(df_lifecycle, values='Count', names='User Type', 
+                     title="User Lifecycle Distribution",
+                     color_discrete_sequence=['#667eea', '#764ba2', '#ef4444', '#f59e0b'])
+        fig.update_traces(textposition='inside', textinfo='percent+label')
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        colors = ['#667eea', '#764ba2', '#ef4444', '#f59e0b']
+        ax.pie(df_lifecycle['Count'], labels=df_lifecycle['User Type'], autopct='%1.1f%%', colors=colors)
+        ax.set_title("User Lifecycle Distribution")
+        st.pyplot(fig)
+    
+    # Monthly user trends with growth
+    st.markdown("#### 📈 Monthly User Trends & Growth")
+    
+    monthly_lifecycle = df_forecast.groupby('Month').agg({
+        'New Users': 'sum',
+        'Returning Users': 'sum',
+        'Churned Users': 'sum',
+        'Rest Period Users': 'sum',
+        'Users': 'sum'
+    }).reset_index()
+    
+    # Calculate month-over-month growth
+    monthly_lifecycle['Growth Rate %'] = monthly_lifecycle['New Users'].pct_change() * 100
+    monthly_lifecycle['Growth Rate %'] = monthly_lifecycle['Growth Rate %'].fillna(0)
+    
+    if PLOTLY_AVAILABLE:
+        # Create subplot with secondary y-axis
+        fig = make_subplots(specs=[[{"secondary_y": True}]])
+        
+        # Add user type lines
+        fig.add_trace(
+            go.Scatter(x=monthly_lifecycle['Month'], y=monthly_lifecycle['New Users'], 
+                      name='New Users', line=dict(color='#667eea')),
+            secondary_y=False,
+        )
+        fig.add_trace(
+            go.Scatter(x=monthly_lifecycle['Month'], y=monthly_lifecycle['Returning Users'], 
+                      name='Returning Users', line=dict(color='#764ba2')),
+            secondary_y=False,
+        )
+        fig.add_trace(
+            go.Scatter(x=monthly_lifecycle['Month'], y=monthly_lifecycle['Churned Users'], 
+                      name='Churned Users', line=dict(color='#ef4444')),
+            secondary_y=False,
+        )
+        
+        # Add growth rate line
+        fig.add_trace(
+            go.Scatter(x=monthly_lifecycle['Month'], y=monthly_lifecycle['Growth Rate %'], 
+                      name='Growth Rate %', line=dict(color='#10b981', dash='dash')),
+            secondary_y=True,
+        )
+        
+        # Update layout
+        fig.update_xaxes(title_text="Month")
+        fig.update_yaxes(title_text="Number of Users", secondary_y=False)
+        fig.update_yaxes(title_text="Growth Rate %", secondary_y=True)
+        fig.update_layout(title_text="Monthly User Trends & Growth Rate", height=500)
+        
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        fig, ax1 = plt.subplots(figsize=(12, 6))
+        
+        # Plot user types
+        ax1.plot(monthly_lifecycle['Month'], monthly_lifecycle['New Users'], label='New Users', color='#667eea')
+        ax1.plot(monthly_lifecycle['Month'], monthly_lifecycle['Returning Users'], label='Returning Users', color='#764ba2')
+        ax1.plot(monthly_lifecycle['Month'], monthly_lifecycle['Churned Users'], label='Churned Users', color='#ef4444')
+        ax1.set_xlabel("Month")
+        ax1.set_ylabel("Number of Users")
+        ax1.legend()
+        ax1.grid(True, alpha=0.3)
+        
+        # Add growth rate on secondary y-axis
+        ax2 = ax1.twinx()
+        ax2.plot(monthly_lifecycle['Month'], monthly_lifecycle['Growth Rate %'], 
+                label='Growth Rate %', color='#10b981', linestyle='--')
+        ax2.set_ylabel("Growth Rate %")
+        ax2.legend(loc='upper right')
+        
+        plt.title("Monthly User Trends & Growth Rate")
+        st.pyplot(fig)
+    
+    # Churn analysis
+    st.markdown("#### ⚠️ Churn Analysis")
+    
+    churn_analysis_data = {
+        'Metric': [
+            'Total Churned Users',
+            'Average Monthly Churn',
+            'Churn Rate (%)',
+            'Retention Rate (%)',
+            'Net User Growth',
+            'Churn Impact on Revenue'
+        ],
+        'Value': [
+            f"{total_churned_users:,}",
+            f"{total_churned_users / 12:.0f}",
+            f"{overall_churn_rate:.1f}%",
+            f"{retention_rate:.1f}%",
+            f"{total_new_users - total_churned_users:,}",
+            f"{currency_symbol}{(total_churned_users * 5000):,}"  # Assuming average loss per churned user
+        ]
+    }
+    
+    df_churn_analysis = pd.DataFrame(churn_analysis_data)
+    st.dataframe(df_churn_analysis, use_container_width=True)
+    
+    # 12-Month User Lifecycle Summary
+    st.markdown("#### 📋 12-Month User Lifecycle Summary")
+    
+    # Get the first duration for the summary
+    if not df_forecast.empty:
+        first_duration = df_forecast['Duration'].iloc[0]
+        lifecycle_summary = create_user_lifecycle_summary(st.session_state.get('config', {}), first_duration)
+        st.dataframe(lifecycle_summary, use_container_width=True)
+    
+    # Comprehensive User Lifecycle Logic Explanation
+    st.markdown("#### 🧠 Advanced User Lifecycle Logic Explanation")
+    
+    with st.expander("🔍 **Detailed User Lifecycle Algorithm**", expanded=True):
+        st.markdown("""
+        **🎯 Core Concept**: Our user lifecycle model simulates realistic user behavior with organic growth, rest periods, and returning users.
+        
+        **📊 1. New User Growth Logic (Delta Calculation)**
+        ```
+        Formula: new_users[m] = total_users[m] - total_users[m-1]
+        Growth: total_users[m] = total_users[m-1] × (1 + growth_rate/100)
+        
+        Example (2% monthly growth):
+        Month 1: 1,000 total → 1,000 new users (starting base)
+        Month 2: 1,020 total → 20 new users (+2% of 1,000)
+        Month 3: 1,040 total → 20 new users (+2% of 1,020)
+        Month 4: 1,061 total → 21 new users (+2% of 1,040)
+        ```
+        
+        **🔄 2. Rest Period Logic (Cohort Tracking)**
+        ```
+        Process:
+        1. Users participate for defined duration (e.g., 3 months)
+        2. After duration, they enter rest period (e.g., 1 month)
+        3. While resting, users are inactive in any committee
+        4. Rest period is mandatory between cycles
+        
+        Example (3M duration + 1M rest):
+        Month 1: Cohort 1 starts (1,000 users)
+        Month 2: Cohort 1 active (1,000 users)
+        Month 3: Cohort 1 active (1,000 users)
+        Month 4: Cohort 1 resting (1,000 users) ← Finished cycle
+        Month 5: Cohort 1 returns (1,000 users) ← Back to active
+        ```
+        
+        **🔄 3. Returning User Logic (Automatic Return)**
+        ```
+        Process:
+        1. Users automatically return after (duration + rest_period) months
+        2. They rejoin as part of active user base
+        3. Returning users behave like new participants
+        4. Return schedule is tracked in advance
+        
+        Example (3M committee + 1M rest):
+        Month 1: 1,000 new, 0 returning → 1,000 active
+        Month 2: 20 new, 0 returning → 20 active
+        Month 3: 20 new, 0 returning → 20 active
+        Month 4: 21 new, 0 returning → 21 active (1,000 resting)
+        Month 5: 21 new, 1,000 returning → 1,021 active
+        Month 6: 21 new, 20 returning → 41 active
+        ```
+        
+        **📈 4. User State Tracking**
+        ```
+        Active Users = New Users + Returning Users
+        Rest Period Users = Users who just finished their cycle
+        Churned Users = Users who don't return (based on churn rate)
+        Total Users to Date = Cumulative user base with growth
+        ```
+        
+        **🎯 5. Key Features**
+        - **No Participation Caps**: No TAM limits, all users can participate
+        - **Integer Counts**: All user counts are whole numbers (rounded)
+        - **Cohort Tracking**: Proper tracking of when each cohort finishes and returns
+        - **Return Scheduling**: Dictionary-based scheduling of user returns
+        - **Growth Integration**: Growth rate affects both new users and returning user calculations
+        """)
+    
+    # Visual Flow Diagram
+    st.markdown("#### 🔄 User Lifecycle Flow Diagram")
+    
+    if PLOTLY_AVAILABLE:
+        # Create a flowchart using Plotly
+        fig_flow = go.Figure()
+        
+        # Add nodes
+        nodes = [
+            "New Users\n(Delta Growth)",
+            "Active Users\n(New + Returning)",
+            "Committee\nParticipation",
+            "Rest Period\n(Mandatory)",
+            "Returning Users\n(Automatic)",
+            "Churned Users\n(Exit)"
+        ]
+        
+        x_pos = [0, 1, 2, 3, 4, 5]
+        y_pos = [0, 0, 0, 0, 0, 0]
+        
+        fig_flow.add_trace(go.Scatter(
+            x=x_pos,
+            y=y_pos,
+            mode='markers+text',
+            text=nodes,
+            textposition="middle center",
+            marker=dict(size=100, color=['#667eea', '#f093fb', '#4facfe', '#f59e0b', '#764ba2', '#ef4444']),
+            textfont=dict(size=12, color="white"),
+            showlegend=False
+        ))
+        
+        # Add arrows
+        arrows_x = [0.5, 1.5, 2.5, 3.5, 4.5, 1, 2, 3, 4]
+        arrows_y = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        arrows_text = ["→", "→", "→", "→", "→", "↓", "↓", "↓", "↓"]
+        
+        fig_flow.add_trace(go.Scatter(
+            x=arrows_x,
+            y=arrows_y,
+            mode='markers+text',
+            text=arrows_text,
+            textposition="middle center",
+            marker=dict(size=30, color='black'),
+            textfont=dict(size=16, color="white"),
+            showlegend=False
+        ))
+        
+        fig_flow.update_layout(
+            title="🔄 User Lifecycle Flow",
+            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
+            height=200,
+            template="plotly_white",
+            showlegend=False
+        )
+        
+        st.plotly_chart(fig_flow, use_container_width=True)
+    else:
+        # Simple text-based flow
+        st.markdown("""
+        ```
+        New Users → Active Users → Committee Participation → Rest Period → Returning Users
+            ↓              ↓              ↓              ↓
+        Churned Users ← Churned Users ← Churned Users ← Churned Users
+        ```
+        """)
+    
+    # Mathematical Formulas
+    st.markdown("#### 🧮 Mathematical Formulas")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        **📊 User Growth Formulas:**
+        ```
+        total_users[m] = total_users[m-1] × (1 + growth_rate/100)
+        new_users[m] = total_users[m] - total_users[m-1]
+        active_users[m] = new_users[m] + returning_users[m]
+        ```
+        """)
+    
+    with col2:
+        st.markdown("""
+        **🔄 Lifecycle Formulas:**
+        ```
+        returning_users[m] = return_schedule[m]
+        resting_users[m] = new_users[m-duration] (if m > duration)
+        churned_users[m] = new_users[m] × churn_rate/100
+        ```
+        """)
+    
+    # Configuration Parameters
+    st.markdown("#### ⚙️ Configuration Parameters")
+    
+    config_params = {
+        "Starting Users": "Initial user base (e.g., 1,000)",
+        "Monthly Growth Rate": "Month-on-month growth percentage (e.g., 2%)",
+        "Rest Period": "Months between cycles (e.g., 1 month)",
+        "Returning User Rate": "Percentage who return (e.g., 100%)",
+        "Churn Rate": "Percentage who don't return (e.g., 0%)"
+    }
+    
+    for param, description in config_params.items():
+        st.markdown(f"**{param}**: {description}")
+    
+    # Lifecycle explanation
+    st.markdown("""
+    **💡 Customer Lifecycle Summary:**
+    - **New Users**: First-time customers joining ROSCA (delta from previous month's total)
+    - **Returning Users**: Customers who completed a cycle and returned after rest period
+    - **Churned Users**: Customers who left and didn't return (tracked monthly)
+    - **Rest Period Users**: Customers in mandatory rest period between cycles
+    - **Active Users**: New Users + Returning Users (currently participating)
+    - **Total Users to Date**: Cumulative total user base (with growth)
+    - **Growth Rate**: Month-on-month growth in total user base
+    - **Churn Rate**: Percentage of users who don't return (monthly churn)
+    - **Retention Rate**: Percentage of new users who return after completing their cycle
+    """)
+
 def create_market_analysis(market_size, sam_size, som_size, market_growth_rate, df_forecast, currency_symbol, currency_name):
     """Create market analysis section"""
     st.markdown("### 🌍 Market Analysis")
@@ -1279,6 +2499,77 @@ def create_risk_analysis(df_forecast):
 
 # In the run_forecast function, replace the fee calculation section:
 
+def calculate_user_lifecycle(config, duration):
+    """
+    Calculate user lifecycle with proper cohort tracking, rest periods, and returning users
+    
+    Returns:
+        dict: Monthly data with new_users, returning_users, resting_users, active_users, total_users
+    """
+    starting_users = config['starting_users']
+    monthly_growth_rate = config['monthly_growth_rate'] / 100
+    rest_period_months = config['rest_period_months']
+    returning_user_rate = config['returning_user_rate'] / 100
+    churn_rate = config['churn_rate'] / 100
+    
+    # Initialize tracking structures
+    total_users_by_month = {}
+    new_users_by_month = {}
+    returning_users_by_month = {}
+    resting_users_by_month = {}
+    active_users_by_month = {}
+    
+    # Cohort tracking: when each cohort will return
+    return_schedule = {}
+    
+    # Month 1: Starting users
+    total_users_by_month[1] = starting_users
+    new_users_by_month[1] = starting_users
+    returning_users_by_month[1] = 0
+    resting_users_by_month[1] = 0
+    active_users_by_month[1] = starting_users
+    
+    # Schedule when the first cohort will return
+    return_month = 1 + duration + rest_period_months
+    return_schedule[return_month] = int(starting_users * returning_user_rate * (1 - churn_rate))
+    
+    # Calculate months 2-12
+    for month in range(2, 13):
+        # 1. Calculate total users (with growth)
+        total_users_by_month[month] = int(total_users_by_month[month-1] * (1 + monthly_growth_rate))
+        
+        # 2. Calculate new users (delta from previous month)
+        new_users_by_month[month] = total_users_by_month[month] - total_users_by_month[month-1]
+        
+        # 3. Calculate returning users (from return_schedule)
+        returning_users_by_month[month] = return_schedule.get(month, 0)
+        
+        # 4. Calculate resting users (users who just finished their cycle)
+        if month > duration:
+            # Users who started (month - duration) months ago are now finishing
+            start_month = month - duration
+            if start_month >= 1:
+                # These users are now resting
+                resting_users_by_month[month] = new_users_by_month[start_month]
+                
+                # Schedule their return
+                return_month = month + rest_period_months
+                if return_month <= 12:  # Only schedule if within our 12-month window
+                    return_schedule[return_month] = int(new_users_by_month[start_month] * returning_user_rate * (1 - churn_rate))
+        else:
+            resting_users_by_month[month] = 0
+        
+        # 5. Calculate active users
+        active_users_by_month[month] = new_users_by_month[month] + returning_users_by_month[month]
+    
+    return {
+        'total_users': total_users_by_month,
+        'new_users': new_users_by_month,
+        'returning_users': returning_users_by_month,
+        'resting_users': resting_users_by_month,
+        'active_users': active_users_by_month
+    }
+
 def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
     """Main forecasting engine - complete version with all features"""
     results = []
@@ -1290,6 +2581,11 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
         'Duration': [],
         'Slab Amount': [],
         'Users': [],
+        'New Users': [],
+        'Returning Users': [],
+        'Churned Users': [],
+        'Rest Period Users': [],
+        'Total Users to Date': [],
         'Pool Size': [],
         'External Capital': [],
         'Total Commitment': [],
@@ -1330,7 +2626,12 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                 # Calculate upfront fee based on slot distribution
                 for slot in range(1, duration + 1):
                     if slot in slot_fees and slot in slot_distribution:
-                        slot_fee_pct = slot_fees[slot]['fee_pct']
+                        # Handle both dictionary and float formats for slot_fees
+                        if isinstance(slot_fees[slot], dict):
+                            slot_fee_pct = slot_fees[slot]['fee_pct']
+                        else:
+                            slot_fee_pct = slot_fees[slot]
+                        
                         slot_distribution_pct = slot_distribution[slot]
                         if slot_distribution_pct > 0:  # Only if slot is not blocked
                             slot_fee = (slab_amount * duration * (slot_fee_pct / 100) * (slot_distribution_pct / 100))
@@ -1339,7 +2640,12 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                 # Calculate monthly fee based on slot distribution
                 for slot in range(1, duration + 1):
                     if slot in slot_fees and slot in slot_distribution:
-                        slot_fee_pct = slot_fees[slot]['fee_pct']
+                        # Handle both dictionary and float formats for slot_fees
+                        if isinstance(slot_fees[slot], dict):
+                            slot_fee_pct = slot_fees[slot]['fee_pct']
+                        else:
+                            slot_fee_pct = slot_fees[slot]
+                        
                         slot_distribution_pct = slot_distribution[slot]
                         if slot_distribution_pct > 0:  # Only if slot is not blocked
                             slot_monthly_fee = (slab_amount * (slot_fee_pct / 100) * (slot_distribution_pct / 100))
@@ -1373,15 +2679,25 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
             party_a_share = net_profit * (config['profit_split'] / 100)
             party_b_share = net_profit * ((100 - config['profit_split']) / 100)
             
+            # Calculate user lifecycle for this duration
+            user_lifecycle = calculate_user_lifecycle(config, duration)
+            
             # Generate monthly data
             for month in range(1, 13):
                 year = 2024 + (month - 1) // 12
                 
-                # Calculate users for this month
-                users_this_month = 100  # Placeholder - should be calculated based on business logic
+                # Get user data from lifecycle calculation
+                new_users = user_lifecycle['new_users'][month]
+                returning_users = user_lifecycle['returning_users'][month]
+                resting_users = user_lifecycle['resting_users'][month]
+                active_users = user_lifecycle['active_users'][month]
+                total_users = user_lifecycle['total_users'][month]
+                
+                # Calculate churned users (users who left this month)
+                churned_users = int(new_users * (config['churn_rate'] / 100))
                 
                 # Calculate pool size
-                pool_size = users_this_month * slab_amount
+                pool_size = active_users * slab_amount
                 
                 # Calculate external capital
                 external_capital = pool_size * 0.1  # Placeholder - 10% external capital
@@ -1391,7 +2707,12 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                 scenario_data['Year'].append(year)
                 scenario_data['Duration'].append(duration)
                 scenario_data['Slab Amount'].append(slab_amount)
-                scenario_data['Users'].append(users_this_month)
+                scenario_data['Users'].append(active_users)
+                scenario_data['New Users'].append(new_users)
+                scenario_data['Returning Users'].append(returning_users)
+                scenario_data['Churned Users'].append(churned_users)
+                scenario_data['Rest Period Users'].append(resting_users)
+                scenario_data['Total Users to Date'].append(total_users)
                 scenario_data['Pool Size'].append(pool_size)
                 scenario_data['External Capital'].append(external_capital)
                 scenario_data['Total Commitment'].append(total_commitment)
@@ -1408,7 +2729,7 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                 scenario_data['Default Recovery Amount'].append(default_recovery)
                 scenario_data['Net Default Loss (After Recovery)'].append(net_default_loss)
                 scenario_data['Default Fees Collected'].append(default_fees)
-                scenario_data['Total Defaulters'].append(int(users_this_month * config['default_rate'] / 100))
+                scenario_data['Total Defaulters'].append(int(active_users * config['default_rate'] / 100))
                 scenario_data['Total Revenue'].append(total_revenue)
                 scenario_data['Total Losses'].append(total_losses)
                 scenario_data['Gross Profit'].append(gross_profit)
@@ -1637,6 +2958,16 @@ with st.sidebar:
     market_growth_rate = st.number_input("Market Growth Rate (%)", min_value=0.0, max_value=100.0, value=15.0, step=0.1, help="Annual market growth rate")
     st.markdown('</div>', unsafe_allow_html=True)
     
+    # Customer Lifecycle Configuration
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("### 🔄 Customer Lifecycle")
+    starting_users = st.number_input("Starting Users", min_value=100, max_value=10000, value=1000, step=100, help="Initial number of users in month 1")
+    monthly_growth_rate = st.number_input("Monthly Growth Rate (%)", min_value=0.0, max_value=50.0, value=2.0, step=0.1, help="Month-on-month growth rate for total user base")
+    rest_period_months = st.number_input("Rest Period (months)", min_value=0, max_value=24, value=1, step=1, help="Months users rest between ROSCA cycles")
+    returning_user_rate = st.number_input("Returning User Rate (%)", min_value=0.0, max_value=100.0, value=100.0, step=1.0, help="Percentage of users who return after rest period")
+    churn_rate = st.number_input("Churn Rate (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0, help="Percentage of users who don't return (set to 0 for automatic return)")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
     # Fee collection mode
     st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 💳 Fee Collection")
@@ -1862,7 +3193,12 @@ config = {
     'durations': durations,
     'slab_amounts': slab_amounts,
     'slot_fees': slot_fees,
-    'slot_distribution': slot_distribution
+    'slot_distribution': slot_distribution,
+    'starting_users': starting_users,
+    'monthly_growth_rate': monthly_growth_rate,
+    'rest_period_months': rest_period_months,
+    'returning_user_rate': returning_user_rate,
+    'churn_rate': churn_rate
 }
 
 # View mode selection
@@ -1989,6 +3325,9 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         
         # Default Impact Analysis
         create_default_impact_analysis(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
+        
+        # Customer Lifecycle Analysis
+        create_customer_lifecycle_analysis(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
         
         # Market Analysis
         if 'market_size' in st.session_state:
