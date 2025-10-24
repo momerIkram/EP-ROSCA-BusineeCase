@@ -1751,7 +1751,7 @@ with st.sidebar:
                         else:
                             slot_distribution[duration][slab][slot] = equal_distribution
                 
-           elif config_mode == "📋 Compact View":
+elif config_mode == "📋 Compact View":
     # Compact view - data editor
     slot_data = []  # <-- Now properly indented under elif
     for slot in range(1, duration + 1):
