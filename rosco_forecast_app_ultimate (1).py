@@ -1657,7 +1657,7 @@ with st.sidebar:
     st.markdown("### 📅 Duration Configuration")
     durations = st.multiselect(
         "Select Durations (months)",
-        [3, 6, 9, 12, 18, 24, 36],
+        [3, 4, 5, 6, 8, 9, 10, 12, 18, 24, 36],
         default=[6, 12, 24]
     )
     
