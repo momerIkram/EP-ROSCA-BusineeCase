@@ -474,6 +474,46 @@ def allocate_users_by_slot(slab_users, slot_share):
     
     return allocations
 
+def month_index_to_ym(start_year, start_month, month_index):
+    """Convert month index to year and month"""
+    total_months = start_month - 1 + month_index
+    year = start_year + (total_months - 1) // 12
+    month = ((total_months - 1) % 12) + 1
+    return year, month
+
+def held_days_exact(deposit_month_index, payout_month_index, start_year=2024, start_month=1,
+                    deposit_day=1, payout_day=15):
+    """
+    Calculate exact days between deposit and payout dates
+    
+    Args:
+        deposit_month_index: Month when deposit is collected (1-based)
+        payout_month_index: Month when payout happens (1-based)
+        start_year: Starting year (default 2024)
+        start_month: Starting month (default 1)
+        deposit_day: Day of month for deposit collection
+        payout_day: Day of month for payout
+    
+    Returns:
+        int: Number of days between deposit and payout
+    """
+    dy, dm = month_index_to_ym(start_year, start_month, deposit_month_index)
+    py, pm = month_index_to_ym(start_year, start_month, payout_month_index)
+    
+    try:
+        d0 = date(dy, dm, deposit_day)
+    except ValueError:
+        # Handle invalid date (e.g., Feb 30)
+        d0 = date(dy, dm, 28 if dm == 2 else 30)
+    
+    try:
+        d1 = date(py, pm, payout_day)
+    except ValueError:
+        # Handle invalid date
+        d1 = date(py, pm, 28 if pm == 2 else 30)
+    
+    return (d1 - d0).days
+
 def calculate_collection_dates(month, duration, collection_day=1, disbursement_day=15):
     """Calculate collection and disbursement dates for a given month and duration"""
     try:
@@ -481,14 +521,25 @@ def calculate_collection_dates(month, duration, collection_day=1, disbursement_d
     except ValueError:
         collection_date = date(2024, month, 28 if month == 2 else 30)
     
-    try:
-        disbursement_date = date(2024, month, disbursement_day)
-    except ValueError:
-        disbursement_date = date(2024, month, 28 if month == 2 else 30)
+    # Calculate disbursement month (collection month + duration)
+    disbursement_month = ((month - 1) + duration) % 12
+    if disbursement_month == 0:
+        disbursement_month = 12
     
-    days_between = (disbursement_date - collection_date).days
-    if days_between < 0:
-        days_between = 30 - abs(days_between)
+    try:
+        disbursement_date = date(2024, disbursement_month, disbursement_day)
+    except ValueError:
+        disbursement_date = date(2024, disbursement_month, 28 if disbursement_month == 2 else 30)
+    
+    # Use held_days_exact for precise calculation
+    days_between = held_days_exact(
+        deposit_month_index=month,
+        payout_month_index=month + duration,
+        start_year=2024,
+        start_month=1,
+        deposit_day=collection_day,
+        payout_day=disbursement_day
+    )
     
     return collection_date, disbursement_date, days_between
 
@@ -497,6 +548,35 @@ def calculate_monthly_nii_tam(principal, rate, collection_date, disbursement_dat
     days = (disbursement_date - collection_date).days
     if days < 0:
         days = 30 - abs(days)
+    return principal * (rate / 100) * (days / 365)
+
+def calculate_nii_with_exact_days(principal, rate, deposit_month, payout_month, 
+                                  deposit_day, payout_day, start_year=2024):
+    """
+    Calculate NII using exact days calculation (held_days_exact logic)
+    
+    Args:
+        principal: Principal amount
+        rate: Interest rate (as percentage)
+        deposit_month: Month when deposit collected (1-based)
+        payout_month: Month when payout happens (1-based)
+        deposit_day: Day of month for deposit
+        payout_day: Day of month for payout
+        start_year: Starting year
+    
+    Returns:
+        float: Calculated NII
+    """
+    days = held_days_exact(
+        deposit_month_index=deposit_month,
+        payout_month_index=payout_month,
+        start_year=start_year,
+        start_month=1,
+        deposit_day=deposit_day,
+        payout_day=payout_day
+    )
+    
+    # NII = Principal × Rate × (Days / 365)
     return principal * (rate / 100) * (days / 365)
 
 def create_slot_configuration_ui(duration, slab_amount, slot_fees, slot_distribution, currency_symbol):
@@ -1070,7 +1150,7 @@ def create_external_capital_chart(df_forecast, currency_symbol, currency_name):
 # =============================================================================
 
 def create_monthly_summary(df_forecast):
-    """Create monthly summary from forecast data"""
+    """Create monthly summary from forecast data with proper monthly aggregation"""
     if df_forecast.empty:
         return pd.DataFrame()
     
@@ -1106,34 +1186,81 @@ def create_monthly_summary(df_forecast):
     else:
         nii_col = None
     
-    # Group by month and sum
-    monthly_data = []
-    for month in range(1, 13):  # 12 months
-        month_data = {
-            'Month': f"Month {month}",
-            'Users Joining This Month': df_forecast[users_col].sum() // 12 if users_col and users_col in df_forecast.columns else 0,
-            'Total Revenue': df_forecast['Total Revenue'].sum() // 12,
-            'Gross Profit': df_forecast['Gross Profit'].sum() // 12,
-            'Total Fees': df_forecast[fees_col].sum() // 12 if fees_col and fees_col in df_forecast.columns else 0,
-            'Total NII': df_forecast[nii_col].sum() // 12 if nii_col and nii_col in df_forecast.columns else 0
-        }
-        monthly_data.append(month_data)
-    
-    return pd.DataFrame(monthly_data)
+    # Group by actual Month column to get monthly breakdowns
+    if 'Month' in df_forecast.columns:
+        monthly_grouped = df_forecast.groupby('Month').agg({
+            users_col: 'sum' if users_col else 'sum',
+            'Total Revenue': 'sum',
+            'Gross Profit': 'sum',
+            fees_col: 'sum' if fees_col else 'sum',
+            nii_col: 'sum' if nii_col else 'sum'
+        }).reset_index()
+        
+        monthly_grouped.columns = ['Month', 'Users Joining This Month', 'Total Revenue', 'Gross Profit', 'Total Fees', 'Total NII']
+        
+        # Format Month column
+        monthly_grouped['Month'] = 'Month ' + monthly_grouped['Month'].astype(str)
+        
+        return monthly_grouped
+    else:
+        # Fallback if no Month column
+        monthly_data = []
+        for month in range(1, 13):
+            month_data = {
+                'Month': f"Month {month}",
+                'Users Joining This Month': 0,
+                'Total Revenue': 0,
+                'Gross Profit': 0,
+                'Total Fees': 0,
+                'Total NII': 0
+            }
+            monthly_data.append(month_data)
+        
+        return pd.DataFrame(monthly_data)
 
 def create_yearly_summary(df_monthly):
-    """Create yearly summary from monthly data"""
+    """Create yearly summary with 5-year YoY projections"""
     if df_monthly.empty:
         return pd.DataFrame()
     
-    yearly_data = {
-        'Year': ['Year 1'],
-        'Total Users': [df_monthly['Users Joining This Month'].sum()],
-        'Total Revenue': [df_monthly['Total Revenue'].sum()],
-        'Gross Profit': [df_monthly['Gross Profit'].sum()],
-        'Total Fees': [df_monthly['Total Fees'].sum()],
-        'Total NII': [df_monthly['Total NII'].sum()]
-    }
+    # Get Year 1 data
+    year1_users = df_monthly['Users Joining This Month'].sum()
+    year1_revenue = df_monthly['Total Revenue'].sum()
+    year1_profit = df_monthly['Gross Profit'].sum()
+    year1_fees = df_monthly['Total Fees'].sum()
+    year1_nii = df_monthly['Total NII'].sum()
+    
+    # Get YoY growth rate from session state, default to 15%
+    yoy_growth_rate = st.session_state.get('yoy_growth_rate', 15.0)
+    yearly_growth = 1 + (yoy_growth_rate / 100)
+    
+    # Create 5 years
+    yearly_data = []
+    for year in range(1, 6):
+        if year == 1:
+            # Actual data from forecast
+            users = year1_users
+            revenue = year1_revenue
+            profit = year1_profit
+            fees = year1_fees
+            nii = year1_nii
+        else:
+            # Project future years with growth
+            growth_factor = yearly_growth ** (year - 1)
+            users = int(year1_users * growth_factor)
+            revenue = year1_revenue * growth_factor
+            profit = year1_profit * growth_factor
+            fees = year1_fees * growth_factor
+            nii = year1_nii * growth_factor
+        
+        yearly_data.append({
+            'Year': f'Year {year}',
+            'Total Users': users,
+            'Total Revenue': revenue,
+            'Gross Profit': profit,
+            'Total Fees': fees,
+            'Total NII': nii
+        })
     
     return pd.DataFrame(yearly_data)
 
@@ -2997,8 +3124,8 @@ def calculate_user_lifecycle(config, duration):
     return_month = 1 + duration + rest_period_months
     return_schedule[return_month] = int(starting_users * returning_user_rate * (1 - churn_rate))
     
-    # Calculate months 2-12
-    for month in range(2, 13):
+    # Calculate months 2-60 (5 years)
+    for month in range(2, 61):
         # 1. Calculate total users (with growth)
         total_users_by_month[month] = int(total_users_by_month[month-1] * (1 + monthly_growth_rate))
         
@@ -3018,7 +3145,7 @@ def calculate_user_lifecycle(config, duration):
                 
                 # Schedule their return
                 return_month = month + rest_period_months
-                if return_month <= 12:  # Only schedule if within our 12-month window
+                if return_month <= 60:  # Only schedule if within our 60-month (5-year) window
                     return_schedule[return_month] = int(new_users_by_month[start_month] * returning_user_rate * (1 - churn_rate))
         else:
             resting_users_by_month[month] = 0
@@ -3053,6 +3180,9 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
         'Pool Size': [],
         'External Capital': [],
         'Total Commitment': [],
+        'Collection Date': [],
+        'Disbursement Date': [],
+        'Days Between': [],
         'Fee %': [],
         'Total Fees Collected': [],
         'Monthly Fee Collection': [],
@@ -3145,13 +3275,7 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
             # Basic calculations
             total_commitment = slab_amount * duration
             
-            # NII calculations
-            base_nii = total_commitment * (config['kibor_rate'] + config['spread']) / 100 / 12 * duration
-            fee_nii = total_fee * (config['kibor_rate'] + config['spread']) / 100 / 12 * duration
-            pool_growth_nii = total_commitment * (config['kibor_rate'] + config['spread']) / 100 / 12 * duration
-            total_nii = base_nii + fee_nii + pool_growth_nii
-            
-            # Default calculations
+            # Default calculations (used for all months)
             pre_payout_default_loss = total_commitment * (config['default_rate'] / 100) * (config['default_pre_pct'] / 100)
             post_payout_default_loss = total_commitment * (config['default_rate'] / 100) * (config['default_post_pct'] / 100)
             total_default_loss = pre_payout_default_loss + post_payout_default_loss
@@ -3159,22 +3283,13 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
             net_default_loss = total_default_loss - default_recovery
             default_fees = total_default_loss * (config['penalty_pct'] / 100)
             
-            # Revenue calculations
-            total_revenue = total_fee + total_nii
-            total_losses = net_default_loss
-            gross_profit = total_revenue - total_losses
-            net_profit = gross_profit - default_fees
-            
-            # Party A/B split
-            party_a_share = net_profit * (config['profit_split'] / 100)
-            party_b_share = net_profit * ((100 - config['profit_split']) / 100)
-            
-            # Calculate user lifecycle for this duration
+            # Calculate user lifecycle for this duration (60 months)
             user_lifecycle = calculate_user_lifecycle(config, duration)
             
-            # Generate monthly data
-            for month in range(1, 13):
-                year = 2024 + (month - 1) // 12
+            # Generate monthly data for 60 months (5 years)
+            for month in range(1, 61):
+                # Calculate which year this month belongs to (Year 1-5)
+                year = ((month - 1) // 12) + 1
                 
                 # Get user data from lifecycle calculation
                 new_users = user_lifecycle['new_users'][month]
@@ -3192,6 +3307,62 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                 # Calculate external capital
                 external_capital = pool_size * 0.1  # Placeholder - 10% external capital
                 
+                # Calculate collection and disbursement dates for this month
+                collection_day = config.get('collection_day', 1)
+                disbursement_day = config.get('disbursement_day', 15)
+                collection_date, disbursement_date, days_between = calculate_collection_dates(
+                    month, duration, collection_day, disbursement_day
+                )
+                
+                # Calculate NII using exact days (held_days_exact logic)
+                # NII = Principal × Rate × (Days / 365)
+                rate = config['kibor_rate'] + config['spread']
+                
+                # Base NII: on the deposit amount
+                base_nii = calculate_nii_with_exact_days(
+                    principal=total_commitment,
+                    rate=rate,
+                    deposit_month=month,
+                    payout_month=month + duration,
+                    deposit_day=collection_day,
+                    payout_day=disbursement_day,
+                    start_year=2024
+                )
+                
+                # Fee NII: on the collected fees
+                fee_nii = calculate_nii_with_exact_days(
+                    principal=total_fee,
+                    rate=rate,
+                    deposit_month=month,
+                    payout_month=month + duration,
+                    deposit_day=collection_day,
+                    payout_day=disbursement_day,
+                    start_year=2024
+                )
+                
+                # Pool Growth NII: on the pool size
+                pool_growth_nii = calculate_nii_with_exact_days(
+                    principal=total_commitment,
+                    rate=rate,
+                    deposit_month=month,
+                    payout_month=month + duration,
+                    deposit_day=collection_day,
+                    payout_day=disbursement_day,
+                    start_year=2024
+                )
+                
+                total_nii = base_nii + fee_nii + pool_growth_nii
+                
+                # Revenue calculations
+                total_revenue = total_fee + total_nii
+                total_losses = net_default_loss
+                gross_profit = total_revenue - total_losses
+                net_profit = gross_profit - default_fees
+                
+                # Party A/B split
+                party_a_share = net_profit * (config['profit_split'] / 100)
+                party_b_share = net_profit * ((100 - config['profit_split']) / 100)
+                
                 # Add to scenario data
                 scenario_data['Month'].append(month)
                 scenario_data['Year'].append(year)
@@ -3206,6 +3377,11 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                 scenario_data['Pool Size'].append(pool_size)
                 scenario_data['External Capital'].append(external_capital)
                 scenario_data['Total Commitment'].append(total_commitment)
+                
+                scenario_data['Collection Date'].append(collection_date)
+                scenario_data['Disbursement Date'].append(disbursement_date)
+                scenario_data['Days Between'].append(days_between)
+                
                 scenario_data['Fee %'].append(sum([slot_fees.get(slot, {}).get('fee_pct', 0) for slot in range(1, duration + 1)]) / duration)
                 scenario_data['Total Fees Collected'].append(total_fee)
                 scenario_data['Monthly Fee Collection'].append(monthly_fee)
@@ -3298,9 +3474,10 @@ def run_tam_forecast(config, fee_collection_mode, currency_symbol, currency_name
     total_tam_users = initial_tam
     user_history = {}
     
-    # Run simulation for 12 months
-    for month in range(1, 13):
-        year = 2024 + (month - 1) // 12
+    # Run simulation for 60 months (5 years)
+    for month in range(1, 61):
+        # Calculate which year this month belongs to (Year 1-5)
+        year = ((month - 1) // 12) + 1
         
         # Step 1: Calculate new users
         if month == 1:
@@ -3373,10 +3550,27 @@ def run_tam_forecast(config, fee_collection_mode, currency_symbol, currency_name
                         monthly_fee = total_deposits * (fee_pct / 100)
                         total_fees = monthly_fee * duration
                     
-                    # NII calculations
-                    base_nii = calculate_monthly_nii_tam(total_deposits, kibor_rate + spread, collection_date, disbursement_date)
-                    fee_nii = calculate_monthly_nii_tam(total_fees, kibor_rate + spread, collection_date, disbursement_date)
-                    pool_growth_nii = calculate_monthly_nii_tam(total_deposits, kibor_rate + spread, collection_date, disbursement_date)
+                    # NII calculations using exact days (held_days_exact logic)
+                    # Get the configured days from config
+                    deposit_day = config.get('collection_day', 1)
+                    payout_day = config.get('disbursement_day', 15)
+                    
+                    # Get days using exact calculation
+                    days_for_nii = held_days_exact(
+                        deposit_month_index=month,
+                        payout_month_index=month + duration,
+                        start_year=2024,
+                        start_month=1,
+                        deposit_day=deposit_day,
+                        payout_day=payout_day
+                    )
+                    
+                    # NII = Principal × Rate × (Days / 365)
+                    rate = kibor_rate + spread
+                    
+                    base_nii = total_deposits * (rate / 100) * (days_for_nii / 365)
+                    fee_nii = total_fees * (rate / 100) * (days_for_nii / 365)
+                    pool_growth_nii = total_deposits * (rate / 100) * (days_for_nii / 365)
                     total_nii = base_nii + fee_nii + pool_growth_nii
                     
                     # Default calculations
@@ -4307,6 +4501,7 @@ with st.sidebar:
     sam_size = st.number_input("Serviceable Addressable Market (SAM)", min_value=0, value=500000, step=10000, help="Addressable market size")
     som_size = st.number_input("Serviceable Obtainable Market (SOM)", min_value=0, value=50000, step=1000, help="Realistic market capture")
     market_growth_rate = st.number_input("Market Growth Rate (%)", min_value=0.0, max_value=100.0, value=15.0, step=0.1, help="Annual market growth rate")
+    yoy_growth_rate = st.number_input("Year-over-Year Growth Rate (%)", min_value=0.0, max_value=100.0, value=15.0, step=0.1, help="YoY growth rate for 5-year projections")
     st.markdown('</div>', unsafe_allow_html=True)
     
     # Customer Lifecycle Configuration
@@ -4326,6 +4521,13 @@ with st.sidebar:
         "Fee Collection Method",
         ["Upfront Fee (Entire Pool)", "Monthly Fee Collection"]
     )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Collection & Disbursement Configuration
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("### 📅 Collection & Disbursement Schedule")
+    collection_day = st.number_input("Collection Day", min_value=1, max_value=28, value=1, step=1, help="Day of month to collect deposits")
+    disbursement_day = st.number_input("Disbursement Day", min_value=1, max_value=28, value=15, step=1, help="Day of month to disburse funds")
     st.markdown('</div>', unsafe_allow_html=True)
 
     # Scenario configuration
@@ -4540,6 +4742,7 @@ with st.sidebar:
 
 # Main content
 st.markdown("## 📊 Forecast Results")
+st.info("📅 **5-Year Projection**: This forecast runs for 60 months with Month-on-Month growth and Year-on-Year analysis. Select 'Monthly Pool & Slab Stats' view to see detailed monthly breakdowns by Pool, Slab, and Slot.")
 
 # Create configuration
 config = {
@@ -4559,13 +4762,15 @@ config = {
     'monthly_growth_rate': monthly_growth_rate,
     'rest_period_months': rest_period_months,
     'returning_user_rate': returning_user_rate,
-    'churn_rate': churn_rate
+    'churn_rate': churn_rate,
+    'collection_day': collection_day,
+    'disbursement_day': disbursement_day
 }
 
 # View mode selection
 view_mode = st.selectbox(
     "Select View Mode",
-    ["📊 Dashboard View", "🔧 Detailed Forecast", "📈 Analytics View", "📅 Year-on-Year Dashboard", "🧩 Advanced User Growth", "⚙️ Configuration Mode"]
+    ["📊 Dashboard View", "🔧 Detailed Forecast", "📈 Analytics View", "📅 Year-on-Year Dashboard", "🗓️ Monthly Pool & Slab Stats", "🧩 Advanced User Growth", "⚙️ Configuration Mode"]
 )
 
 # Run forecast
@@ -4635,6 +4840,7 @@ if st.button("🚀 Run Forecast", type="primary"):
             st.session_state['sam_size'] = sam_size
             st.session_state['som_size'] = som_size
             st.session_state['market_growth_rate'] = market_growth_rate
+            st.session_state['yoy_growth_rate'] = yoy_growth_rate
             
         else:
             st.error("❌ No forecast data generated")
@@ -4671,6 +4877,43 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         # Otherwise show standard dashboard
         # Dashboard overview
         create_dashboard_overview(df_monthly_summary, scenario_name, CURRENCY_SYMBOL, CURRENCY_NAME)
+        
+        # Collection & Disbursement Timeline (if available)
+        if 'Collection Date' in df_forecast.columns and 'Disbursement Date' in df_forecast.columns:
+            st.markdown("### 📅 Collection & Disbursement Timeline")
+            
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                avg_days = df_forecast['Days Between'].mean() if 'Days Between' in df_forecast.columns else 0
+                st.metric("Avg Days Between Collection & Disbursement", f"{avg_days:.1f} days")
+            
+            with col2:
+                total_deposits = df_forecast['Total Deposits'].sum() if 'Total Deposits' in df_forecast.columns else 0
+                st.metric("Total Deposits Expected", format_currency(total_deposits, CURRENCY_SYMBOL, CURRENCY_NAME))
+            
+            with col3:
+                st.metric("Collection Day", f"Day {collection_day}")
+            
+            with col4:
+                st.metric("Disbursement Day", f"Day {disbursement_day}")
+            
+            # Show timeline table
+            timeline_cols = ['Month', 'Collection Date', 'Disbursement Date', 'Days Between', 'Total Deposits']
+            available_cols = [col for col in timeline_cols if col in df_forecast.columns]
+            
+            if available_cols:
+                timeline_df = df_forecast.groupby('Month')[available_cols].first().reset_index()
+                st.dataframe(timeline_df, use_container_width=True)
+            
+            # NII Impact Explanation
+            st.info(f"""
+            **💰 NII Calculation Impact**: 
+            - **Collection Day**: Day {collection_day} of each month (when deposits are collected)
+            - **Disbursement Day**: Day {disbursement_day} of each month (when funds are disbursed)
+            - **Formula**: NII = Principal × Rate × (Days Between / 365)
+            - **Your Configuration**: {avg_days:.1f} days average holding period
+            - The more days between collection and disbursement, the higher the NII!
+            """)
         
         # Fee Collection Mode Analysis
         st.subheader("💳 Fee Collection Analysis")
@@ -4787,11 +5030,21 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         
         with col1:
             st.subheader("📊 Monthly Summary")
-            st.dataframe(df_monthly_summary)
+            # Format with commas
+            df_monthly_display = df_monthly_summary.copy()
+            numeric_cols = df_monthly_display.select_dtypes(include=[np.number]).columns
+            for col in numeric_cols:
+                df_monthly_display[col] = df_monthly_display[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
+            st.dataframe(df_monthly_display, use_container_width=True)
         
         with col2:
             st.subheader("📈 Yearly Summary")
-            st.dataframe(df_yearly_summary)
+            # Format with commas
+            df_yearly_display = df_yearly_summary.copy()
+            numeric_cols = df_yearly_display.select_dtypes(include=[np.number]).columns
+            for col in numeric_cols:
+                df_yearly_display[col] = df_yearly_display[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
+            st.dataframe(df_yearly_display, use_container_width=True)
         
         # Profit share analysis
         st.subheader("🤝 Profit Share Analysis")
@@ -4826,6 +5079,91 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
     elif view_mode == "📅 Year-on-Year Dashboard":
         # Year-on-Year dashboard
         create_yoy_dashboard(df_forecast, config, CURRENCY_SYMBOL, CURRENCY_NAME)
+    
+    elif view_mode == "🗓️ Monthly Pool & Slab Stats":
+        st.markdown("## 🗓️ Monthly Pool, Slab & Slot Statistics")
+        
+        # Year selector
+        selected_year = st.selectbox("Select Year to View", ["All Years", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5"])
+        
+        if selected_year != "All Years":
+            year_num = int(selected_year.split(" ")[1])
+            df_filtered = df_forecast[df_forecast['Year'] == year_num].copy()
+        else:
+            df_filtered = df_forecast.copy()
+        
+        # Monthly Breakdown by Year
+        st.markdown("### 📊 Monthly Breakdown")
+        
+        # Group by Month and Duration, Slab
+        agg_dict = {'Users': 'sum', 'Total Revenue': 'sum', 'Gross Profit': 'sum'}
+        
+        # Add columns that exist
+        if 'Total Fees Collected' in df_filtered.columns:
+            agg_dict['Total Fees Collected'] = 'sum'
+        elif 'Total Fees' in df_filtered.columns:
+            agg_dict['Total Fees'] = 'sum'
+            
+        if 'Total NII (Lifetime)' in df_filtered.columns:
+            agg_dict['Total NII (Lifetime)'] = 'sum'
+        elif 'Total NII' in df_filtered.columns:
+            agg_dict['Total NII'] = 'sum'
+        
+        monthly_stats = df_filtered.groupby(['Month', 'Duration', 'Slab Amount']).agg(agg_dict).reset_index()
+        
+        monthly_stats['Month'] = monthly_stats['Month'].apply(lambda x: f"Month {x}")
+        monthly_stats['Pool Size'] = monthly_stats['Users'] * monthly_stats['Slab Amount']
+        
+        # Format with commas
+        for col in monthly_stats.select_dtypes(include=[np.number]).columns:
+            if col != 'Month':
+                monthly_stats[col] = monthly_stats[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
+        
+        st.dataframe(monthly_stats, use_container_width=True)
+        
+        # Yearly Aggregation
+        st.markdown("### 📈 5-Year Year-over-Year Summary")
+        
+        yearly_agg_dict = {'Users': 'sum', 'Total Revenue': 'sum', 'Gross Profit': 'sum'}
+        
+        if 'Total Fees Collected' in df_forecast.columns:
+            yearly_agg_dict['Total Fees Collected'] = 'sum'
+        elif 'Total Fees' in df_forecast.columns:
+            yearly_agg_dict['Total Fees'] = 'sum'
+            
+        if 'Total NII (Lifetime)' in df_forecast.columns:
+            yearly_agg_dict['Total NII (Lifetime)'] = 'sum'
+        elif 'Total NII' in df_forecast.columns:
+            yearly_agg_dict['Total NII'] = 'sum'
+        
+        yearly_stats = df_forecast.groupby('Year').agg(yearly_agg_dict).reset_index()
+        
+        yearly_stats['Year'] = yearly_stats['Year'].apply(lambda x: f"Year {x}")
+        
+        # Format with commas
+        for col in yearly_stats.select_dtypes(include=[np.number]).columns:
+            if col != 'Year':
+                yearly_stats[col] = yearly_stats[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
+        
+        st.dataframe(yearly_stats, use_container_width=True)
+        
+        # Pool by Slab & Duration Breakdown
+        st.markdown("### 💰 Pool Breakdown by Slab & Duration")
+        
+        pool_breakdown = df_filtered.groupby(['Duration', 'Slab Amount']).agg({
+            'Users': 'sum',
+            'Pool Size': 'sum' if 'Pool Size' in df_filtered.columns else (df_filtered['Users'] * df_filtered['Slab Amount']).sum(),
+            'Total Revenue': 'sum',
+            'Gross Profit': 'sum'
+        }).reset_index()
+        
+        pool_breakdown['Avg Pool Size'] = pool_breakdown['Pool Size'] / pool_breakdown['Users']
+        
+        # Format with commas
+        for col in pool_breakdown.select_dtypes(include=[np.number]).columns:
+            pool_breakdown[col] = pool_breakdown[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
+        
+        st.dataframe(pool_breakdown, use_container_width=True)
     
     elif view_mode == "🧩 Advanced User Growth":
         # Advanced User Growth system
