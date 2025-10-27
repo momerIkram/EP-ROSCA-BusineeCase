@@ -3235,6 +3235,9 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
             if slot_distribution is None or not isinstance(slot_distribution, dict):
                 slot_distribution = {}
             
+            # Basic calculations (needed for fee calculation)
+            total_commitment = slab_amount * duration
+            
             # Calculate slot-wise fees
             total_fee = 0
             monthly_fee = 0
@@ -3255,13 +3258,14 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                         
                         slot_distribution_pct = slot_distribution[slot]
                         if slot_distribution_pct > 0:  # Only if slot is not blocked
-                            slot_fee = (slab_amount * duration * (slot_fee_pct / 100) * (slot_distribution_pct / 100))
+                            # Upfront: Pay total commitment × fee% × distribution for all slots
+                            slot_fee = (total_commitment * (slot_fee_pct / 100) * (slot_distribution_pct / 100))
                             total_fee += slot_fee
                     else:
                         # Fallback: use default fee if slot configuration is missing
                         default_fee_pct = 2.0  # Default 2% fee
                         default_distribution = 100.0 / duration  # Equal distribution
-                        slot_fee = (slab_amount * duration * (default_fee_pct / 100) * (default_distribution / 100))
+                        slot_fee = (total_commitment * (default_fee_pct / 100) * (default_distribution / 100))
                         total_fee += slot_fee
             else:
                 # Calculate monthly fee based on slot distribution
@@ -3288,9 +3292,6 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                         slot_monthly_fee = (slab_amount * (default_fee_pct / 100) * (default_distribution / 100))
                         monthly_fee += slot_monthly_fee
                 total_fee = monthly_fee * duration
-            
-            # Basic calculations
-            total_commitment = slab_amount * duration
             
             # Default calculations (used for all months)
             pre_payout_default_loss = total_commitment * (config['default_rate'] / 100) * (config['default_pre_pct'] / 100)
@@ -3370,11 +3371,20 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                 
                 total_nii = base_nii + fee_nii + pool_growth_nii
                 
-                # Revenue calculations
-                total_revenue = total_fee + total_nii
+                # Revenue calculations (Proper Accounting Logic)
+                # Total Revenue = All Income Sources
+                # Income Sources: Fees + NII + Default Penalty Fees
+                total_revenue = total_fee + total_nii + default_fees
+                
+                # Gross Profit = Revenue - Direct Costs (Default Losses)
+                gross_profit = total_revenue - net_default_loss
+                
+                # Net Profit = Gross Profit - Operating Expenses
+                # (No operating expenses currently, so Net = Gross)
+                net_profit = gross_profit
+                
+                # Total Losses (for reporting)
                 total_losses = net_default_loss
-                gross_profit = total_revenue - total_losses
-                net_profit = gross_profit - default_fees
                 
                 # Party A/B split
                 party_a_share = net_profit * (config['profit_split'] / 100)
@@ -3598,11 +3608,18 @@ def run_tam_forecast(config, fee_collection_mode, currency_symbol, currency_name
                     net_default_loss = total_default_loss - default_recovery
                     default_fees = total_default_loss * (penalty_pct / 100)
                     
-                    # Revenue calculations
-                    total_revenue = total_fees + total_nii
+                    # Revenue calculations (Proper Accounting Logic)
+                    # Total Revenue = All Income Sources
+                    total_revenue = total_fees + total_nii + default_fees
+                    
+                    # Gross Profit = Revenue - Direct Costs (Default Losses)
+                    gross_profit = total_revenue - net_default_loss
+                    
+                    # Net Profit = Gross Profit (no operating expenses)
+                    net_profit = gross_profit
+                    
+                    # Total Losses (for reporting)
                     total_losses = net_default_loss
-                    gross_profit = total_revenue - total_losses
-                    net_profit = gross_profit - default_fees
                     
                     # Party A/B split
                     party_a_share = net_profit * (profit_split / 100)
@@ -4898,15 +4915,51 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         # === Year-on-Year Visual Summary ===
         st.markdown("### 📊 5-Year Financial Overview")
         
-        # Aggregate by Year
-        yearly_agg_dict = {'Users': 'sum', 'Total Revenue': 'sum', 'Gross Profit': 'sum'}
+        # Add summary metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("🎯 Total 5-Year Revenue", 
+                     format_currency(df_forecast['Total Revenue'].sum(), currency_symbol, currency_name),
+                     help="Cumulative revenue across all 5 years")
+        with col2:
+            st.metric("📈 Total 5-Year Profit", 
+                     format_currency(df_forecast['Gross Profit'].sum(), currency_symbol, currency_name),
+                     help="Cumulative gross profit across all 5 years")
+        with col3:
+            total_users_end = df_forecast['Users'].iloc[-1] if not df_forecast.empty else 0
+            st.metric("👥 Users at Year 5", f"{int(total_users_end):,}")
+        with col4:
+            avg_profit_margin = (df_forecast['Gross Profit'].sum() / df_forecast['Total Revenue'].sum() * 100) if df_forecast['Total Revenue'].sum() > 0 else 0
+            st.metric("💰 Avg Profit Margin", f"{avg_profit_margin:.1f}%")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.info("**📝 Note**: Users shown are at END of each year. Revenue and Profit are cumulative for that year across all durations, slabs, and slots.")
+        
+        # Aggregate by Year - need to be careful with revenue aggregation
+        # Sum revenue across all month/duration/slab combinations for each year
+        yearly_agg_dict = {'Total Revenue': 'sum', 'Gross Profit': 'sum'}
         if 'Total Fees Collected' in df_forecast.columns:
             yearly_agg_dict['Total Fees Collected'] = 'sum'
         
         if 'Total NII (Lifetime)' in df_forecast.columns:
             yearly_agg_dict['Total NII (Lifetime)'] = 'sum'
         
+        # Get users at END of each year (last month of year)
         yearly_stats = df_forecast.groupby('Year').agg(yearly_agg_dict).reset_index()
+        
+        # Debug: Show what we're aggregating
+        # st.write(f"Debug: Yearly Revenue sum = {yearly_stats['Total Revenue'].sum()}")
+        
+        # Add Users column - users at END of each year (not sum!)
+        yearly_stats['Users'] = 0
+        for idx, row in yearly_stats.iterrows():
+            year = row['Year']
+            year_data = df_forecast[df_forecast['Year'] == year]
+            # Get users at last month of year (or max if all 12 months not present)
+            if not year_data.empty:
+                # Get last month's users
+                last_month_users = year_data['Users'].iloc[-1]
+                yearly_stats.at[idx, 'Users'] = last_month_users
         
         # Calculate profit split for two parties
         yearly_stats['Party A Share'] = yearly_stats['Gross Profit'] * (profit_split / 100)
@@ -4920,17 +4973,49 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         yearly_stats['Party A Share'] = yearly_stats['Party A Share'].apply(lambda x: f"{int(x):,}")
         yearly_stats['Party B Share'] = yearly_stats['Party B Share'].apply(lambda x: f"{int(x):,}")
         
-        # Display as styled columns for business case
+        # Display in fancy, trendy modern cards
+        st.markdown("<br>", unsafe_allow_html=True)
+        
         for idx, row in yearly_stats.iterrows():
-            with st.container():
-                cols = st.columns(6)
-                cols[0].markdown(f"### {row['Year']}")
-                cols[1].metric("Users", row['Users'])
-                cols[2].metric("Revenue", row['Total Revenue'])
-                cols[3].metric("Gross Profit", row['Gross Profit'])
-                cols[4].metric("Party A", row['Party A Share'])
-                cols[5].metric("Party B", row['Party B Share'])
-                st.markdown("---")
+            year = row['Year']
+            users = row['Users']
+            revenue = row['Total Revenue']
+            profit = row['Gross Profit']
+            party_a = row['Party A Share']
+            party_b = row['Party B Share']
+            
+            # Create a modern card with gradient
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        padding: 2rem; border-radius: 20px; margin-bottom: 2rem; 
+                        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);">
+                <h2 style="color: white; margin: 0 0 1.5rem 0; text-align: center; font-size: 2rem;">
+                    {year}
+                </h2>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; opacity: 0.9;">👥 USERS</div>
+                        <div style="color: #fff; font-size: 1.5rem; font-weight: bold;">{users}</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; opacity: 0.9;">💰 REVENUE</div>
+                        <div style="color: #fff; font-size: 1.5rem; font-weight: bold;">Rs {revenue}</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; opacity: 0.9;">📈 GROSS PROFIT</div>
+                        <div style="color: #fff; font-size: 1.5rem; font-weight: bold;">Rs {profit}</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; opacity: 0.9;">🤝 PARTY A</div>
+                        <div style="color: #fff; font-size: 1.5rem; font-weight: bold;">Rs {party_a}</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; opacity: 0.9;">🤝 PARTY B</div>
+                        <div style="color: #fff; font-size: 1.5rem; font-weight: bold;">Rs {party_b}</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
         
         # Collection & Disbursement Timeline (if available)
         if 'Collection Date' in df_forecast.columns and 'Disbursement Date' in df_forecast.columns:
