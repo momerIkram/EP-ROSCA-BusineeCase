@@ -1074,16 +1074,48 @@ def create_monthly_summary(df_forecast):
     if df_forecast.empty:
         return pd.DataFrame()
     
+    # Determine which columns exist (handle both standard and TAM format)
+    has_users = 'Users' in df_forecast.columns
+    has_users_in_slot = 'Users in Slot' in df_forecast.columns
+    has_total_fees_collected = 'Total Fees Collected' in df_forecast.columns
+    has_total_fees = 'Total Fees' in df_forecast.columns
+    has_total_nii_lifetime = 'Total NII (Lifetime)' in df_forecast.columns
+    has_total_nii = 'Total NII' in df_forecast.columns
+    
+    # Get user column
+    if has_users:
+        users_col = 'Users'
+    elif has_users_in_slot:
+        users_col = 'Users in Slot'
+    else:
+        users_col = None
+    
+    # Get fees column
+    if has_total_fees_collected:
+        fees_col = 'Total Fees Collected'
+    elif has_total_fees:
+        fees_col = 'Total Fees'
+    else:
+        fees_col = None
+    
+    # Get NII column
+    if has_total_nii_lifetime:
+        nii_col = 'Total NII (Lifetime)'
+    elif has_total_nii:
+        nii_col = 'Total NII'
+    else:
+        nii_col = None
+    
     # Group by month and sum
     monthly_data = []
     for month in range(1, 13):  # 12 months
         month_data = {
             'Month': f"Month {month}",
-            'Users Joining This Month': df_forecast['Users'].sum() // 12,
+            'Users Joining This Month': df_forecast[users_col].sum() // 12 if users_col and users_col in df_forecast.columns else 0,
             'Total Revenue': df_forecast['Total Revenue'].sum() // 12,
             'Gross Profit': df_forecast['Gross Profit'].sum() // 12,
-            'Total Fees': df_forecast['Total Fees Collected'].sum() // 12,
-            'Total NII': df_forecast['Total NII (Lifetime)'].sum() // 12
+            'Total Fees': df_forecast[fees_col].sum() // 12 if fees_col and fees_col in df_forecast.columns else 0,
+            'Total NII': df_forecast[nii_col].sum() // 12 if nii_col and nii_col in df_forecast.columns else 0
         }
         monthly_data.append(month_data)
     
@@ -1125,18 +1157,25 @@ def create_deposit_log(df_forecast):
     if df_forecast.empty:
         return pd.DataFrame()
     
+    # Determine user column
+    users_col = 'Users in Slot' if 'Users in Slot' in df_forecast.columns else 'Users'
+    fees_col = 'Total Fees' if 'Total Fees' in df_forecast.columns else 'Total Fees Collected'
+    monthly_fee_col = 'Monthly Fee' if 'Monthly Fee' in df_forecast.columns else 'Monthly Fee Collection'
+    
     deposit_data = []
     for _, row in df_forecast.iterrows():
         for month in range(1, 13):
+            users = row[users_col] if users_col in df_forecast.columns else 0
+            slab_amt = row.get('Slab Amount', 0)
             deposit_data.append({
                 'Month': f"Month {month}",
-                'Duration': row['Duration'],
-                'Slab Amount': row['Slab Amount'],
-                'Users': row['Users'],
-                'Monthly Deposit': row['Slab Amount'],
-                'Total Deposits': row['Slab Amount'] * row['Users'],
-                'Fee Collected': row['Monthly Fee Collection'],
-                'Total Fee': row['Total Fees Collected']
+                'Duration': row.get('Duration', 0),
+                'Slab Amount': slab_amt,
+                'Users': users,
+                'Monthly Deposit': slab_amt,
+                'Total Deposits': slab_amt * users,
+                'Fee Collected': row.get(monthly_fee_col, 0),
+                'Total Fee': row.get(fees_col, 0)
             })
     
     return pd.DataFrame(deposit_data)
@@ -1146,19 +1185,22 @@ def create_default_log(df_forecast):
     if df_forecast.empty:
         return pd.DataFrame()
     
+    # Determine user column
+    users_col = 'Users in Slot' if 'Users in Slot' in df_forecast.columns else 'Users'
+    
     default_data = []
     for _, row in df_forecast.iterrows():
         for month in range(1, 13):
             default_data.append({
                 'Month': f"Month {month}",
-                'Duration': row['Duration'],
-                'Slab Amount': row['Slab Amount'],
-                'Users': row['Users'],
-                'Pre-Payout Defaults': row['Pre-Payout Default Loss'],
-                'Post-Payout Defaults': row['Post-Payout Default Loss'],
-                'Total Defaults': row['Total Default Loss'],
-                'Recovery Amount': row['Default Recovery Amount'],
-                'Net Default Loss': row['Net Default Loss (After Recovery)']
+                'Duration': row.get('Duration', 0),
+                'Slab Amount': row.get('Slab Amount', 0),
+                'Users': row.get(users_col, 0),
+                'Pre-Payout Defaults': row.get('Pre-Payout Default Loss', 0),
+                'Post-Payout Defaults': row.get('Post-Payout Default Loss', 0),
+                'Total Defaults': row.get('Total Default Loss', 0),
+                'Recovery Amount': row.get('Default Recovery', 0) or row.get('Default Recovery Amount', 0),
+                'Net Default Loss': row.get('Net Default Loss', 0) or row.get('Net Default Loss (After Recovery)', 0)
             })
     
     return pd.DataFrame(default_data)
@@ -1168,19 +1210,23 @@ def create_lifecycle_log(df_forecast):
     if df_forecast.empty:
         return pd.DataFrame()
     
+    # Determine user column
+    users_col = 'Users in Slot' if 'Users in Slot' in df_forecast.columns else 'Users'
+    
     lifecycle_data = []
     for _, row in df_forecast.iterrows():
         for month in range(1, 13):
+            users = row.get(users_col, 0)
             lifecycle_data.append({
                 'Month': f"Month {month}",
-                'Duration': row['Duration'],
-                'Slab Amount': row['Slab Amount'],
-                'Users': row['Users'],
-                'New Users': row['Users'] // 12,
-                'Rejoining Users': 0,  # Placeholder
-                'Churned Users': 0,  # Placeholder
-                'Active Users': row['Users'],
-                'Pool Size': row['Pool Size']
+                'Duration': row.get('Duration', 0),
+                'Slab Amount': row.get('Slab Amount', 0),
+                'Users': users,
+                'New Users': users // 12,
+                'Rejoining Users': row.get('Returning Users', 0),
+                'Churned Users': row.get('Churned Users', 0),
+                'Active Users': users,
+                'Pool Size': row.get('Pool Size', 0)
             })
     
     return pd.DataFrame(lifecycle_data)
