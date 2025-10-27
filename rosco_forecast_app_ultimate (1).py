@@ -516,20 +516,36 @@ def held_days_exact(deposit_month_index, payout_month_index, start_year=2024, st
 
 def calculate_collection_dates(month, duration, collection_day=1, disbursement_day=15):
     """Calculate collection and disbursement dates for a given month and duration"""
-    try:
-        collection_date = date(2024, month, collection_day)
-    except ValueError:
-        collection_date = date(2024, month, 28 if month == 2 else 30)
+    from calendar import monthrange
     
-    # Calculate disbursement month (collection month + duration)
-    disbursement_month = ((month - 1) + duration) % 12
-    if disbursement_month == 0:
-        disbursement_month = 12
+    # Calculate which year this month belongs to (assuming Year 1 starts in 2024)
+    year = 2024 + ((month - 1) // 12)
+    actual_month = ((month - 1) % 12) + 1
+    
+    # Ensure collection_day doesn't exceed maximum days in month
+    max_days = monthrange(year, actual_month)[1]
+    safe_collection_day = min(collection_day, max_days)
     
     try:
-        disbursement_date = date(2024, disbursement_month, disbursement_day)
+        collection_date = date(year, actual_month, safe_collection_day)
     except ValueError:
-        disbursement_date = date(2024, disbursement_month, 28 if disbursement_month == 2 else 30)
+        # Fallback to last day of month
+        collection_date = date(year, actual_month, max_days)
+    
+    # Calculate disbursement month and year
+    total_months_from_start = month + duration - 1
+    disbursement_year = 2024 + ((total_months_from_start - 1) // 12)
+    disbursement_month = ((total_months_from_start - 1) % 12) + 1
+    
+    # Ensure disbursement_day doesn't exceed maximum days in disbursement month
+    max_disburse_days = monthrange(disbursement_year, disbursement_month)[1]
+    safe_disbursement_day = min(disbursement_day, max_disburse_days)
+    
+    try:
+        disbursement_date = date(disbursement_year, disbursement_month, safe_disbursement_day)
+    except ValueError:
+        # Fallback to last day of disbursement month
+        disbursement_date = date(disbursement_year, disbursement_month, max_disburse_days)
     
     # Use held_days_exact for precise calculation
     days_between = held_days_exact(
@@ -537,8 +553,8 @@ def calculate_collection_dates(month, duration, collection_day=1, disbursement_d
         payout_month_index=month + duration,
         start_year=2024,
         start_month=1,
-        deposit_day=collection_day,
-        payout_day=disbursement_day
+        deposit_day=safe_collection_day,
+        payout_day=safe_disbursement_day
     )
     
     return collection_date, disbursement_date, days_between
@@ -4770,7 +4786,7 @@ config = {
 # View mode selection
 view_mode = st.selectbox(
     "Select View Mode",
-    ["📊 Dashboard View", "🔧 Detailed Forecast", "📈 Analytics View", "📅 Year-on-Year Dashboard", "🗓️ Monthly Pool & Slab Stats", "🧩 Advanced User Growth", "⚙️ Configuration Mode"]
+    ["📊 Dashboard View", "🔧 Detailed Forecast", "📈 Analytics View", "⚙️ Configuration Mode"]
 )
 
 # Run forecast
@@ -4968,6 +4984,80 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         # Customer Lifecycle Analysis
         create_customer_lifecycle_analysis(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
         
+        # === NEW: Monthly Pool & Slab Stats ===
+        st.markdown("---")
+        st.markdown("### 🗓️ Monthly Pool, Slab & Slot Breakdown")
+        
+        # Year selector
+        selected_year = st.selectbox("Filter by Year", ["All Years", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5"], key="year_selector")
+        
+        if selected_year != "All Years":
+            year_num = int(selected_year.split(" ")[1])
+            df_filtered = df_forecast[df_forecast['Year'] == year_num].copy()
+        else:
+            df_filtered = df_forecast.copy()
+        
+        # Monthly Breakdown
+        st.markdown("#### 📊 Monthly Pool & Slab Breakdown")
+        
+        agg_dict = {'Users': 'sum', 'Total Revenue': 'sum', 'Gross Profit': 'sum'}
+        
+        if 'Total Fees Collected' in df_filtered.columns:
+            agg_dict['Total Fees Collected'] = 'sum'
+        elif 'Total Fees' in df_filtered.columns:
+            agg_dict['Total Fees'] = 'sum'
+            
+        if 'Total NII (Lifetime)' in df_filtered.columns:
+            agg_dict['Total NII (Lifetime)'] = 'sum'
+        elif 'Total NII' in df_filtered.columns:
+            agg_dict['Total NII'] = 'sum'
+        
+        monthly_pool_stats = df_filtered.groupby(['Month', 'Duration', 'Slab Amount']).agg(agg_dict).reset_index()
+        
+        if 'Users' in monthly_pool_stats.columns and 'Slab Amount' in monthly_pool_stats.columns:
+            monthly_pool_stats['Pool Size'] = monthly_pool_stats['Users'] * monthly_pool_stats['Slab Amount']
+        
+        # Format Month column
+        if 'Month' in monthly_pool_stats.columns:
+            monthly_pool_stats = monthly_pool_stats.copy()
+            monthly_pool_stats['Month'] = monthly_pool_stats['Month'].apply(lambda x: f"Month {x}")
+        
+        # Format numeric columns with commas
+        numeric_cols = monthly_pool_stats.select_dtypes(include=[np.number]).columns
+        for col in numeric_cols:
+            if col not in ['Month', 'Duration']:
+                monthly_pool_stats[col] = monthly_pool_stats[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
+        
+        st.dataframe(monthly_pool_stats, use_container_width=True)
+        
+        # === 5-Year YoY Summary ===
+        st.markdown("#### 📈 5-Year Year-over-Year Summary")
+        
+        yearly_agg_dict = {'Users': 'sum', 'Total Revenue': 'sum', 'Gross Profit': 'sum'}
+        
+        if 'Total Fees Collected' in df_forecast.columns:
+            yearly_agg_dict['Total Fees Collected'] = 'sum'
+        elif 'Total Fees' in df_forecast.columns:
+            yearly_agg_dict['Total Fees'] = 'sum'
+            
+        if 'Total NII (Lifetime)' in df_forecast.columns:
+            yearly_agg_dict['Total NII (Lifetime)'] = 'sum'
+        elif 'Total NII' in df_forecast.columns:
+            yearly_agg_dict['Total NII'] = 'sum'
+        
+        yearly_stats = df_forecast.groupby('Year').agg(yearly_agg_dict).reset_index()
+        
+        if 'Year' in yearly_stats.columns:
+            yearly_stats['Year'] = yearly_stats['Year'].apply(lambda x: f"Year {x}")
+        
+        # Format numeric columns with commas
+        numeric_cols_yearly = yearly_stats.select_dtypes(include=[np.number]).columns
+        for col in numeric_cols_yearly:
+            if col != 'Year':
+                yearly_stats[col] = yearly_stats[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
+        
+        st.dataframe(yearly_stats, use_container_width=True)
+        
         # Market Analysis
         if 'market_size' in st.session_state:
             create_market_analysis(
@@ -4979,6 +5069,7 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
                 CURRENCY_SYMBOL,
                 CURRENCY_NAME
             )
+        
         # Export options
         st.subheader("📥 Export Data")
         
@@ -5076,42 +5167,50 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         st.subheader("⚠️ Risk Analysis")
         st.dataframe(df_risk_analysis)
     
-    elif view_mode == "📅 Year-on-Year Dashboard":
-        # Year-on-Year dashboard
-        create_yoy_dashboard(df_forecast, config, CURRENCY_SYMBOL, CURRENCY_NAME)
+    elif view_mode == "🧩 Advanced User Growth":
+        # This view mode has been removed - functionality integrated into Dashboard View  
+        st.info("✅ Advanced Growth, Monthly Pool & Slab Stats, and Year-on-Year are now all part of the Dashboard View!")
     
-    elif view_mode == "🗓️ Monthly Pool & Slab Stats":
-        st.markdown("## 🗓️ Monthly Pool, Slab & Slot Statistics")
+    elif view_mode == "⚙️ Configuration Mode":
+        # Configuration summary
+        st.subheader("⚙️ Configuration Summary")
+        df_config_summary = create_configuration_summary(config, fee_collection_mode, CURRENCY_SYMBOL, CURRENCY_NAME)
+        st.dataframe(df_config_summary)
         
-        # Year selector
-        selected_year = st.selectbox("Select Year to View", ["All Years", "Year 1", "Year 2", "Year 3", "Year 4", "Year 5"])
+        # Configuration editor
+        st.subheader("🔧 Edit Configuration")
         
-        if selected_year != "All Years":
-            year_num = int(selected_year.split(" ")[1])
-            df_filtered = df_forecast[df_forecast['Year'] == year_num].copy()
-        else:
-            df_filtered = df_forecast.copy()
+        col1, col2 = st.columns(2)
         
-        # Monthly Breakdown by Year
-        st.markdown("### 📊 Monthly Breakdown")
+        with col1:
+            st.markdown("**Financial Parameters**")
+            new_kibor_rate = st.number_input("KIBOR Rate (%)", value=config['kibor_rate'], step=0.1)
+            new_spread = st.number_input("Spread (%)", value=config['spread'], step=0.1)
+            new_profit_split = st.number_input("Profit Split - Party A (%)", value=config['profit_split'], step=1.0)
         
-        # Group by Month and Duration, Slab
-        agg_dict = {'Users': 'sum', 'Total Revenue': 'sum', 'Gross Profit': 'sum'}
+        with col2:
+            st.markdown("**Default Parameters**")
+            new_default_rate = st.number_input("Default Rate (%)", value=config['default_rate'], step=0.1)
+            new_penalty_pct = st.number_input("Penalty Rate (%)", value=config['penalty_pct'], step=0.1)
+            new_recovery_rate = st.number_input("Recovery Rate (%)", value=config['recovery_rate'], step=1.0)
         
-        # Add columns that exist
-        if 'Total Fees Collected' in df_filtered.columns:
-            agg_dict['Total Fees Collected'] = 'sum'
-        elif 'Total Fees' in df_filtered.columns:
-            agg_dict['Total Fees'] = 'sum'
+        if st.button("🔄 Update Configuration"):
+            # Update configuration
+            config['kibor_rate'] = new_kibor_rate
+            config['spread'] = new_spread
+            config['profit_split'] = new_profit_split
+            config['default_rate'] = new_default_rate
+            config['penalty_pct'] = new_penalty_pct
+            config['recovery_rate'] = new_recovery_rate
             
-        if 'Total NII (Lifetime)' in df_filtered.columns:
-            agg_dict['Total NII (Lifetime)'] = 'sum'
-        elif 'Total NII' in df_filtered.columns:
-            agg_dict['Total NII'] = 'sum'
-        
-        monthly_stats = df_filtered.groupby(['Month', 'Duration', 'Slab Amount']).agg(agg_dict).reset_index()
-        
-        monthly_stats['Month'] = monthly_stats['Month'].apply(lambda x: f"Month {x}")
+            # Store updated configuration
+            st.session_state['config'] = config
+            
+            st.success("✅ Configuration updated successfully!")
+            st.rerun()
+
+# This is a duplicate footer marker to be removed - skip to line 5495
+
         monthly_stats['Pool Size'] = monthly_stats['Users'] * monthly_stats['Slab Amount']
         
         # Format with commas
