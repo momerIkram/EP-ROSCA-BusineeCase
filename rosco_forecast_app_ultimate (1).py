@@ -2830,7 +2830,8 @@ def create_tam_dashboard_overview(df_forecast, scenario_name, currency_symbol, c
     
     with col2:
         st.markdown('<div class="metric-card">', unsafe_allow_html=True)
-        total_active_users = df_forecast['Total Active Users'].sum() if not df_forecast.empty else 0
+        # Get unique active users (not sum across months)
+        total_active_users = df_forecast['Total Active Users'].iloc[-1] if not df_forecast.empty else 0
         st.metric("Total Active Users", f"{total_active_users:,}")
         st.markdown('</div>', unsafe_allow_html=True)
     
@@ -2854,7 +2855,7 @@ def create_user_lifecycle_analysis_tam(df_forecast, currency_symbol, currency_na
     total_new_users = df_forecast['New Users'].sum()
     total_returning_users = df_forecast['Returning Users'].sum()
     total_resting_users = df_forecast['Resting Users'].sum()
-    total_active_users = df_forecast['Total Active Users'].sum()
+    total_active_users = df_forecast['Total Active Users'].iloc[-1] if not df_forecast.empty else 0  # Last month's active users
     total_tam_users = df_forecast['Total TAM Users'].iloc[-1] if not df_forecast.empty else 0
     
     # Lifecycle metrics
@@ -4893,6 +4894,43 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         # Otherwise show standard dashboard
         # Dashboard overview
         create_dashboard_overview(df_monthly_summary, scenario_name, CURRENCY_SYMBOL, CURRENCY_NAME)
+        
+        # === Year-on-Year Visual Summary ===
+        st.markdown("### 📊 5-Year Financial Overview")
+        
+        # Aggregate by Year
+        yearly_agg_dict = {'Users': 'sum', 'Total Revenue': 'sum', 'Gross Profit': 'sum'}
+        if 'Total Fees Collected' in df_forecast.columns:
+            yearly_agg_dict['Total Fees Collected'] = 'sum'
+        
+        if 'Total NII (Lifetime)' in df_forecast.columns:
+            yearly_agg_dict['Total NII (Lifetime)'] = 'sum'
+        
+        yearly_stats = df_forecast.groupby('Year').agg(yearly_agg_dict).reset_index()
+        
+        # Calculate profit split for two parties
+        yearly_stats['Party A Share'] = yearly_stats['Gross Profit'] * (profit_split / 100)
+        yearly_stats['Party B Share'] = yearly_stats['Gross Profit'] * ((100 - profit_split) / 100)
+        
+        # Format for display
+        yearly_stats['Year'] = yearly_stats['Year'].apply(lambda x: f"Year {x}")
+        yearly_stats['Users'] = yearly_stats['Users'].apply(lambda x: f"{int(x):,}")
+        yearly_stats['Total Revenue'] = yearly_stats['Total Revenue'].apply(lambda x: f"{int(x):,}")
+        yearly_stats['Gross Profit'] = yearly_stats['Gross Profit'].apply(lambda x: f"{int(x):,}")
+        yearly_stats['Party A Share'] = yearly_stats['Party A Share'].apply(lambda x: f"{int(x):,}")
+        yearly_stats['Party B Share'] = yearly_stats['Party B Share'].apply(lambda x: f"{int(x):,}")
+        
+        # Display as styled columns for business case
+        for idx, row in yearly_stats.iterrows():
+            with st.container():
+                cols = st.columns(6)
+                cols[0].markdown(f"### {row['Year']}")
+                cols[1].metric("Users", row['Users'])
+                cols[2].metric("Revenue", row['Total Revenue'])
+                cols[3].metric("Gross Profit", row['Gross Profit'])
+                cols[4].metric("Party A", row['Party A Share'])
+                cols[5].metric("Party B", row['Party B Share'])
+                st.markdown("---")
         
         # Collection & Disbursement Timeline (if available)
         if 'Collection Date' in df_forecast.columns and 'Disbursement Date' in df_forecast.columns:
