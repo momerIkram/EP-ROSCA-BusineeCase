@@ -375,6 +375,130 @@ def validate_slot_distribution(slot_distribution, duration):
     total = sum(slot_distribution.values())
     return abs(total - 100.0) < 0.1
 
+def validate_percentage_distribution(distribution, level_name):
+    """Validate that distribution sums to 100%"""
+    total = sum(distribution.values())
+    if abs(total - 100.0) > 0.1:
+        return False, f"{level_name} distribution is {total:.1f}% (should be 100%)"
+    return True, "Valid"
+
+def apply_rounding_correction(allocations, total_target):
+    """Apply rounding correction to ensure integer totals"""
+    current_total = sum(allocations.values())
+    difference = total_target - current_total
+    
+    if difference != 0:
+        largest_key = max(allocations.keys(), key=lambda k: allocations[k])
+        allocations[largest_key] += difference
+    
+    return allocations
+
+# ============================================================================= 
+# 🧩 TAM USER DISTRIBUTION SYSTEM (From add.txt)
+# ============================================================================= 
+
+def calculate_new_users_tam(prev_total_users, growth_rate):
+    """Calculate new users for current month (TAM system)"""
+    return int(prev_total_users * (growth_rate / 100))
+
+def determine_returning_users_tam(month, user_history, durations, rest_periods):
+    """Determine returning users for current month (TAM system)"""
+    returning_users = 0
+    
+    for join_month, user_data in user_history.items():
+        for duration, user_count in user_data.items():
+            rest_period = rest_periods.get(duration, 1)
+            return_month = join_month + duration + rest_period
+            
+            if return_month == month:
+                returning_users += user_count
+    
+    return returning_users
+
+def allocate_users_by_duration(users, duration_share):
+    """Allocate users by duration with integer rounding"""
+    allocations = {}
+    total_allocated = 0
+    
+    for duration, percentage in duration_share.items():
+        allocated = int(users * percentage / 100)
+        allocations[duration] = allocated
+        total_allocated += allocated
+    
+    allocations = apply_rounding_correction(allocations, users)
+    
+    return allocations
+
+def allocate_users_by_slab(duration_users, slab_share):
+    """Allocate users by slab for each duration"""
+    allocations = {}
+    
+    for duration, users in duration_users.items():
+        if duration in slab_share:
+            slab_allocations = {}
+            total_allocated = 0
+            
+            for slab, percentage in slab_share[duration].items():
+                allocated = int(users * percentage / 100)
+                slab_allocations[slab] = allocated
+                total_allocated += allocated
+            
+            slab_allocations = apply_rounding_correction(slab_allocations, users)
+            allocations[duration] = slab_allocations
+        else:
+            allocations[duration] = {}
+    
+    return allocations
+
+def allocate_users_by_slot(slab_users, slot_share):
+    """Allocate users by slot for each duration and slab"""
+    allocations = {}
+    
+    for duration, slabs in slab_users.items():
+        allocations[duration] = {}
+        
+        for slab, users in slabs.items():
+            if duration in slot_share:
+                slot_allocations = {}
+                total_allocated = 0
+                
+                for slot, percentage in slot_share[duration].items():
+                    allocated = int(users * percentage / 100)
+                    slot_allocations[slot] = allocated
+                    total_allocated += allocated
+                
+                slot_allocations = apply_rounding_correction(slot_allocations, users)
+                allocations[duration][slab] = slot_allocations
+            else:
+                allocations[duration][slab] = {}
+    
+    return allocations
+
+def calculate_collection_dates(month, duration, collection_day=1, disbursement_day=15):
+    """Calculate collection and disbursement dates for a given month and duration"""
+    try:
+        collection_date = date(2024, month, collection_day)
+    except ValueError:
+        collection_date = date(2024, month, 28 if month == 2 else 30)
+    
+    try:
+        disbursement_date = date(2024, month, disbursement_day)
+    except ValueError:
+        disbursement_date = date(2024, month, 28 if month == 2 else 30)
+    
+    days_between = (disbursement_date - collection_date).days
+    if days_between < 0:
+        days_between = 30 - abs(days_between)
+    
+    return collection_date, disbursement_date, days_between
+
+def calculate_monthly_nii_tam(principal, rate, collection_date, disbursement_date):
+    """Calculate monthly NII based on collection and disbursement dates"""
+    days = (disbursement_date - collection_date).days
+    if days < 0:
+        days = 30 - abs(days)
+    return principal * (rate / 100) * (days / 365)
+
 def create_slot_configuration_ui(duration, slab_amount, slot_fees, slot_distribution, currency_symbol):
     """Create UI for slot configuration"""
     st.markdown(f"**🎯 Slot Configuration for {duration}M, {currency_symbol}{slab_amount:,}**")
@@ -2494,6 +2618,300 @@ def create_risk_analysis(df_forecast):
     return pd.DataFrame(risk_data)
 
 # =============================================================================
+# 🌍 TAM-SPECIFIC DASHBOARD FUNCTIONS (From add.txt)
+# =============================================================================
+
+def create_tam_dashboard_overview(df_forecast, scenario_name, currency_symbol, currency_name):
+    """Create TAM-focused dashboard overview"""
+    st.markdown(f"""
+    <div class="dashboard-header">
+        <h1>🌍 {scenario_name} - TAM Distribution System</h1>
+        <p>Advanced ROSCA Forecasting with Total Addressable Market Distribution</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Key TAM metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        total_tam_users = df_forecast['Total TAM Users'].iloc[-1] if not df_forecast.empty else 0
+        st.metric("Total TAM Users", f"{total_tam_users:,}")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        total_active_users = df_forecast['Total Active Users'].sum() if not df_forecast.empty else 0
+        st.metric("Total Active Users", f"{total_active_users:,}")
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        total_revenue = df_forecast['Total Revenue'].sum() if not df_forecast.empty else 0
+        st.metric("Total Revenue", format_currency(total_revenue, currency_symbol, currency_name))
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        total_profit = df_forecast['Gross Profit'].sum() if not df_forecast.empty else 0
+        st.metric("Gross Profit", format_currency(total_profit, currency_symbol, currency_name))
+        st.markdown('</div>', unsafe_allow_html=True)
+
+def create_user_lifecycle_analysis_tam(df_forecast, currency_symbol, currency_name):
+    """Create comprehensive user lifecycle analysis (TAM version)"""
+    st.markdown("### 🔄 User Lifecycle Analysis")
+    
+    # Calculate lifecycle metrics
+    total_new_users = df_forecast['New Users'].sum()
+    total_returning_users = df_forecast['Returning Users'].sum()
+    total_resting_users = df_forecast['Resting Users'].sum()
+    total_active_users = df_forecast['Total Active Users'].sum()
+    total_tam_users = df_forecast['Total TAM Users'].iloc[-1] if not df_forecast.empty else 0
+    
+    # Lifecycle metrics
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        st.metric("New Users", f"{total_new_users:,}")
+    
+    with col2:
+        st.metric("Returning Users", f"{total_returning_users:,}")
+    
+    with col3:
+        st.metric("Resting Users", f"{total_resting_users:,}")
+    
+    with col4:
+        st.metric("Active Users", f"{total_active_users:,}")
+    
+    with col5:
+        st.metric("Total TAM", f"{total_tam_users:,}")
+    
+    # Monthly user trends
+    st.markdown("#### 📈 Monthly User Trends")
+    
+    monthly_summary = df_forecast.groupby('Month').agg({
+        'New Users': 'first',
+        'Returning Users': 'first',
+        'Resting Users': 'first',
+        'Total Active Users': 'first',
+        'Total TAM Users': 'first'
+    }).reset_index()
+    
+    if PLOTLY_AVAILABLE:
+        fig = go.Figure()
+        
+        fig.add_trace(go.Scatter(
+            x=monthly_summary['Month'],
+            y=monthly_summary['New Users'],
+            mode='lines+markers',
+            name='New Users',
+            line=dict(color='#667eea', width=3),
+            marker=dict(size=8, color='#667eea')
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=monthly_summary['Month'],
+            y=monthly_summary['Returning Users'],
+            mode='lines+markers',
+            name='Returning Users',
+            line=dict(color='#764ba2', width=3),
+            marker=dict(size=8, color='#764ba2')
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=monthly_summary['Month'],
+            y=monthly_summary['Total Active Users'],
+            mode='lines+markers',
+            name='Total Active Users',
+            line=dict(color='#f093fb', width=3),
+            marker=dict(size=8, color='#f093fb')
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=monthly_summary['Month'],
+            y=monthly_summary['Total TAM Users'],
+            mode='lines+markers',
+            name='Total TAM Users',
+            line=dict(color='#10b981', width=3),
+            marker=dict(size=8, color='#10b981')
+        ))
+        
+        fig.update_layout(
+            title="👥 User Lifecycle Trends",
+            xaxis_title="Month",
+            yaxis_title="Number of Users",
+            height=500,
+            template="plotly_white",
+            showlegend=True
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(monthly_summary['Month'], monthly_summary['New Users'], 'o-', color='#667eea', linewidth=3, markersize=8, label='New Users')
+        ax.plot(monthly_summary['Month'], monthly_summary['Returning Users'], 'o-', color='#764ba2', linewidth=3, markersize=8, label='Returning Users')
+        ax.plot(monthly_summary['Month'], monthly_summary['Total Active Users'], 'o-', color='#f093fb', linewidth=3, markersize=8, label='Total Active Users')
+        ax.plot(monthly_summary['Month'], monthly_summary['Total TAM Users'], 'o-', color='#10b981', linewidth=3, markersize=8, label='Total TAM Users')
+        ax.set_title("👥 User Lifecycle Trends", fontsize=16, fontweight='bold')
+        ax.set_xlabel("Month", fontsize=12)
+        ax.set_ylabel("Number of Users", fontsize=12)
+        ax.legend(fontsize=10)
+        ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+
+def create_distribution_analysis_tam(df_forecast, currency_symbol, currency_name):
+    """Create distribution hierarchy analysis"""
+    st.markdown("### 🧩 TAM Distribution Hierarchy Analysis")
+    
+    # Duration distribution
+    st.markdown("#### 📅 Duration Distribution")
+    duration_summary = df_forecast.groupby('Duration')['Users in Slot'].sum().reset_index()
+    duration_summary['Percentage'] = (duration_summary['Users in Slot'] / duration_summary['Users in Slot'].sum() * 100).round(1)
+    
+    if PLOTLY_AVAILABLE:
+        fig_duration = px.pie(
+            duration_summary, 
+            values='Users in Slot', 
+            names='Duration',
+            title="Duration Distribution",
+            color_discrete_sequence=px.colors.qualitative.Set3
+        )
+        st.plotly_chart(fig_duration, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.pie(duration_summary['Users in Slot'], labels=duration_summary['Duration'], autopct='%1.1f%%')
+        ax.set_title("Duration Distribution")
+        st.pyplot(fig)
+    
+    # Slab distribution
+    st.markdown("#### 💵 Slab Distribution")
+    slab_summary = df_forecast.groupby(['Duration', 'Slab Amount'])['Users in Slot'].sum().reset_index()
+    
+    if PLOTLY_AVAILABLE:
+        fig_slab = px.bar(
+            slab_summary,
+            x='Duration',
+            y='Users in Slot',
+            color='Slab Amount',
+            title="Slab Distribution by Duration",
+            barmode='group'
+        )
+        st.plotly_chart(fig_slab, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(10, 6))
+        for duration in slab_summary['Duration'].unique():
+            duration_data = slab_summary[slab_summary['Duration'] == duration]
+            ax.bar(duration_data['Slab Amount'], duration_data['Users in Slot'], label=f'{duration}M', alpha=0.7)
+        ax.set_title("Slab Distribution by Duration")
+        ax.set_xlabel("Slab Amount")
+        ax.set_ylabel("Users")
+        ax.legend()
+        ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+
+def create_collection_analysis_tam(df_forecast, currency_symbol, currency_name):
+    """Create collection and disbursement analysis"""
+    st.markdown("### 📅 Collection & Disbursement Analysis")
+    
+    # Collection metrics
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        avg_days_between = df_forecast['Days Between'].mean()
+        st.metric("Avg Collection Period", f"{avg_days_between:.0f} days")
+    
+    with col2:
+        total_deposits = df_forecast['Total Deposits'].sum()
+        st.metric("Total Deposits", format_currency(total_deposits, currency_symbol, currency_name))
+    
+    with col3:
+        total_fees = df_forecast['Total Fees'].sum()
+        st.metric("Total Fees", format_currency(total_fees, currency_symbol, currency_name))
+    
+    with col4:
+        total_nii = df_forecast['Total NII'].sum()
+        st.metric("Total NII", format_currency(total_nii, currency_symbol, currency_name))
+    
+    # Collection timeline
+    st.markdown("#### 📊 Collection Timeline")
+    
+    collection_timeline = df_forecast.groupby('Month').agg({
+        'Collection Date': 'first',
+        'Disbursement Date': 'first',
+        'Days Between': 'first',
+        'Total Deposits': 'sum',
+        'Total Fees': 'sum'
+    }).reset_index()
+    
+    if PLOTLY_AVAILABLE:
+        fig = go.Figure()
+        
+        fig.add_trace(go.Scatter(
+            x=collection_timeline['Month'],
+            y=collection_timeline['Total Deposits'],
+            mode='lines+markers',
+            name='Total Deposits',
+            line=dict(color='#4facfe', width=3),
+            marker=dict(size=8, color='#4facfe')
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=collection_timeline['Month'],
+            y=collection_timeline['Total Fees'],
+            mode='lines+markers',
+            name='Total Fees',
+            line=dict(color='#00f2fe', width=3),
+            marker=dict(size=8, color='#00f2fe')
+        ))
+        
+        fig.update_layout(
+            title="💰 Monthly Collection & Fee Trends",
+            xaxis_title="Month",
+            yaxis_title="Amount",
+            height=400,
+            template="plotly_white"
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        fig, ax = plt.subplots(figsize=(12, 6))
+        ax.plot(collection_timeline['Month'], collection_timeline['Total Deposits'], 'o-', color='#4facfe', linewidth=3, markersize=8, label='Total Deposits')
+        ax.plot(collection_timeline['Month'], collection_timeline['Total Fees'], 'o-', color='#00f2fe', linewidth=3, markersize=8, label='Total Fees')
+        ax.set_title("💰 Monthly Collection & Fee Trends", fontsize=16, fontweight='bold')
+        ax.set_xlabel("Month", fontsize=12)
+        ax.set_ylabel("Amount", fontsize=12)
+        ax.legend(fontsize=10)
+        ax.grid(True, alpha=0.3)
+        st.pyplot(fig)
+
+def create_financial_dashboard_tam(df_forecast, currency_symbol, currency_name):
+    """Create comprehensive financial dashboard"""
+    st.markdown("### 💰 Financial Performance Dashboard")
+    
+    # Financial metrics summary
+    col1, col2, col3, col4, col5 = st.columns(5)
+    
+    with col1:
+        total_deposits = df_forecast['Total Deposits'].sum()
+        st.metric("Total Deposits", format_currency(total_deposits, currency_symbol, currency_name))
+    
+    with col2:
+        total_fees = df_forecast['Total Fees'].sum()
+        st.metric("Total Fees", format_currency(total_fees, currency_symbol, currency_name))
+    
+    with col3:
+        total_nii = df_forecast['Total NII'].sum()
+        st.metric("Total NII", format_currency(total_nii, currency_symbol, currency_name))
+    
+    with col4:
+        total_revenue = df_forecast['Total Revenue'].sum()
+        st.metric("Total Revenue", format_currency(total_revenue, currency_symbol, currency_name))
+    
+    with col5:
+        total_profit = df_forecast['Net Profit'].sum()
+        st.metric("Net Profit", format_currency(total_profit, currency_symbol, currency_name))
+
+# =============================================================================
 # 🔧 MAIN FORECASTING ENGINE
 # =============================================================================
 
@@ -2765,6 +3183,227 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
     
     # Convert to DataFrame
     df_forecast = pd.DataFrame(scenario_data)
+    
+    return df_forecast
+
+def run_tam_forecast(config, fee_collection_mode, currency_symbol, currency_name):
+    """Main forecasting engine with TAM-based user distribution"""
+    monthly_data = {
+        'Month': [],
+        'Year': [],
+        'New Users': [],
+        'Returning Users': [],
+        'Resting Users': [],
+        'Total Active Users': [],
+        'Total TAM Users': [],
+        'Duration': [],
+        'Slab Amount': [],
+        'Slot': [],
+        'Users in Slot': [],
+        'Collection Date': [],
+        'Disbursement Date': [],
+        'Days Between': [],
+        'Monthly Deposit': [],
+        'Total Deposits': [],
+        'Fee %': [],
+        'Total Fees': [],
+        'Monthly Fee': [],
+        'Base NII': [],
+        'Fee NII': [],
+        'Pool Growth NII': [],
+        'Total NII': [],
+        'Pre-Payout Default Loss': [],
+        'Post-Payout Default Loss': [],
+        'Total Default Loss': [],
+        'Default Recovery': [],
+        'Net Default Loss': [],
+        'Default Fees': [],
+        'Total Defaulters': [],
+        'Total Revenue': [],
+        'Total Losses': [],
+        'Gross Profit': [],
+        'Net Profit': [],
+        'Party A Share': [],
+        'Party B Share': []
+    }
+    
+    # Extract configuration
+    initial_tam = config['initial_tam']
+    monthly_growth_rate = config['monthly_growth_rate']
+    durations = config['durations']
+    duration_share = config['duration_share']
+    slab_share = config['slab_share']
+    slot_share = config['slot_share']
+    rest_periods = config['rest_periods']
+    slot_fees = config['slot_fees']
+    slot_distribution = config['slot_distribution']
+    
+    # Financial parameters
+    kibor_rate = config['kibor_rate']
+    spread = config['spread']
+    default_rate = config['default_rate']
+    default_pre_pct = config['default_pre_pct']
+    default_post_pct = config['default_post_pct']
+    penalty_pct = config['penalty_pct']
+    recovery_rate = config['recovery_rate']
+    profit_split = config['profit_split']
+    
+    # Track total TAM users
+    total_tam_users = initial_tam
+    user_history = {}
+    
+    # Run simulation for 12 months
+    for month in range(1, 13):
+        year = 2024 + (month - 1) // 12
+        
+        # Step 1: Calculate new users
+        if month == 1:
+            new_users = initial_tam
+        else:
+            new_users = calculate_new_users_tam(total_tam_users, monthly_growth_rate)
+        
+        # Update total TAM users
+        total_tam_users += new_users
+        
+        # Step 2: Determine returning users
+        returning_users = determine_returning_users_tam(month, user_history, durations, rest_periods)
+        
+        # Step 3: Calculate total active users
+        total_active_users = new_users + returning_users
+        
+        # Step 4: Calculate resting users
+        resting_users = 0
+        for join_month, user_data in user_history.items():
+            for duration, user_count in user_data.items():
+                completion_month = join_month + duration
+                if completion_month == month:
+                    resting_users += user_count
+        
+        # Step 5: Distribute users using 3-level hierarchy
+        users_by_duration = allocate_users_by_duration(total_active_users, duration_share)
+        users_by_slab = allocate_users_by_slab(users_by_duration, slab_share)
+        users_by_slot = allocate_users_by_slot(users_by_slab, slot_share)
+        
+        # Step 6: Process each duration/slab/slot combination
+        for duration in durations:
+            if duration not in users_by_duration:
+                continue
+                
+            for slab_amount in slab_share.get(duration, {}).keys():
+                if slab_amount not in users_by_slab.get(duration, {}):
+                    continue
+                    
+                for slot in slot_share.get(duration, {}).keys():
+                    if slot not in users_by_slot.get(duration, {}).get(slab_amount, {}):
+                        continue
+                    
+                    users_in_slot = users_by_slot[duration][slab_amount][slot]
+                    
+                    if users_in_slot == 0:
+                        continue
+                    
+                    # Calculate collection and disbursement dates
+                    collection_date, disbursement_date, days_between = calculate_collection_dates(
+                        month, duration, config.get('collection_day', 1), config.get('disbursement_day', 15)
+                    )
+                    
+                    # Calculate financial metrics
+                    monthly_deposit = slab_amount
+                    total_deposits = users_in_slot * monthly_deposit
+                    
+                    # Fee calculations
+                    if duration in slot_fees and slot in slot_fees[duration]:
+                        if isinstance(slot_fees[duration][slot], dict):
+                            fee_pct = slot_fees[duration][slot]['fee_pct']
+                        else:
+                            fee_pct = slot_fees[duration][slot]
+                    else:
+                        fee_pct = 2.0
+                    
+                    if fee_collection_mode == "Upfront Fee (Entire Pool)":
+                        total_fees = total_deposits * duration * (fee_pct / 100)
+                        monthly_fee = total_fees / duration
+                    else:
+                        monthly_fee = total_deposits * (fee_pct / 100)
+                        total_fees = monthly_fee * duration
+                    
+                    # NII calculations
+                    base_nii = calculate_monthly_nii_tam(total_deposits, kibor_rate + spread, collection_date, disbursement_date)
+                    fee_nii = calculate_monthly_nii_tam(total_fees, kibor_rate + spread, collection_date, disbursement_date)
+                    pool_growth_nii = calculate_monthly_nii_tam(total_deposits, kibor_rate + spread, collection_date, disbursement_date)
+                    total_nii = base_nii + fee_nii + pool_growth_nii
+                    
+                    # Default calculations
+                    pre_payout_default_loss = total_deposits * (default_rate / 100) * (default_pre_pct / 100)
+                    post_payout_default_loss = total_deposits * (default_rate / 100) * (default_post_pct / 100)
+                    total_default_loss = pre_payout_default_loss + post_payout_default_loss
+                    default_recovery = total_default_loss * (recovery_rate / 100)
+                    net_default_loss = total_default_loss - default_recovery
+                    default_fees = total_default_loss * (penalty_pct / 100)
+                    
+                    # Revenue calculations
+                    total_revenue = total_fees + total_nii
+                    total_losses = net_default_loss
+                    gross_profit = total_revenue - total_losses
+                    net_profit = gross_profit - default_fees
+                    
+                    # Party A/B split
+                    party_a_share = net_profit * (profit_split / 100)
+                    party_b_share = net_profit * ((100 - profit_split) / 100)
+                    
+                    # Store results
+                    monthly_data['Month'].append(month)
+                    monthly_data['Year'].append(year)
+                    monthly_data['New Users'].append(new_users)
+                    monthly_data['Returning Users'].append(returning_users)
+                    monthly_data['Resting Users'].append(resting_users)
+                    monthly_data['Total Active Users'].append(total_active_users)
+                    monthly_data['Total TAM Users'].append(total_tam_users)
+                    monthly_data['Duration'].append(duration)
+                    monthly_data['Slab Amount'].append(slab_amount)
+                    monthly_data['Slot'].append(slot)
+                    monthly_data['Users in Slot'].append(users_in_slot)
+                    monthly_data['Collection Date'].append(collection_date)
+                    monthly_data['Disbursement Date'].append(disbursement_date)
+                    monthly_data['Days Between'].append(days_between)
+                    monthly_data['Monthly Deposit'].append(monthly_deposit)
+                    monthly_data['Total Deposits'].append(total_deposits)
+                    monthly_data['Fee %'].append(fee_pct)
+                    monthly_data['Total Fees'].append(total_fees)
+                    monthly_data['Monthly Fee'].append(monthly_fee)
+                    monthly_data['Base NII'].append(base_nii)
+                    monthly_data['Fee NII'].append(fee_nii)
+                    monthly_data['Pool Growth NII'].append(pool_growth_nii)
+                    monthly_data['Total NII'].append(total_nii)
+                    monthly_data['Pre-Payout Default Loss'].append(pre_payout_default_loss)
+                    monthly_data['Post-Payout Default Loss'].append(post_payout_default_loss)
+                    monthly_data['Total Default Loss'].append(total_default_loss)
+                    monthly_data['Default Recovery'].append(default_recovery)
+                    monthly_data['Net Default Loss'].append(net_default_loss)
+                    monthly_data['Default Fees'].append(default_fees)
+                    monthly_data['Total Defaulters'].append(int(users_in_slot * default_rate / 100))
+                    monthly_data['Total Revenue'].append(total_revenue)
+                    monthly_data['Total Losses'].append(total_losses)
+                    monthly_data['Gross Profit'].append(gross_profit)
+                    monthly_data['Net Profit'].append(net_profit)
+                    monthly_data['Party A Share'].append(party_a_share)
+                    monthly_data['Party B Share'].append(party_b_share)
+        
+        # Step 7: Update user history
+        if month == 1:
+            user_history[month] = {}
+            for duration in durations:
+                if duration in users_by_duration:
+                    user_history[month][duration] = users_by_duration[duration]
+        else:
+            if new_users > 0:
+                user_history[month] = {}
+                for duration in durations:
+                    if duration in users_by_duration:
+                        user_history[month][duration] = users_by_duration[duration]
+    
+    # Convert to DataFrame
+    df_forecast = pd.DataFrame(monthly_data)
     
     return df_forecast
 
@@ -3677,6 +4316,16 @@ with st.sidebar:
         st.stop()
     st.markdown('</div>', unsafe_allow_html=True)
     
+    # Forecasting Engine Selection
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    st.markdown("### 🚀 Forecasting Engine")
+    forecasting_engine = st.radio(
+        "Forecast Mode",
+        ["🧩 Standard Forecast", "🌍 TAM Distribution"],
+        help="Standard: Advanced lifecycle tracking. TAM: 3-level hierarchy (Duration→Slab→Slot)"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
     # Slot configuration - BEAUTIFUL UI RESTORED
     st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
     st.markdown("### 🎯 Slot Configuration")
@@ -3883,8 +4532,31 @@ if st.button("🚀 Run Forecast", type="primary"):
                 st.error(f"❌ {error}")
             st.stop()
         
-        # Run forecast
-        df_forecast = run_forecast(config, fee_collection_mode, CURRENCY_SYMBOL, CURRENCY_NAME)
+        # Run forecast based on selected engine
+        if forecasting_engine == "🌍 TAM Distribution":
+            # Prepare config for TAM forecasting
+            # Note: TAM mode requires specific config format
+            if 'initial_tam' not in config:
+                config['initial_tam'] = starting_users
+            if 'duration_share' not in config:
+                # Create equal distribution for durations
+                config['duration_share'] = {d: 100.0/len(durations) for d in durations}
+            if 'slab_share' not in config:
+                # Create equal distribution for slabs
+                config['slab_share'] = {}
+                for d in durations:
+                    config['slab_share'][d] = {s: 100.0/len(slab_amounts) for s in slab_amounts}
+            if 'slot_share' not in config:
+                # Create equal distribution for slots
+                config['slot_share'] = {}
+                for d in durations:
+                    config['slot_share'][d] = {s: 100.0/d for s in range(1, d+1)}
+            if 'rest_periods' not in config:
+                config['rest_periods'] = {d: 1 for d in durations}
+            
+            df_forecast = run_tam_forecast(config, fee_collection_mode, CURRENCY_SYMBOL, CURRENCY_NAME)
+        else:
+            df_forecast = run_forecast(config, fee_collection_mode, CURRENCY_SYMBOL, CURRENCY_NAME)
         
         if not df_forecast.empty:
             st.success("✅ Forecast completed successfully!")
@@ -3910,6 +4582,7 @@ if st.button("🚀 Run Forecast", type="primary"):
             st.session_state['config'] = config
             st.session_state['fee_collection_mode'] = fee_collection_mode
             st.session_state['scenario_name'] = scenario_name
+            st.session_state['forecasting_engine'] = forecasting_engine
             
             # Store market data in session state
             st.session_state['market_size'] = market_size
@@ -3937,8 +4610,19 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
     config = st.session_state['config']
     fee_collection_mode = st.session_state['fee_collection_mode']
     scenario_name = st.session_state['scenario_name']
+    forecasting_engine = st.session_state.get('forecasting_engine', '🧩 Standard Forecast')
     
     if view_mode == "📊 Dashboard View":
+        # Show TAM dashboard if TAM mode is selected
+        if forecasting_engine == "🌍 TAM Distribution":
+            create_tam_dashboard_overview(df_forecast, scenario_name, CURRENCY_SYMBOL, CURRENCY_NAME)
+            create_user_lifecycle_analysis_tam(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
+            create_distribution_analysis_tam(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
+            create_collection_analysis_tam(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
+            create_financial_dashboard_tam(df_forecast, CURRENCY_SYMBOL, CURRENCY_NAME)
+            st.stop()
+        
+        # Otherwise show standard dashboard
         # Dashboard overview
         create_dashboard_overview(df_monthly_summary, scenario_name, CURRENCY_SYMBOL, CURRENCY_NAME)
         
