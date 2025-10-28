@@ -4966,7 +4966,8 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         yearly_stats = df_forecast.groupby('Year').agg(yearly_agg_dict).reset_index()
         
         # Debug: Show what we're aggregating
-        # st.write(f"Debug: Yearly Revenue sum = {yearly_stats['Total Revenue'].sum()}")
+        # st.write(f"Debug: Found {len(yearly_stats)} years in data")
+        # st.write(f"Debug: Years = {yearly_stats['Year'].tolist()}")
         
         # Add all user type columns - users at END of each year
         for user_col in ['Users', 'New Users', 'Returning Users', 'Rest Period Users', 'Total Users to Date']:
@@ -4992,10 +4993,17 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         # Format for display
         yearly_stats['Year'] = yearly_stats['Year'].apply(lambda x: f"Year {x}")
         
-        # Format user columns
+        # Format user columns with comma separation
         for user_col in ['Users', 'New Users', 'Returning Users', 'Rest Period Users', 'Total Users to Date']:
             if user_col in yearly_stats.columns:
-                yearly_stats[user_col] = yearly_stats[user_col].apply(lambda x: f"{int(x):,}" if pd.notna(x) and x != 'N/A' else str(x))
+                def format_with_comma(x):
+                    if pd.isna(x) or x == 'N/A':
+                        return str(x) if isinstance(x, str) else '0'
+                    elif isinstance(x, (int, float)):
+                        return f"{int(x):,}"
+                    else:
+                        return str(x)
+                yearly_stats[user_col] = yearly_stats[user_col].apply(format_with_comma)
         
         # Format financial columns
         yearly_stats['Total Revenue'] = yearly_stats['Total Revenue'].apply(lambda x: f"{int(x):,}")
@@ -5009,25 +5017,14 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         for idx, row in yearly_stats.iterrows():
             year = row['Year']
             
-            # Get all user metrics - ensure they're properly formatted with commas
+            # Get all user metrics - already formatted with commas
             active_users = row.get('Users', 0)
             new_users = row.get('New Users', 'N/A')
             returning_users = row.get('Returning Users', 'N/A')
             resting_users = row.get('Rest Period Users', 'N/A')
             total_users = row.get('Total Users to Date', 'N/A')
             
-            # If values are not formatted yet, apply comma formatting
-            if isinstance(active_users, (int, float)) and active_users != 0:
-                active_users = f"{int(active_users):,}"
-            if isinstance(new_users, (int, float)):
-                new_users = f"{int(new_users):,}"
-            if isinstance(returning_users, (int, float)):
-                returning_users = f"{int(returning_users):,}"
-            if isinstance(resting_users, (int, float)):
-                resting_users = f"{int(resting_users):,}"
-            if isinstance(total_users, (int, float)):
-                total_users = f"{int(total_users):,}"
-            
+            # Get financial metrics - already formatted with commas
             revenue = row['Total Revenue']
             profit = row['Gross Profit']
             party_a = row['Party A Share']
