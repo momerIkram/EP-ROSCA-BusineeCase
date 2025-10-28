@@ -1533,6 +1533,16 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
         monthly_data['Total Users Growth %'] = monthly_data['Total Users Growth %'].fillna(0).round(1)
         monthly_data['Revenue Growth %'] = monthly_data['Revenue Growth %'].fillna(0).round(1)
         
+        # Format all numeric columns with commas (except percentages)
+        numeric_cols = ['New Users', 'Returning Users', 'Churned Users', 'Rest Period Users', 
+                       'Users', 'Total Users to Date', 'Pool Size', 'Total Revenue', 'Gross Profit']
+        for col in numeric_cols:
+            if col in monthly_data.columns:
+                monthly_data[col] = monthly_data[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else x)
+        
+        # Format Month column
+        monthly_data['Month'] = monthly_data['Month'].apply(lambda x: f"Month {x+1}")
+        
         # Display the table
         st.dataframe(monthly_data, use_container_width=True)
         
@@ -4991,12 +5001,24 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         for idx, row in yearly_stats.iterrows():
             year = row['Year']
             
-            # Get all user metrics
+            # Get all user metrics - ensure they're properly formatted with commas
             active_users = row.get('Users', 0)
             new_users = row.get('New Users', 'N/A')
             returning_users = row.get('Returning Users', 'N/A')
             resting_users = row.get('Rest Period Users', 'N/A')
             total_users = row.get('Total Users to Date', 'N/A')
+            
+            # If values are not formatted yet, apply comma formatting
+            if isinstance(active_users, (int, float)) and active_users != 0:
+                active_users = f"{int(active_users):,}"
+            if isinstance(new_users, (int, float)):
+                new_users = f"{int(new_users):,}"
+            if isinstance(returning_users, (int, float)):
+                returning_users = f"{int(returning_users):,}"
+            if isinstance(resting_users, (int, float)):
+                resting_users = f"{int(resting_users):,}"
+            if isinstance(total_users, (int, float)):
+                total_users = f"{int(total_users):,}"
             
             revenue = row['Total Revenue']
             profit = row['Gross Profit']
@@ -5091,6 +5113,22 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
                 cols_to_select = [col for col in available_cols if col != 'Month']
                 if cols_to_select:
                     timeline_df = df_forecast.groupby('Month')[cols_to_select].first().reset_index()
+                    
+                    # Format Month column first
+                    timeline_df['Month'] = timeline_df['Month'].apply(lambda x: f"Month {x+1}")
+                    
+                    # Remove actual dates and show abstract references instead
+                    if 'Collection Date' in timeline_df.columns:
+                        timeline_df['Collection Date'] = timeline_df['Month'].str.replace('Month ', 'Collection Period ')
+                    if 'Disbursement Date' in timeline_df.columns:
+                        timeline_df['Disbursement Date'] = timeline_df['Month'].str.replace('Month ', 'Disbursement Period ')
+                    
+                    # Format amounts with commas
+                    if 'Days Between' in timeline_df.columns:
+                        timeline_df['Days Between'] = timeline_df['Days Between'].apply(lambda x: f"{float(x):.1f} days")
+                    if 'Total Deposits' in timeline_df.columns:
+                        timeline_df['Total Deposits'] = timeline_df['Total Deposits'].apply(lambda x: format_currency(x, CURRENCY_SYMBOL, CURRENCY_NAME))
+                    
                     st.dataframe(timeline_df, use_container_width=True)
             
             # NII Impact Explanation
