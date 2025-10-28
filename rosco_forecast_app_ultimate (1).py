@@ -4919,11 +4919,11 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         col1, col2, col3, col4 = st.columns(4)
         with col1:
             st.metric("🎯 Total 5-Year Revenue", 
-                     format_currency(df_forecast['Total Revenue'].sum(), currency_symbol, currency_name),
+                     format_currency(df_forecast['Total Revenue'].sum(), CURRENCY_SYMBOL, CURRENCY_NAME),
                      help="Cumulative revenue across all 5 years")
         with col2:
             st.metric("📈 Total 5-Year Profit", 
-                     format_currency(df_forecast['Gross Profit'].sum(), currency_symbol, currency_name),
+                     format_currency(df_forecast['Gross Profit'].sum(), CURRENCY_SYMBOL, CURRENCY_NAME),
                      help="Cumulative gross profit across all 5 years")
         with col3:
             total_users_end = df_forecast['Users'].iloc[-1] if not df_forecast.empty else 0
@@ -4962,8 +4962,9 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
                 yearly_stats.at[idx, 'Users'] = last_month_users
         
         # Calculate profit split for two parties
-        yearly_stats['Party A Share'] = yearly_stats['Gross Profit'] * (profit_split / 100)
-        yearly_stats['Party B Share'] = yearly_stats['Gross Profit'] * ((100 - profit_split) / 100)
+        profit_split_pct = config.get('profit_split', 70.0)  # Default 70% if not found
+        yearly_stats['Party A Share'] = yearly_stats['Gross Profit'] * (profit_split_pct / 100)
+        yearly_stats['Party B Share'] = yearly_stats['Gross Profit'] * ((100 - profit_split_pct) / 100)
         
         # Format for display
         yearly_stats['Year'] = yearly_stats['Year'].apply(lambda x: f"Year {x}")
