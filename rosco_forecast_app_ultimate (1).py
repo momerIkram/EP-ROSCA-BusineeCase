@@ -4950,16 +4950,21 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         # Debug: Show what we're aggregating
         # st.write(f"Debug: Yearly Revenue sum = {yearly_stats['Total Revenue'].sum()}")
         
-        # Add Users column - users at END of each year (not sum!)
-        yearly_stats['Users'] = 0
-        for idx, row in yearly_stats.iterrows():
-            year = row['Year']
-            year_data = df_forecast[df_forecast['Year'] == year]
-            # Get users at last month of year (or max if all 12 months not present)
-            if not year_data.empty:
-                # Get last month's users
-                last_month_users = year_data['Users'].iloc[-1]
-                yearly_stats.at[idx, 'Users'] = last_month_users
+        # Add all user type columns - users at END of each year
+        for user_col in ['Users', 'New Users', 'Returning Users', 'Rest Period Users', 'Total Users to Date']:
+            if user_col in df_forecast.columns:
+                yearly_stats[user_col] = 0
+                for idx, row in yearly_stats.iterrows():
+                    year = row['Year']
+                    year_data = df_forecast[df_forecast['Year'] == year]
+                    if not year_data.empty:
+                        # Get the last month for this year
+                        last_month = year_data['Month'].max()
+                        # Get all rows for the last month
+                        last_month_data = year_data[year_data['Month'] == last_month]
+                        # Sum users across all combinations in the last month
+                        total_users = last_month_data[user_col].sum()
+                        yearly_stats.at[idx, user_col] = total_users
         
         # Calculate profit split for two parties
         profit_split_pct = config.get('profit_split', 70.0)  # Default 70% if not found
@@ -4968,7 +4973,13 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         
         # Format for display
         yearly_stats['Year'] = yearly_stats['Year'].apply(lambda x: f"Year {x}")
-        yearly_stats['Users'] = yearly_stats['Users'].apply(lambda x: f"{int(x):,}")
+        
+        # Format user columns
+        for user_col in ['Users', 'New Users', 'Returning Users', 'Rest Period Users', 'Total Users to Date']:
+            if user_col in yearly_stats.columns:
+                yearly_stats[user_col] = yearly_stats[user_col].apply(lambda x: f"{int(x):,}" if pd.notna(x) and x != 'N/A' else str(x))
+        
+        # Format financial columns
         yearly_stats['Total Revenue'] = yearly_stats['Total Revenue'].apply(lambda x: f"{int(x):,}")
         yearly_stats['Gross Profit'] = yearly_stats['Gross Profit'].apply(lambda x: f"{int(x):,}")
         yearly_stats['Party A Share'] = yearly_stats['Party A Share'].apply(lambda x: f"{int(x):,}")
@@ -4979,7 +4990,14 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         
         for idx, row in yearly_stats.iterrows():
             year = row['Year']
-            users = row['Users']
+            
+            # Get all user metrics
+            active_users = row.get('Users', 0)
+            new_users = row.get('New Users', 'N/A')
+            returning_users = row.get('Returning Users', 'N/A')
+            resting_users = row.get('Rest Period Users', 'N/A')
+            total_users = row.get('Total Users to Date', 'N/A')
+            
             revenue = row['Total Revenue']
             profit = row['Gross Profit']
             party_a = row['Party A Share']
@@ -4990,29 +5008,55 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                         padding: 2rem; border-radius: 20px; margin-bottom: 2rem; 
                         box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);">
-                <h2 style="color: white; margin: 0 0 1.5rem 0; text-align: center; font-size: 2rem;">
+                <h2 style="color: white; margin: 0 0 1rem 0; text-align: center; font-size: 2rem;">
                     {year}
                 </h2>
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem;">
-                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; opacity: 0.9;">👥 USERS</div>
-                        <div style="color: #fff; font-size: 1.5rem; font-weight: bold;">{users}</div>
+                
+                <h3 style="color: rgba(255,255,255,0.9); margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;">👥 USER METRICS</h3>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem; margin-bottom: 1.5rem;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">🟢 ACTIVE</div>
+                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{active_users}</div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; opacity: 0.9;">💰 REVENUE</div>
-                        <div style="color: #fff; font-size: 1.5rem; font-weight: bold;">Rs {revenue}</div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">🆕 NEW</div>
+                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{new_users}</div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; opacity: 0.9;">📈 GROSS PROFIT</div>
-                        <div style="color: #fff; font-size: 1.5rem; font-weight: bold;">Rs {profit}</div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">🔄 RETURNING</div>
+                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{returning_users}</div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; opacity: 0.9;">🤝 PARTY A</div>
-                        <div style="color: #fff; font-size: 1.5rem; font-weight: bold;">Rs {party_a}</div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">😴 RESTING</div>
+                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{resting_users}</div>
                     </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 1rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.9rem; margin-bottom: 0.5rem; opacity: 0.9;">🤝 PARTY B</div>
-                        <div style="color: #fff; font-size: 1.5rem; font-weight: bold;">Rs {party_b}</div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">👥 TOTAL SERVICED</div>
+                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{total_users}</div>
+                    </div>
+                </div>
+                
+                <h3 style="color: rgba(255,255,255,0.9); margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;">💰 FINANCIAL METRICS</h3>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem;">
+                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">💰 REVENUE</div>
+                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {revenue}</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">📈 PROFIT</div>
+                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {profit}</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">🤝 PARTY A</div>
+                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {party_a}</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">🤝 PARTY B</div>
+                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {party_b}</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">📊 PROFIT%</div>
+                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">N/A</div>
                     </div>
                 </div>
             </div>
@@ -5041,9 +5085,13 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
             timeline_cols = ['Month', 'Collection Date', 'Disbursement Date', 'Days Between', 'Total Deposits']
             available_cols = [col for col in timeline_cols if col in df_forecast.columns]
             
-            if available_cols:
-                timeline_df = df_forecast.groupby('Month')[available_cols].first().reset_index()
-                st.dataframe(timeline_df, use_container_width=True)
+            if available_cols and 'Month' in available_cols:
+                # Group by Month, get first row for each month (to avoid duplicates)
+                # Exclude 'Month' from the selection since it's used for grouping
+                cols_to_select = [col for col in available_cols if col != 'Month']
+                if cols_to_select:
+                    timeline_df = df_forecast.groupby('Month')[cols_to_select].first().reset_index()
+                    st.dataframe(timeline_df, use_container_width=True)
             
             # NII Impact Explanation
             st.info(f"""
