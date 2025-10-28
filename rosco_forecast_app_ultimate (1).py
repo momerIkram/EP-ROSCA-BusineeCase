@@ -1533,15 +1533,18 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
         monthly_data['Total Users Growth %'] = monthly_data['Total Users Growth %'].fillna(0).round(1)
         monthly_data['Revenue Growth %'] = monthly_data['Revenue Growth %'].fillna(0).round(1)
         
-        # Format all numeric columns with commas (except percentages)
+        # Store original numeric values BEFORE formatting for display
+        monthly_data_numeric = monthly_data.copy()
+        
+        # Format Month column
+        monthly_data['Month'] = monthly_data['Month'].apply(lambda x: f"Month {x+1}")
+        
+        # Format all numeric columns with commas (except percentages) for display only
         numeric_cols = ['New Users', 'Returning Users', 'Churned Users', 'Rest Period Users', 
                        'Users', 'Total Users to Date', 'Pool Size', 'Total Revenue', 'Gross Profit']
         for col in numeric_cols:
             if col in monthly_data.columns:
                 monthly_data[col] = monthly_data[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else x)
-        
-        # Format Month column
-        monthly_data['Month'] = monthly_data['Month'].apply(lambda x: f"Month {x+1}")
         
         # Display the table
         st.dataframe(monthly_data, use_container_width=True)
@@ -1554,16 +1557,18 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
             st.metric("Avg Monthly Growth", f"{avg_monthly_growth:.1f}%")
         
         with col2:
-            peak_month = monthly_data.loc[monthly_data['Users'].idxmax(), 'Month']
-            peak_users = monthly_data['Users'].max()
-            st.metric("Peak Month", f"Month {peak_month}")
+            peak_month_idx = monthly_data_numeric['Users'].idxmax()
+            peak_month = monthly_data_numeric.loc[peak_month_idx, 'Month']
+            peak_users = monthly_data_numeric['Users'].max()
+            st.metric("Peak Month", f"Month {int(peak_month)+1}")
         
         with col3:
-            total_revenue = monthly_data['Total Revenue'].sum()
+            total_revenue = monthly_data_numeric['Total Revenue'].sum()
             st.metric("Total Revenue", format_currency(total_revenue, currency_symbol, currency_name))
         
         with col4:
-            avg_revenue_per_user = total_revenue / monthly_data['Users'].sum() if monthly_data['Users'].sum() > 0 else 0
+            total_users_sum = monthly_data_numeric['Users'].sum()
+            avg_revenue_per_user = total_revenue / total_users_sum if total_users_sum > 0 else 0
             st.metric("Revenue per User", format_currency(avg_revenue_per_user, currency_symbol, currency_name))
         
         # Fancy Monthly Charts
@@ -1576,10 +1581,10 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
             if PLOTLY_AVAILABLE:
                 fig_users = go.Figure()
                 
-                # Add traces with trendy colors
+                # Add traces with trendy colors - use numeric data for charts
                 fig_users.add_trace(go.Scatter(
-                    x=monthly_data['Month'], 
-                    y=monthly_data['New Users'],
+                    x=monthly_data_numeric['Month'].apply(lambda x: f"M{int(x)+1}"), 
+                    y=monthly_data_numeric['New Users'],
                     mode='lines+markers',
                     name='New Users',
                     line=dict(color='#667eea', width=3),
@@ -1587,8 +1592,8 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
                 ))
                 
                 fig_users.add_trace(go.Scatter(
-                    x=monthly_data['Month'], 
-                    y=monthly_data['Returning Users'],
+                    x=monthly_data_numeric['Month'].apply(lambda x: f"M{int(x)+1}"), 
+                    y=monthly_data_numeric['Returning Users'],
                     mode='lines+markers',
                     name='Returning Users',
                     line=dict(color='#764ba2', width=3),
@@ -1596,8 +1601,8 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
                 ))
                 
                 fig_users.add_trace(go.Scatter(
-                    x=monthly_data['Month'], 
-                    y=monthly_data['Users'],
+                    x=monthly_data_numeric['Month'].apply(lambda x: f"M{int(x)+1}"), 
+                    y=monthly_data_numeric['Users'],
                     mode='lines+markers',
                     name='Active Users',
                     line=dict(color='#f093fb', width=3),
@@ -1617,9 +1622,10 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
                 st.plotly_chart(fig_users, use_container_width=True)
             else:
                 fig, ax = plt.subplots(figsize=(10, 6))
-                ax.plot(monthly_data['Month'], monthly_data['New Users'], 'o-', color='#667eea', linewidth=3, markersize=8, label='New Users')
-                ax.plot(monthly_data['Month'], monthly_data['Returning Users'], 'o-', color='#764ba2', linewidth=3, markersize=8, label='Returning Users')
-                ax.plot(monthly_data['Month'], monthly_data['Users'], 'o-', color='#f093fb', linewidth=3, markersize=8, label='Active Users')
+                months_labels = monthly_data_numeric['Month'].apply(lambda x: f"M{int(x)+1}")
+                ax.plot(months_labels, monthly_data_numeric['New Users'], 'o-', color='#667eea', linewidth=3, markersize=8, label='New Users')
+                ax.plot(months_labels, monthly_data_numeric['Returning Users'], 'o-', color='#764ba2', linewidth=3, markersize=8, label='Returning Users')
+                ax.plot(months_labels, monthly_data_numeric['Users'], 'o-', color='#f093fb', linewidth=3, markersize=8, label='Active Users')
                 ax.set_title("📈 Monthly User Trends", fontsize=16, fontweight='bold')
                 ax.set_xlabel("Month", fontsize=12)
                 ax.set_ylabel("Number of Users", fontsize=12)
@@ -1631,10 +1637,11 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
             # Revenue Trends Chart
             if PLOTLY_AVAILABLE:
                 fig_revenue = go.Figure()
+                months_labels = monthly_data_numeric['Month'].apply(lambda x: f"M{int(x)+1}")
                 
                 fig_revenue.add_trace(go.Scatter(
-                    x=monthly_data['Month'], 
-                    y=monthly_data['Total Revenue'],
+                    x=months_labels, 
+                    y=monthly_data_numeric['Total Revenue'],
                     mode='lines+markers',
                     name='Total Revenue',
                     line=dict(color='#4facfe', width=3),
@@ -1643,8 +1650,8 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
                 ))
                 
                 fig_revenue.add_trace(go.Scatter(
-                    x=monthly_data['Month'], 
-                    y=monthly_data['Gross Profit'],
+                    x=months_labels, 
+                    y=monthly_data_numeric['Gross Profit'],
                     mode='lines+markers',
                     name='Gross Profit',
                     line=dict(color='#00f2fe', width=3),
@@ -1664,8 +1671,9 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
                 st.plotly_chart(fig_revenue, use_container_width=True)
             else:
                 fig, ax = plt.subplots(figsize=(10, 6))
-                ax.plot(monthly_data['Month'], monthly_data['Total Revenue'], 'o-', color='#4facfe', linewidth=3, markersize=8, label='Total Revenue')
-                ax.plot(monthly_data['Month'], monthly_data['Gross Profit'], 'o-', color='#00f2fe', linewidth=3, markersize=8, label='Gross Profit')
+                months_labels = monthly_data_numeric['Month'].apply(lambda x: f"M{int(x)+1}")
+                ax.plot(months_labels, monthly_data_numeric['Total Revenue'], 'o-', color='#4facfe', linewidth=3, markersize=8, label='Total Revenue')
+                ax.plot(months_labels, monthly_data_numeric['Gross Profit'], 'o-', color='#00f2fe', linewidth=3, markersize=8, label='Gross Profit')
                 ax.set_title("💰 Monthly Revenue Trends", fontsize=16, fontweight='bold')
                 ax.set_xlabel("Month", fontsize=12)
                 ax.set_ylabel("Amount", fontsize=12)
