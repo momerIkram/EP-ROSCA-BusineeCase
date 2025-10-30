@@ -4993,16 +4993,20 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         # Format for display
         yearly_stats['Year'] = yearly_stats['Year'].apply(lambda x: f"Year {x}")
         
+        # Helper function to format with commas - defined OUTSIDE the loop
+        def format_with_comma(x):
+            if pd.isna(x):
+                return '0'
+            elif isinstance(x, (int, float)):
+                return f"{int(x):,}"
+            elif isinstance(x, str) and x == 'N/A':
+                return x
+            else:
+                return str(x)
+        
         # Format user columns with comma separation
         for user_col in ['Users', 'New Users', 'Returning Users', 'Rest Period Users', 'Total Users to Date']:
             if user_col in yearly_stats.columns:
-                def format_with_comma(x):
-                    if pd.isna(x) or x == 'N/A':
-                        return str(x) if isinstance(x, str) else '0'
-                    elif isinstance(x, (int, float)):
-                        return f"{int(x):,}"
-                    else:
-                        return str(x)
                 yearly_stats[user_col] = yearly_stats[user_col].apply(format_with_comma)
         
         # Format financial columns
