@@ -23,7 +23,7 @@ except ImportError:
 
 st.set_page_config(
     layout="wide", 
-    page_title="BACHAT ROSCA PRICING", 
+    page_title="BACHAT BACHAT KOMMITTEE PRICING", 
     page_icon="🚀", 
     initial_sidebar_state="expanded"
 )
@@ -748,7 +748,7 @@ def create_dashboard_overview(df_monthly_summary, scenario_name, currency_symbol
     st.markdown(f"""
     <div class="dashboard-header">
         <h1>📊 {scenario_name}</h1>
-        <p>ROSCA Forecast Dashboard - Real-time Analytics</p>
+        <p>BACHAT KOMMITTEE Forecast Dashboard - Real-time Analytics</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -2713,7 +2713,7 @@ def create_customer_lifecycle_analysis(df_forecast, currency_symbol, currency_na
     # Lifecycle explanation
     st.markdown("""
     **💡 Customer Lifecycle Summary:**
-    - **New Users**: First-time customers joining ROSCA (delta from previous month's total)
+    - **New Users**: First-time customers joining BACHAT KOMMITTEE (delta from previous month's total)
     - **Returning Users**: Customers who completed a cycle and returned after rest period
     - **Churned Users**: Customers who left and didn't return (tracked monthly)
     - **Rest Period Users**: Customers in mandatory rest period between cycles
@@ -2836,7 +2836,7 @@ def create_tam_dashboard_overview(df_forecast, scenario_name, currency_symbol, c
     st.markdown(f"""
     <div class="dashboard-header">
         <h1>🌍 {scenario_name} - TAM Distribution System</h1>
-        <p>Advanced ROSCA Forecasting with Total Addressable Market Distribution</p>
+        <p>Advanced BACHAT KOMMITTEE Forecasting with Total Addressable Market Distribution</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -4516,7 +4516,7 @@ def create_advanced_user_growth_ui():
 # Main header
 st.markdown("""
 <div class="dashboard-header">
-    <h1>💰 ROSCA Forecast Pro</h1>
+    <h1>💰 BACHAT KOMMITTEE Forecast Pro</h1>
     <p>Advanced Rotating Savings and Credit Association Forecasting & Analytics</p>
 </div>
 """, unsafe_allow_html=True)
@@ -4564,7 +4564,7 @@ with st.sidebar:
     st.markdown("### 🔄 Customer Lifecycle")
     starting_users = st.number_input("Starting Users", min_value=100, value=1000, step=100, help="Initial number of users in month 1")
     monthly_growth_rate = st.number_input("Monthly Growth Rate (%)", min_value=0.0, max_value=50.0, value=2.0, step=0.1, help="Month-on-month growth rate for total user base")
-    rest_period_months = st.number_input("Rest Period (months)", min_value=0, max_value=24, value=1, step=1, help="Months users rest between ROSCA cycles")
+    rest_period_months = st.number_input("Rest Period (months)", min_value=0, max_value=24, value=1, step=1, help="Months users rest between BACHAT KOMMITTEE cycles")
     returning_user_rate = st.number_input("Returning User Rate (%)", min_value=0.0, max_value=100.0, value=100.0, step=1.0, help="Percentage of users who return after rest period")
     churn_rate = st.number_input("Churn Rate (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0, help="Percentage of users who don't return (set to 0 for automatic return)")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -5288,6 +5288,34 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
         # Export options
         st.subheader("📥 Export Data")
         
+        # Prepare unformatted dataframes for export
+        # Monthly Pool Stats (unformatted)
+        monthly_pool_stats_export = df_filtered.groupby(['Month', 'Duration', 'Slab Amount']).agg(agg_dict).reset_index()
+        if 'Users' in monthly_pool_stats_export.columns and 'Slab Amount' in monthly_pool_stats_export.columns:
+            monthly_pool_stats_export['Pool Size'] = monthly_pool_stats_export['Users'] * monthly_pool_stats_export['Slab Amount']
+        
+        # Yearly Stats (unformatted) - use same aggregation dict as yearly_stats
+        yearly_agg_dict_export = {'Users': 'sum', 'Total Revenue': 'sum', 'Gross Profit': 'sum'}
+        if 'Total Fees Collected' in df_forecast.columns:
+            yearly_agg_dict_export['Total Fees Collected'] = 'sum'
+        elif 'Total Fees' in df_forecast.columns:
+            yearly_agg_dict_export['Total Fees'] = 'sum'
+        if 'Total NII (Lifetime)' in df_forecast.columns:
+            yearly_agg_dict_export['Total NII (Lifetime)'] = 'sum'
+        elif 'Total NII' in df_forecast.columns:
+            yearly_agg_dict_export['Total NII'] = 'sum'
+        yearly_stats_export = df_forecast.groupby('Year').agg(yearly_agg_dict_export).reset_index()
+        
+        # Pool Breakdown (unformatted)
+        pool_breakdown_export = df_filtered.groupby(['Duration', 'Slab Amount']).agg({
+            'Users': 'sum',
+            'Pool Size': 'sum' if 'Pool Size' in df_filtered.columns else (df_filtered['Users'] * df_filtered['Slab Amount']).sum(),
+            'Total Revenue': 'sum',
+            'Gross Profit': 'sum'
+        }).reset_index()
+        if 'Pool Size' in pool_breakdown_export.columns and 'Users' in pool_breakdown_export.columns:
+            pool_breakdown_export['Avg Pool Size'] = pool_breakdown_export['Pool Size'] / pool_breakdown_export['Users']
+        
         col1, col2 = st.columns(2)
         
         with col1:
@@ -5295,36 +5323,54 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
             st.download_button(
                 label="📄 Download CSV",
                 data=csv,
-                file_name=f"rosca_forecast_{scenario_name}.csv",
+                file_name=f"BACHAT KOMMITTEE_forecast_{scenario_name}.csv",
                 mime="text/csv"
             )
         
         with col2:
-            # Excel export
+            # Comprehensive Excel export
             from io import BytesIO
             output = BytesIO()
-            with pd.ExcelWriter(output, engine='openpyxl') as writer:
-                df_forecast.to_excel(writer, sheet_name='Forecast', index=False)
-                if not df_monthly_summary.empty:
-                    df_monthly_summary.to_excel(writer, sheet_name='Monthly Summary', index=False)
-                if not df_yearly_summary.empty:
-                    df_yearly_summary.to_excel(writer, sheet_name='Yearly Summary', index=False)
-                if not df_profit_share.empty:
-                    df_profit_share.to_excel(writer, sheet_name='Profit Share', index=False)
-                if not df_deposit_log.empty:
-                    df_deposit_log.to_excel(writer, sheet_name='Deposit Log', index=False)
-                if not df_default_log.empty:
-                    df_default_log.to_excel(writer, sheet_name='Default Log', index=False)
-                if not df_lifecycle_log.empty:
-                    df_lifecycle_log.to_excel(writer, sheet_name='Lifecycle Log', index=False)
-            excel_data = output.getvalue()
-            
-            st.download_button(
-                label="📊 Download Excel",
-                data=excel_data,
-                file_name=f"rosca_forecast_{scenario_name}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            try:
+                with pd.ExcelWriter(output, engine='openpyxl') as writer:
+                    # Main forecast data
+                    df_forecast.to_excel(writer, sheet_name='Forecast', index=False)
+                    
+                    # Summary sheets
+                    if not df_monthly_summary.empty:
+                        df_monthly_summary.to_excel(writer, sheet_name='Monthly Summary', index=False)
+                    if not df_yearly_summary.empty:
+                        df_yearly_summary.to_excel(writer, sheet_name='Yearly Summary', index=False)
+                    if not df_profit_share.empty:
+                        df_profit_share.to_excel(writer, sheet_name='Profit Share', index=False)
+                    
+                    # Detailed breakdowns
+                    if not monthly_pool_stats_export.empty:
+                        monthly_pool_stats_export.to_excel(writer, sheet_name='Monthly Pool Stats', index=False)
+                    if not yearly_stats_export.empty:
+                        yearly_stats_export.to_excel(writer, sheet_name='Yearly Stats', index=False)
+                    if not pool_breakdown_export.empty:
+                        pool_breakdown_export.to_excel(writer, sheet_name='Pool Breakdown', index=False)
+                    
+                    # Log sheets
+                    if not df_deposit_log.empty:
+                        df_deposit_log.to_excel(writer, sheet_name='Deposit Log', index=False)
+                    if not df_default_log.empty:
+                        df_default_log.to_excel(writer, sheet_name='Default Log', index=False)
+                    if not df_lifecycle_log.empty:
+                        df_lifecycle_log.to_excel(writer, sheet_name='Lifecycle Log', index=False)
+                
+                excel_data = output.getvalue()
+                
+                st.download_button(
+                    label="📊 Download Complete Excel",
+                    data=excel_data,
+                    file_name=f"BACHAT KOMMITTEE_complete_export_{scenario_name}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            except Exception as e:
+                st.error(f"Error creating Excel file: {str(e)}")
+                st.info("Please ensure 'openpyxl' is installed: pip install openpyxl")
     
     elif view_mode == "🔧 Detailed Forecast":
         # Detailed forecast table
@@ -5423,61 +5469,6 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
             
             st.success("✅ Configuration updated successfully!")
             st.rerun()
-
-# This is a duplicate footer marker to be removed - skip to line 5495
-
-        monthly_pool_stats['Pool Size'] = monthly_pool_stats['Users'] * monthly_pool_stats['Slab Amount']
-        
-        # Format with commas
-        for col in monthly_pool_stats.select_dtypes(include=[np.number]).columns:
-            if col != 'Month':
-                monthly_pool_stats[col] = monthly_pool_stats[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
-        
-        st.dataframe(monthly_pool_stats, use_container_width=True)
-        
-        # Yearly Aggregation
-        st.markdown("### 📈 5-Year Year-over-Year Summary")
-        
-        yearly_agg_dict = {'Users': 'sum', 'Total Revenue': 'sum', 'Gross Profit': 'sum'}
-        
-        if 'Total Fees Collected' in df_forecast.columns:
-            yearly_agg_dict['Total Fees Collected'] = 'sum'
-        elif 'Total Fees' in df_forecast.columns:
-            yearly_agg_dict['Total Fees'] = 'sum'
-            
-        if 'Total NII (Lifetime)' in df_forecast.columns:
-            yearly_agg_dict['Total NII (Lifetime)'] = 'sum'
-        elif 'Total NII' in df_forecast.columns:
-            yearly_agg_dict['Total NII'] = 'sum'
-        
-        yearly_stats = df_forecast.groupby('Year').agg(yearly_agg_dict).reset_index()
-        
-        yearly_stats['Year'] = yearly_stats['Year'].apply(lambda x: f"Year {x}")
-        
-        # Format with commas
-        for col in yearly_stats.select_dtypes(include=[np.number]).columns:
-            if col != 'Year':
-                yearly_stats[col] = yearly_stats[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
-        
-        st.dataframe(yearly_stats, use_container_width=True)
-        
-        # Pool by Slab & Duration Breakdown
-        st.markdown("### 💰 Pool Breakdown by Slab & Duration")
-        
-        pool_breakdown = df_filtered.groupby(['Duration', 'Slab Amount']).agg({
-            'Users': 'sum',
-            'Pool Size': 'sum' if 'Pool Size' in df_filtered.columns else (df_filtered['Users'] * df_filtered['Slab Amount']).sum(),
-            'Total Revenue': 'sum',
-            'Gross Profit': 'sum'
-        }).reset_index()
-        
-        pool_breakdown['Avg Pool Size'] = pool_breakdown['Pool Size'] / pool_breakdown['Users']
-        
-        # Format with commas
-        for col in pool_breakdown.select_dtypes(include=[np.number]).columns:
-            pool_breakdown[col] = pool_breakdown[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
-        
-        st.dataframe(pool_breakdown, use_container_width=True)
     
     elif view_mode == "🧩 Advanced User Growth":
         # Advanced User Growth system
@@ -5711,6 +5702,5 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #64748b; padding: 2rem;">
     <p>💰 BACHAT KOMMITTEE Forecast/Pricing</p>
-    <p>Built with ❤️ using Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
