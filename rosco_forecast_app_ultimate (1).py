@@ -5035,63 +5035,56 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
             party_b = row['Party B Share']
             
             # Create a modern card with gradient
-            st.markdown(f"""
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        padding: 2rem; border-radius: 20px; margin-bottom: 2rem; 
-                        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);">
-                <h2 style="color: white; margin: 0 0 1rem 0; text-align: center; font-size: 2rem;">
-                    {year}
-                </h2>
-                
-                <h3 style="color: rgba(255,255,255,0.9); margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;">👥 USER METRICS</h3>
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem; margin-bottom: 1.5rem;">
-                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">🟢 ACTIVE</div>
-                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{active_users}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">🆕 NEW</div>
-                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{new_users}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">🔄 RETURNING</div>
-                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{returning_users}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">😴 RESTING</div>
-                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{resting_users}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">👥 TOTAL SERVICED</div>
-                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{total_users}</div>
-                    </div>
-                </div>
-                
-                <h3 style="color: rgba(255,255,255,0.9); margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;">💰 FINANCIAL METRICS</h3>
-                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem;">
-                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">💰 REVENUE</div>
-                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {revenue}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">📈 PROFIT</div>
-                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {profit}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">🤝 PARTY A</div>
-                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {party_a}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">🤝 PARTY B</div>
-                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {party_b}</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-                        <div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;">📊 PROFIT%</div>
-                        <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">N/A</div>
-                    </div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            html_content = f"""<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 20px; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);">
+<h2 style="color: white; margin: 0 0 1rem 0; text-align: center; font-size: 2rem;">{year}</h2>
+<h3 style="color: rgba(255, 255, 255,0.9); margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;"> &#x1F465; USER METRICS</h3>
+<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem; margin-bottom: 1.5rem;">
+<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F7E2; ACTIVE</div>
+<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{active_users}</div>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F195; NEW</div>
+<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{new_users}</div>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F504; RETURNING</div>
+<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{returning_users}</div>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F634; RESTING</div>
+<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{resting_users}</div>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F465; TOTAL SERVICED</div>
+<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{total_users}</div>
+</div>
+</div>
+<h3 style="color: rgba(255, 255, 255,0.9); margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;"> &#x1F4B0; FINANCIAL METRICS</h3>
+<div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem;">
+<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4B0; REVENUE</div>
+<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {revenue}</div>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4C8; PROFIT</div>
+<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {profit}</div>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F91D; PARTY A</div>
+<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {party_a}</div>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F91D; PARTY B</div>
+<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {party_b}</div>
+</div>
+<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
+<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4CA; PROFIT%</div>
+<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">N/A</div>
+</div>
+</div>
+</div>"""
+            st.markdown(html_content, unsafe_allow_html=True)
         
         # Collection & Disbursement Timeline (if available)
         if 'Collection Date' in df_forecast.columns and 'Disbursement Date' in df_forecast.columns:
