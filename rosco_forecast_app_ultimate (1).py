@@ -4546,7 +4546,7 @@ def create_advanced_user_growth_ui():
 # Main header
 st.markdown("""
 <div class="dashboard-header">
-    <h1>💰 ROSCA Forecast Pro</h1>
+    <h1>💰 BACHAT KOMMITTEE</h1>
     <p>Advanced Rotating Savings and Credit Association Forecasting & Analytics</p>
 </div>
 """, unsafe_allow_html=True)
