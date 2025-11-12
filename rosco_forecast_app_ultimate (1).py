@@ -4547,7 +4547,7 @@ def create_advanced_user_growth_ui():
 st.markdown("""
 <div class="dashboard-header">
     <h1>💰 BACHAT KOMMITTEE</h1>
-    <p>Advanced Rotating Savings and Credit Association Forecasting & Analytics</p>
+    <p>PRICING, FORCASTING & ANALYTICS</p>
 </div>
 """, unsafe_allow_html=True)
 
