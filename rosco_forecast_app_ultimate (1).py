@@ -5714,7 +5714,7 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
 st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #64748b; padding: 2rem;">
-    <p>💰 ROSCA Forecast Pro - Advanced Financial Forecasting & Analytics</p>
+    <p>💰 BACHAT KOMMITTEE Forecast/Pricing</p>
     <p>Built with ❤️ using Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
