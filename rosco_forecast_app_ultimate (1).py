@@ -23,7 +23,7 @@ except ImportError:
 
 st.set_page_config(
     layout="wide", 
-    page_title="BACHAT BACHAT KOMMITTEE PRICING", 
+    page_title="BACHAT ROSCA PRICING", 
     page_icon="🚀", 
     initial_sidebar_state="expanded"
 )
@@ -607,19 +607,37 @@ def create_slot_configuration_ui(duration, slab_amount, slot_fees, slot_distribu
         col1, col2, col3 = st.columns(3)
         
         with col1:
+            # Handle both dict and numeric formats for slot_fees
+            if slot in slot_fees and slot_fees[slot] is not None:
+                if isinstance(slot_fees[slot], dict):
+                    default_fee = slot_fees[slot].get('fee_pct', 2.0)
+                else:
+                    default_fee = slot_fees[slot]
+            else:
+                default_fee = 2.0
+            
             fee_pct = st.number_input(
                 f"Fee % for Slot {slot}",
                 min_value=0.0,
                 max_value=20.0,
-                value=slot_fees.get(slot, {}).get('fee_pct', 2.0),
+                value=default_fee,
                 step=0.1,
                 key=f"fee_{duration}_{slab_amount}_{slot}"
             )
         
         with col2:
+            # Handle both dict and numeric formats for slot_fees
+            if slot in slot_fees and slot_fees[slot] is not None:
+                if isinstance(slot_fees[slot], dict):
+                    default_blocked = slot_fees[slot].get('blocked', False)
+                else:
+                    default_blocked = False
+            else:
+                default_blocked = False
+            
             blocked = st.checkbox(
                 f"Block Slot {slot}",
-                value=slot_fees.get(slot, {}).get('blocked', False),
+                value=default_blocked,
                 key=f"block_{duration}_{slab_amount}_{slot}"
             )
         
@@ -748,7 +766,7 @@ def create_dashboard_overview(df_monthly_summary, scenario_name, currency_symbol
     st.markdown(f"""
     <div class="dashboard-header">
         <h1>📊 {scenario_name}</h1>
-        <p>BACHAT KOMMITTEE Forecast Dashboard - Real-time Analytics</p>
+        <p>ROSCA Forecast Dashboard - Real-time Analytics</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -2713,7 +2731,7 @@ def create_customer_lifecycle_analysis(df_forecast, currency_symbol, currency_na
     # Lifecycle explanation
     st.markdown("""
     **💡 Customer Lifecycle Summary:**
-    - **New Users**: First-time customers joining BACHAT KOMMITTEE (delta from previous month's total)
+    - **New Users**: First-time customers joining ROSCA (delta from previous month's total)
     - **Returning Users**: Customers who completed a cycle and returned after rest period
     - **Churned Users**: Customers who left and didn't return (tracked monthly)
     - **Rest Period Users**: Customers in mandatory rest period between cycles
@@ -2836,7 +2854,7 @@ def create_tam_dashboard_overview(df_forecast, scenario_name, currency_symbol, c
     st.markdown(f"""
     <div class="dashboard-header">
         <h1>🌍 {scenario_name} - TAM Distribution System</h1>
-        <p>Advanced BACHAT KOMMITTEE Forecasting with Total Addressable Market Distribution</p>
+        <p>Advanced ROSCA Forecasting with Total Addressable Market Distribution</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -3430,7 +3448,19 @@ def run_forecast(config, fee_collection_mode, currency_symbol, currency_name):
                 scenario_data['Disbursement Date'].append(disbursement_date)
                 scenario_data['Days Between'].append(days_between)
                 
-                scenario_data['Fee %'].append(sum([slot_fees.get(slot, {}).get('fee_pct', 0) for slot in range(1, duration + 1)]) / duration)
+                # Calculate average fee percentage - handle both dict and numeric formats
+                fee_percentages = []
+                for slot in range(1, duration + 1):
+                    if slot in slot_fees and slot_fees[slot] is not None:
+                        if isinstance(slot_fees[slot], dict):
+                            fee_percentages.append(slot_fees[slot].get('fee_pct', 0))
+                        else:
+                            fee_percentages.append(slot_fees[slot])
+                    else:
+                        fee_percentages.append(0)
+                
+                avg_fee_pct = sum(fee_percentages) / duration if duration > 0 else 0
+                scenario_data['Fee %'].append(avg_fee_pct)
                 scenario_data['Total Fees Collected'].append(total_fee)
                 scenario_data['Monthly Fee Collection'].append(monthly_fee)
                 scenario_data['Base NII (Lifetime)'].append(base_nii)
@@ -4516,7 +4546,7 @@ def create_advanced_user_growth_ui():
 # Main header
 st.markdown("""
 <div class="dashboard-header">
-    <h1>💰 BACHAT KOMMITTEE Forecast Pro</h1>
+    <h1>💰 ROSCA Forecast Pro</h1>
     <p>Advanced Rotating Savings and Credit Association Forecasting & Analytics</p>
 </div>
 """, unsafe_allow_html=True)
@@ -4564,7 +4594,7 @@ with st.sidebar:
     st.markdown("### 🔄 Customer Lifecycle")
     starting_users = st.number_input("Starting Users", min_value=100, value=1000, step=100, help="Initial number of users in month 1")
     monthly_growth_rate = st.number_input("Monthly Growth Rate (%)", min_value=0.0, max_value=50.0, value=2.0, step=0.1, help="Month-on-month growth rate for total user base")
-    rest_period_months = st.number_input("Rest Period (months)", min_value=0, max_value=24, value=1, step=1, help="Months users rest between BACHAT KOMMITTEE cycles")
+    rest_period_months = st.number_input("Rest Period (months)", min_value=0, max_value=24, value=1, step=1, help="Months users rest between ROSCA cycles")
     returning_user_rate = st.number_input("Returning User Rate (%)", min_value=0.0, max_value=100.0, value=100.0, step=1.0, help="Percentage of users who return after rest period")
     churn_rate = st.number_input("Churn Rate (%)", min_value=0.0, max_value=100.0, value=0.0, step=1.0, help="Percentage of users who don't return (set to 0 for automatic return)")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -5323,7 +5353,7 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
             st.download_button(
                 label="📄 Download CSV",
                 data=csv,
-                file_name=f"BACHAT KOMMITTEE_forecast_{scenario_name}.csv",
+                file_name=f"rosca_forecast_{scenario_name}.csv",
                 mime="text/csv"
             )
         
@@ -5365,7 +5395,7 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
                 st.download_button(
                     label="📊 Download Complete Excel",
                     data=excel_data,
-                    file_name=f"BACHAT KOMMITTEE_complete_export_{scenario_name}.xlsx",
+                    file_name=f"rosca_complete_export_{scenario_name}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
             except Exception as e:
