@@ -5426,14 +5426,14 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
 
 # This is a duplicate footer marker to be removed - skip to line 5495
 
-        monthly_stats['Pool Size'] = monthly_stats['Users'] * monthly_stats['Slab Amount']
+        monthly_pool_stats['Pool Size'] = monthly_pool_stats['Users'] * monthly_pool_stats['Slab Amount']
         
         # Format with commas
-        for col in monthly_stats.select_dtypes(include=[np.number]).columns:
+        for col in monthly_pool_stats.select_dtypes(include=[np.number]).columns:
             if col != 'Month':
-                monthly_stats[col] = monthly_stats[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
+                monthly_pool_stats[col] = monthly_pool_stats[col].apply(lambda x: f"{int(x):,}" if pd.notna(x) else "")
         
-        st.dataframe(monthly_stats, use_container_width=True)
+        st.dataframe(monthly_pool_stats, use_container_width=True)
         
         # Yearly Aggregation
         st.markdown("### 📈 5-Year Year-over-Year Summary")
@@ -5711,5 +5711,6 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #64748b; padding: 2rem;">
     <p>💰 BACHAT KOMMITTEE Forecast/Pricing</p>
+    <p>Built with ❤️ using Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
