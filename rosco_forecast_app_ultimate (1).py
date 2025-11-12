@@ -41,12 +41,13 @@ st.markdown("""
     
     /* Dashboard Header */
     .dashboard-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #1a1a1a 0%, #2C2C2C 100%);
         padding: 2rem 1.5rem;
         border-radius: 20px;
         margin-bottom: 2rem;
-        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
         color: white;
+        border: 2px solid #00D084;
     }
     
     .dashboard-header h1 {
@@ -90,7 +91,7 @@ st.markdown("""
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
+        background: linear-gradient(90deg, #00D084, #00C978);
     }
     
     .metric-title {
@@ -120,7 +121,7 @@ st.markdown("""
     }
     
     .metric-change.positive {
-        color: #10b981;
+        color: #00D084;
     }
     
     .metric-change.negative {
@@ -146,7 +147,7 @@ st.markdown("""
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
+        background: linear-gradient(90deg, #00D084, #00C978);
     }
     
     .chart-title {
@@ -160,28 +161,28 @@ st.markdown("""
     
     /* Sidebar Styling */
     .css-1d391kg {
-        background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(180deg, #1a1a1a 0%, #2C2C2C 100%);
     }
     
     /* Success/Info/Warning/Error Boxes */
     .success-box {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
+        background: linear-gradient(135deg, #00D084 0%, #00C978 100%);
+        color: #1a1a1a;
         padding: 1rem 1.5rem;
         border-radius: 12px;
         margin: 1rem 0;
-        box-shadow: 0 4px 20px rgba(16, 185, 129, 0.2);
-        border-left: 4px solid #059669;
+        box-shadow: 0 4px 20px rgba(0, 208, 132, 0.3);
+        border-left: 4px solid #00C978;
     }
     
     .info-box {
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-        color: white;
+        background: linear-gradient(135deg, #2C2C2C 0%, #1a1a1a 100%);
+        color: #00D084;
         padding: 1rem 1.5rem;
         border-radius: 12px;
         margin: 1rem 0;
-        box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
-        border-left: 4px solid #2563eb;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        border-left: 4px solid #00D084;
     }
     
     .warning-box {
@@ -206,40 +207,41 @@ st.markdown("""
     
     /* Button Styling */
     .stButton > button {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
+        background: linear-gradient(135deg, #00D084 0%, #00C978 100%);
+        color: #1a1a1a;
         border: none;
         border-radius: 12px;
         padding: 0.5rem 1.5rem;
         font-weight: 600;
         transition: all 0.3s ease;
-        box-shadow: 0 4px 20px rgba(102, 126, 234, 0.3);
+        box-shadow: 0 4px 20px rgba(0, 208, 132, 0.3);
     }
     
     .stButton > button:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 8px 30px rgba(0, 208, 132, 0.5);
+        background: linear-gradient(135deg, #00C978 0%, #00D084 100%);
     }
     
     /* Selectbox Styling */
     .stSelectbox > div > div {
         background: white;
         border-radius: 12px;
-        border: 1px solid rgba(102, 126, 234, 0.2);
+        border: 1px solid rgba(0, 208, 132, 0.3);
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     
     /* Number Input Styling */
     .stNumberInput > div > div > input {
         border-radius: 12px;
-        border: 1px solid rgba(102, 126, 234, 0.2);
+        border: 1px solid rgba(0, 208, 132, 0.3);
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     
     /* Text Input Styling */
     .stTextInput > div > div > input {
         border-radius: 12px;
-        border: 1px solid rgba(102, 126, 234, 0.2);
+        border: 1px solid rgba(0, 208, 132, 0.3);
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     
@@ -247,54 +249,55 @@ st.markdown("""
     .stMultiSelect > div > div {
         background: white;
         border-radius: 12px;
-        border: 1px solid rgba(102, 126, 234, 0.2);
+        border: 1px solid rgba(0, 208, 132, 0.3);
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     
     /* Expander Styling */
     .streamlit-expanderHeader {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, #2C2C2C 0%, #1a1a1a 100%);
         border-radius: 12px;
-        border: 1px solid rgba(102, 126, 234, 0.1);
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0, 208, 132, 0.3);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        color: #00D084;
     }
     
     /* Progress Bar */
     .stProgress > div > div > div > div {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00D084 0%, #00C978 100%);
     }
     
     /* Spinner */
     .stSpinner > div {
-        border-top-color: #667eea;
+        border-top-color: #00D084;
     }
     
     /* Data Editor Styling */
     .stDataEditor {
         border-radius: 12px;
-        border: 1px solid rgba(102, 126, 234, 0.2);
+        border: 1px solid rgba(0, 208, 132, 0.3);
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     
     /* Table Styling */
     .stDataFrame {
         border-radius: 12px;
-        border: 1px solid rgba(102, 126, 234, 0.2);
+        border: 1px solid rgba(0, 208, 132, 0.3);
         box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     }
     
     /* Sidebar Section Headers */
     .sidebar-section {
-        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+        background: linear-gradient(135deg, #2C2C2C 0%, #1a1a1a 100%);
         padding: 1rem;
         border-radius: 12px;
         margin: 1rem 0;
-        border: 1px solid rgba(102, 126, 234, 0.1);
-        box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        border: 1px solid rgba(0, 208, 132, 0.3);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
     }
     
     .sidebar-section h3 {
-        color: #1e293b;
+        color: #00D084;
         font-size: 1.1rem;
         margin: 0 0 1rem 0;
         font-weight: 600;
@@ -888,7 +891,7 @@ def create_revenue_profit_analysis(df_forecast, currency_symbol, currency_name):
         st.plotly_chart(fig, use_container_width=True)
     else:
         fig, ax = plt.subplots(figsize=(8, 6))
-        ax.bar(df_revenue['Component'], df_revenue['Amount'], color=['#667eea', '#764ba2'])
+        ax.bar(df_revenue['Component'], df_revenue['Amount'], color=['#00D084', '#00C978'])
         ax.set_title("Revenue Components")
         ax.set_ylabel("Amount")
         st.pyplot(fig)
@@ -928,7 +931,7 @@ def create_profit_share_analysis(df_forecast, profit_split, currency_symbol, cur
     if PLOTLY_AVAILABLE:
         fig = px.pie(df_share, values='Amount', names='Party', 
                      title="Profit Share Distribution",
-                     color_discrete_sequence=['#667eea', '#764ba2'])
+                     color_discrete_sequence=['#00D084', '#00C978'])
         fig.update_traces(textposition='inside', textinfo='percent+label')
         st.plotly_chart(fig, use_container_width=True)
     else:
@@ -1016,7 +1019,7 @@ def create_revenue_chart(df_results, currency_symbol):
     else:
         fig, ax = plt.subplots(figsize=(10, 6))
         df_grouped = df_results.groupby('Duration')['Total Revenue'].sum()
-        ax.bar(df_grouped.index, df_grouped.values, color='#667eea')
+        ax.bar(df_grouped.index, df_grouped.values, color='#00D084')
         ax.set_title('Revenue by Duration')
         ax.set_xlabel('Duration')
         ax.set_ylabel('Total Revenue')
@@ -1039,7 +1042,7 @@ def create_profit_chart(df_results, currency_symbol):
     else:
         fig, ax = plt.subplots(figsize=(10, 6))
         df_grouped = df_results.groupby('Slab')['Net Profit'].sum()
-        ax.bar(df_grouped.index, df_grouped.values, color='#764ba2')
+        ax.bar(df_grouped.index, df_grouped.values, color='#00C978')
         ax.set_title('Profit by Slab')
         ax.set_xlabel('Slab')
         ax.set_ylabel('Net Profit')
@@ -1054,14 +1057,14 @@ def create_monthly_pools_chart(df_forecast, currency_symbol, currency_name):
             x='Month',
             y='Pool Size',
             title="Monthly Pool Size",
-            color_discrete_sequence=['#667eea']
+            color_discrete_sequence=['#00D084']
         )
         fig.update_layout(height=400)
         return fig
     else:
         fig, ax = plt.subplots(figsize=(12, 6))
         df_grouped = df_forecast.groupby('Month')['Pool Size'].sum()
-        ax.plot(df_grouped.index, df_grouped.values, color='#667eea', linewidth=2)
+        ax.plot(df_grouped.index, df_grouped.values, color='#00D084', linewidth=2)
         ax.set_title('Monthly Pool Size')
         ax.set_xlabel('Month')
         ax.set_ylabel('Pool Size')
@@ -1587,8 +1590,8 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
                     y=monthly_data_numeric['New Users'],
                     mode='lines+markers',
                     name='New Users',
-                    line=dict(color='#667eea', width=3),
-                    marker=dict(size=8, color='#667eea')
+                    line=dict(color='#00D084', width=3),
+                    marker=dict(size=8, color='#00D084')
                 ))
                 
                 fig_users.add_trace(go.Scatter(
@@ -1596,8 +1599,8 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
                     y=monthly_data_numeric['Returning Users'],
                     mode='lines+markers',
                     name='Returning Users',
-                    line=dict(color='#764ba2', width=3),
-                    marker=dict(size=8, color='#764ba2')
+                    line=dict(color='#00C978', width=3),
+                    marker=dict(size=8, color='#00C978')
                 ))
                 
                 fig_users.add_trace(go.Scatter(
@@ -1623,8 +1626,8 @@ def create_monthly_view(df_forecast, currency_symbol, currency_name):
             else:
                 fig, ax = plt.subplots(figsize=(10, 6))
                 months_labels = monthly_data_numeric['Month'].apply(lambda x: f"M{int(x)+1}")
-                ax.plot(months_labels, monthly_data_numeric['New Users'], 'o-', color='#667eea', linewidth=3, markersize=8, label='New Users')
-                ax.plot(months_labels, monthly_data_numeric['Returning Users'], 'o-', color='#764ba2', linewidth=3, markersize=8, label='Returning Users')
+                ax.plot(months_labels, monthly_data_numeric['New Users'], 'o-', color='#00D084', linewidth=3, markersize=8, label='New Users')
+                ax.plot(months_labels, monthly_data_numeric['Returning Users'], 'o-', color='#00C978', linewidth=3, markersize=8, label='Returning Users')
                 ax.plot(months_labels, monthly_data_numeric['Users'], 'o-', color='#f093fb', linewidth=3, markersize=8, label='Active Users')
                 ax.set_title("📈 Monthly User Trends", fontsize=16, fontweight='bold')
                 ax.set_xlabel("Month", fontsize=12)
@@ -1793,7 +1796,7 @@ def create_yearly_view(df_forecast, currency_symbol, currency_name):
                     yearly_data['Rest Period Users'].sum()
                 ],
                 hole=0.4,
-                marker_colors=['#667eea', '#764ba2', '#ef4444', '#f59e0b']
+                marker_colors=['#00D084', '#00C978', '#ef4444', '#f59e0b']
             )])
             
             fig_pie.update_layout(
@@ -1813,7 +1816,7 @@ def create_yearly_view(df_forecast, currency_symbol, currency_name):
                 yearly_data['Churned Users'].sum(),
                 yearly_data['Rest Period Users'].sum()
             ]
-            colors = ['#667eea', '#764ba2', '#ef4444', '#f59e0b']
+            colors = ['#00D084', '#00C978', '#ef4444', '#f59e0b']
             
             wedges, texts, autotexts = ax.pie(values, labels=labels, colors=colors, autopct='%1.1f%%', startangle=90)
             ax.set_title("👥 Yearly User Distribution", fontsize=16, fontweight='bold')
@@ -5034,52 +5037,52 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
             party_a = row['Party A Share']
             party_b = row['Party B Share']
             
-            # Create a modern card with gradient
-            html_content = f"""<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; border-radius: 20px; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);">
-<h2 style="color: white; margin: 0 0 1rem 0; text-align: center; font-size: 2rem;">{year}</h2>
-<h3 style="color: rgba(255, 255, 255,0.9); margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;"> &#x1F465; USER METRICS</h3>
+            # Create a modern card with gradient - easypaisa theme
+            html_content = f"""<div style="background: linear-gradient(135deg, #1a1a1a 0%, #2C2C2C 100%); padding: 2rem; border-radius: 20px; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 2px solid #00D084;">
+<h2 style="color: #00D084; margin: 0 0 1rem 0; text-align: center; font-size: 2rem; font-weight: bold;">{year}</h2>
+<h3 style="color: #00D084; margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;"> &#x1F465; USER METRICS</h3>
 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem; margin-bottom: 1.5rem;">
-<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F7E2; ACTIVE</div>
+<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F7E2; ACTIVE</div>
 <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{active_users}</div>
 </div>
-<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F195; NEW</div>
+<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F195; NEW</div>
 <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{new_users}</div>
 </div>
-<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F504; RETURNING</div>
+<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F504; RETURNING</div>
 <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{returning_users}</div>
 </div>
-<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F634; RESTING</div>
+<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F634; RESTING</div>
 <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{resting_users}</div>
 </div>
-<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F465; TOTAL SERVICED</div>
+<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F465; TOTAL SERVICED</div>
 <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{total_users}</div>
 </div>
 </div>
-<h3 style="color: rgba(255, 255, 255,0.9); margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;"> &#x1F4B0; FINANCIAL METRICS</h3>
+<h3 style="color: #00D084; margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;"> &#x1F4B0; FINANCIAL METRICS</h3>
 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem;">
-<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4B0; REVENUE</div>
+<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4B0; REVENUE</div>
 <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {revenue}</div>
 </div>
-<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4C8; PROFIT</div>
+<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4C8; PROFIT</div>
 <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {profit}</div>
 </div>
-<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F91D; PARTY A</div>
+<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F91D; PARTY A</div>
 <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {party_a}</div>
 </div>
-<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F91D; PARTY B</div>
+<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F91D; PARTY B</div>
 <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {party_b}</div>
 </div>
-<div style="background: rgba(255,255,255,0.15); padding: 0.8rem; border-radius: 10px; backdrop-filter: blur(10px);">
-<div style="color: #fff; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4CA; PROFIT%</div>
+<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4CA; PROFIT%</div>
 <div style="color: #fff; font-size: 1.1rem; font-weight: bold;">N/A</div>
 </div>
 </div>
