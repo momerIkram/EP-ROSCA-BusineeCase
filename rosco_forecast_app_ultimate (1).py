@@ -5711,6 +5711,5 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; color: #64748b; padding: 2rem;">
     <p>💰 BACHAT KOMMITTEE Forecast/Pricing</p>
-    <p>Built with ❤️ using Streamlit</p>
 </div>
 """, unsafe_allow_html=True)
