@@ -41,12 +41,12 @@ st.markdown("""
     
     /* Dashboard Header */
     .dashboard-header {
-        background: linear-gradient(135deg, #1a1a1a 0%, #2C2C2C 100%);
+        background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
         padding: 2rem 1.5rem;
         border-radius: 20px;
         margin-bottom: 2rem;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-        color: white;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        color: #1a1a1a;
         border: 2px solid #00D084;
     }
     
@@ -161,7 +161,7 @@ st.markdown("""
     
     /* Sidebar Styling */
     .css-1d391kg {
-        background: linear-gradient(180deg, #1a1a1a 0%, #2C2C2C 100%);
+        background: linear-gradient(180deg, #f5f5f5 0%, #e8e8e8 100%);
     }
     
     /* Success/Info/Warning/Error Boxes */
@@ -176,12 +176,12 @@ st.markdown("""
     }
     
     .info-box {
-        background: linear-gradient(135deg, #2C2C2C 0%, #1a1a1a 100%);
-        color: #00D084;
+        background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
+        color: #1a1a1a;
         padding: 1rem 1.5rem;
         border-radius: 12px;
         margin: 1rem 0;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         border-left: 4px solid #00D084;
     }
     
@@ -255,11 +255,11 @@ st.markdown("""
     
     /* Expander Styling */
     .streamlit-expanderHeader {
-        background: linear-gradient(135deg, #2C2C2C 0%, #1a1a1a 100%);
+        background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
         border-radius: 12px;
         border: 1px solid rgba(0, 208, 132, 0.3);
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        color: #00D084;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        color: #1a1a1a;
     }
     
     /* Progress Bar */
@@ -288,16 +288,16 @@ st.markdown("""
     
     /* Sidebar Section Headers */
     .sidebar-section {
-        background: linear-gradient(135deg, #2C2C2C 0%, #1a1a1a 100%);
+        background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%);
         padding: 1rem;
         border-radius: 12px;
         margin: 1rem 0;
         border: 1px solid rgba(0, 208, 132, 0.3);
-        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
     
     .sidebar-section h3 {
-        color: #00D084;
+        color: #1a1a1a;
         font-size: 1.1rem;
         margin: 0 0 1rem 0;
         font-weight: 600;
@@ -5037,53 +5037,53 @@ if 'df_forecast' in st.session_state and not st.session_state['df_forecast'].emp
             party_a = row['Party A Share']
             party_b = row['Party B Share']
             
-            # Create a modern card with gradient - easypaisa theme
-            html_content = f"""<div style="background: linear-gradient(135deg, #1a1a1a 0%, #2C2C2C 100%); padding: 2rem; border-radius: 20px; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); border: 2px solid #00D084;">
+            # Create a modern card with gradient - easypaisa theme (lightened)
+            html_content = f"""<div style="background: linear-gradient(135deg, #f5f5f5 0%, #e8e8e8 100%); padding: 2rem; border-radius: 20px; margin-bottom: 2rem; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); border: 2px solid #00D084;">
 <h2 style="color: #00D084; margin: 0 0 1rem 0; text-align: center; font-size: 2rem; font-weight: bold;">{year}</h2>
 <h3 style="color: #00D084; margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;"> &#x1F465; USER METRICS</h3>
 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem; margin-bottom: 1.5rem;">
-<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="background: rgba(0, 208, 132, 0.08); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
 <div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F7E2; ACTIVE</div>
-<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{active_users}</div>
+<div style="color: #1a1a1a; font-size: 1.1rem; font-weight: bold;">{active_users}</div>
 </div>
-<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="background: rgba(0, 208, 132, 0.08); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
 <div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F195; NEW</div>
-<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{new_users}</div>
+<div style="color: #1a1a1a; font-size: 1.1rem; font-weight: bold;">{new_users}</div>
 </div>
-<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="background: rgba(0, 208, 132, 0.08); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
 <div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F504; RETURNING</div>
-<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{returning_users}</div>
+<div style="color: #1a1a1a; font-size: 1.1rem; font-weight: bold;">{returning_users}</div>
 </div>
-<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="background: rgba(0, 208, 132, 0.08); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
 <div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F634; RESTING</div>
-<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{resting_users}</div>
+<div style="color: #1a1a1a; font-size: 1.1rem; font-weight: bold;">{resting_users}</div>
 </div>
-<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="background: rgba(0, 208, 132, 0.08); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
 <div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F465; TOTAL SERVICED</div>
-<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">{total_users}</div>
+<div style="color: #1a1a1a; font-size: 1.1rem; font-weight: bold;">{total_users}</div>
 </div>
 </div>
 <h3 style="color: #00D084; margin: 1rem 0 0.5rem 0; font-size: 1.1rem; text-align: center;"> &#x1F4B0; FINANCIAL METRICS</h3>
 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.8rem;">
-<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="background: rgba(0, 208, 132, 0.08); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
 <div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4B0; REVENUE</div>
-<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {revenue}</div>
+<div style="color: #1a1a1a; font-size: 1.1rem; font-weight: bold;">Rs {revenue}</div>
 </div>
-<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="background: rgba(0, 208, 132, 0.08); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
 <div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4C8; PROFIT</div>
-<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {profit}</div>
+<div style="color: #1a1a1a; font-size: 1.1rem; font-weight: bold;">Rs {profit}</div>
 </div>
-<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="background: rgba(0, 208, 132, 0.08); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
 <div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F91D; PARTY A</div>
-<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {party_a}</div>
+<div style="color: #1a1a1a; font-size: 1.1rem; font-weight: bold;">Rs {party_a}</div>
 </div>
-<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="background: rgba(0, 208, 132, 0.08); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
 <div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F91D; PARTY B</div>
-<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">Rs {party_b}</div>
+<div style="color: #1a1a1a; font-size: 1.1rem; font-weight: bold;">Rs {party_b}</div>
 </div>
-<div style="background: rgba(0, 208, 132, 0.1); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
+<div style="background: rgba(0, 208, 132, 0.08); padding: 0.8rem; border-radius: 10px; border: 1px solid rgba(0, 208, 132, 0.3);">
 <div style="color: #00D084; font-size: 0.75rem; margin-bottom: 0.3rem; opacity: 0.9;"> &#x1F4CA; PROFIT%</div>
-<div style="color: #fff; font-size: 1.1rem; font-weight: bold;">N/A</div>
+<div style="color: #1a1a1a; font-size: 1.1rem; font-weight: bold;">N/A</div>
 </div>
 </div>
 </div>"""
