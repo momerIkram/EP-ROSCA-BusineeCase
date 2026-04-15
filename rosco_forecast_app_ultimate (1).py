@@ -69,7 +69,8 @@ class BachatConfig:
     durations: List[int]       = field(default_factory=lambda: [6])
     slab_amounts: List[int]    = field(default_factory=lambda: [10_000])
     slot_fee_pct: float        = 5.0          # default fee; overridden by slot_fees_config
-    blocked_slots: int         = 1
+    # Per-duration blocked slots: {duration: n_blocked}.  Falls back to min(1, N-1).
+    blocked_slots_config: Dict = field(default_factory=dict)
     fee_collection_mode: str   = "Upfront"    # "Upfront" | "Monthly"
 
     # Per-slot fee overrides: key = "{duration}_{slot}", value = fee_pct (float)
@@ -105,6 +106,16 @@ class BachatConfig:
 
 
 # =============================================================================
+# HELPERS
+# =============================================================================
+
+def _blocked(cfg: "BachatConfig", duration: int) -> int:
+    """Blocked slots for a specific duration.
+    Defaults to min(1, duration-1) if not explicitly configured."""
+    return cfg.blocked_slots_config.get(duration, min(1, duration - 1))
+
+
+# =============================================================================
 # VALIDATION
 # =============================================================================
 
@@ -117,11 +128,12 @@ def validate_config(cfg: BachatConfig) -> Tuple[List[str], List[str]]:
         errors.append("Select at least one ROSCA duration.")
     if not cfg.slab_amounts:
         errors.append("Select at least one slab amount.")
-    if cfg.blocked_slots >= min(cfg.durations, default=1):
-        errors.append(
-            f"Blocked slots ({cfg.blocked_slots}) must be < shortest duration "
-            f"({min(cfg.durations)}). No user slots would remain."
-        )
+    for d in cfg.durations:
+        b = _blocked(cfg, d)
+        if b >= d:
+            errors.append(
+                f"Blocked slots for {d}M ({b}) must be < {d}. No user slots would remain."
+            )
     if cfg.collection_day >= cfg.disbursement_day:
         errors.append(
             f"Collection day ({cfg.collection_day}) must be < disbursement day "
@@ -236,8 +248,9 @@ def cycle_fees_and_fee_nii(
     """
     N   = duration
     pot = N * slab
+    blocked    = _blocked(cfg, N)
     total_fees = 0.0
-    for s in range(cfg.blocked_slots + 1, N + 1):
+    for s in range(blocked + 1, N + 1):
         key     = f"{N}_{s}"
         fee_pct = cfg.slot_fees_config.get(key, cfg.slot_fee_pct)
         # Both modes charge fee_pct on the full pot (numerically equivalent)
@@ -262,8 +275,9 @@ def cycle_default_loss_split(
     Post-payout defaults: member receives pot then stops paying.
       → Credit loss, affects receivables provisioning.
     """
+    blocked    = _blocked(cfg, duration)
     gross, net = slot_conditional_default_loss(
-        duration, cfg.blocked_slots, slab, cfg.default_rate, cfg.recovery_rate)
+        duration, blocked, slab, cfg.default_rate, cfg.recovery_rate)
     penalty  = gross * (cfg.penalty_pct / 100.0)
     pre_net  = net * (cfg.default_pre_pct  / 100.0)
     post_net = net * (cfg.default_post_pct / 100.0)
@@ -360,11 +374,12 @@ def build_forecast(cfg: BachatConfig) -> pd.DataFrame:
             N            = duration
             pot          = N * slab
             scale        = _tam_scale(cfg, duration, slab)
-            user_slots   = N - cfg.blocked_slots
+            blocked      = _blocked(cfg, N)
+            user_slots   = N - blocked
 
             cycle_base_nii  = base_nii_per_cycle(
                 N, slab, annual_rate, cfg.collection_day, cfg.disbursement_day)
-            cycle_float_nii = float_nii_per_cycle(N, cfg.blocked_slots, slab, annual_rate)
+            cycle_float_nii = float_nii_per_cycle(N, blocked, slab, annual_rate)
             cycle_fees, cycle_fee_nii = cycle_fees_and_fee_nii(
                 cfg, N, slab, annual_rate)
             def_split       = cycle_default_loss_split(cfg, N, slab)
@@ -372,7 +387,7 @@ def build_forecast(cfg: BachatConfig) -> pd.DataFrame:
             pre_net         = def_split["pre_net"]
             post_net        = def_split["post_net"]
             cycle_penalty   = def_split["penalty"]
-            cycle_float_pkr = platform_float_capital(N, cfg.blocked_slots, slab)
+            cycle_float_pkr = platform_float_capital(N, blocked, slab)
             avg_float       = cycle_float_pkr / N if N > 0 else 0.0
 
             lifecycle = user_lifecycle(cfg, N, scale_factor=scale)
@@ -436,19 +451,20 @@ def cycle_economics(cfg: BachatConfig, duration: int, slab: int = 0) -> Dict:
     N           = duration
     pot         = N * slab
 
+    blocked     = _blocked(cfg, N)
     b_nii       = base_nii_per_cycle(N, slab, annual_rate,
                                      cfg.collection_day, cfg.disbursement_day)
-    fl_nii      = float_nii_per_cycle(N, cfg.blocked_slots, slab, annual_rate)
+    fl_nii      = float_nii_per_cycle(N, blocked, slab, annual_rate)
     fees, f_nii = cycle_fees_and_fee_nii(cfg, N, slab, annual_rate)
     def_split   = cycle_default_loss_split(cfg, N, slab)
     net_def     = def_split["net"]
     penalty     = def_split["penalty"]
     total_rev   = b_nii + fl_nii + fees + f_nii + penalty
-    fpm         = platform_float_capital(N, cfg.blocked_slots, slab)
+    fpm         = platform_float_capital(N, blocked, slab)
 
     return {
         "duration": N, "slab": slab, "pot": pot,
-        "user_slots": N - cfg.blocked_slots,
+        "user_slots": N - blocked,
         "base_nii": b_nii, "float_nii": fl_nii,
         "fees": fees, "fee_nii": f_nii,
         "gross_default": def_split["gross"],
@@ -460,9 +476,10 @@ def cycle_economics(cfg: BachatConfig, duration: int, slab: int = 0) -> Dict:
         "net_profit": total_rev - net_def,
         "float_pkr_months": fpm,
         "avg_float_outstanding": fpm / N if N > 0 else 0.0,
+        "blocked_slots": blocked,
         "max_single_default_loss": max(
             (max_debtor_position(N, s, slab)
-             for s in range(cfg.blocked_slots + 1, N + 1)),
+             for s in range(blocked + 1, N + 1)),
             default=0.0),
     }
 
@@ -470,10 +487,11 @@ def cycle_economics(cfg: BachatConfig, duration: int, slab: int = 0) -> Dict:
 def build_slot_table(cfg: BachatConfig, duration: int, slab: int = 0) -> pd.DataFrame:
     if slab == 0:
         slab = cfg.slab_amounts[0] if cfg.slab_amounts else 10_000
-    N   = duration
-    rows = []
+    N       = duration
+    blocked = _blocked(cfg, N)
+    rows    = []
     for slot in range(1, N + 1):
-        is_plat  = slot <= cfg.blocked_slots
+        is_plat  = slot <= blocked
         max_d    = 0.0 if is_plat else max_debtor_position(N, slot, slab)
         exp_loss = (0.0 if is_plat else
                     max_d * (cfg.default_rate / 100.0) * (1 - cfg.recovery_rate / 100.0))
@@ -882,10 +900,18 @@ def render_sidebar() -> BachatConfig:
         chosen_slabs = [10_000]
     cfg.slab_amounts = sorted(chosen_slabs)
 
-    max_b = min(cfg.durations) - 1
-    cfg.blocked_slots = st.sidebar.slider(
-        "Platform-Blocked Slots", 0, max(1, max_b), min(1, max_b),
-        help="Early slots the platform takes to capture working-capital float")
+    st.sidebar.caption("Platform-Blocked Slots per Duration")
+    blocked_cfg: Dict = {}
+    for dur in cfg.durations:
+        max_b = dur - 1
+        default_b = min(1, max_b)
+        blocked_cfg[dur] = st.sidebar.slider(
+            f"Blocked slots — {dur}M ROSCA",
+            0, max(1, max_b), default_b,
+            key=f"blocked_{dur}",
+            help=f"For {dur}-month ROSCA: slots the platform occupies to capture float. "
+                 f"Max = {max_b} (must leave at least 1 user slot).")
+    cfg.blocked_slots_config = blocked_cfg
 
     cfg.fee_collection_mode = st.sidebar.radio(
         "Fee Collection Mode",
@@ -905,9 +931,10 @@ def render_sidebar() -> BachatConfig:
                    "Leave blank to use the default above.")
         slot_fees: Dict = {}
         for dur in cfg.durations:
-            st.markdown(f"**{dur}-Month ROSCA**")
+            b_dur = cfg.blocked_slots_config.get(dur, min(1, dur - 1))
+            st.markdown(f"**{dur}-Month ROSCA** ({b_dur} blocked, {dur - b_dur} user slots)")
             cols = st.columns(3)
-            for idx, slot in enumerate(range(cfg.blocked_slots + 1, dur + 1)):
+            for idx, slot in enumerate(range(b_dur + 1, dur + 1)):
                 with cols[idx % 3]:
                     val = st.number_input(
                         f"Slot {slot} fee %",
@@ -1106,12 +1133,19 @@ def render_sidebar() -> BachatConfig:
     # ── Live Config Summary ───────────────────────────────────────────────────
     min_pot = min(cfg.durations) * min(cfg.slab_amounts)
     slabs_str = ", ".join(f"PKR {s:,}" for s in cfg.slab_amounts)
+    blocked_str = "  ".join(
+        f"{d}M:{cfg.blocked_slots_config.get(d, min(1,d-1))}b"
+        for d in cfg.durations)
     st.sidebar.markdown(f"""
     <div class="sb-summary">
         <div class="sb-summary-title">◉ Active Configuration</div>
         <div class="sb-summary-row">
             <span>Duration(s)</span>
             <b>{", ".join(f"{d}M" for d in cfg.durations)}</b>
+        </div>
+        <div class="sb-summary-row">
+            <span>Blocked Slots</span>
+            <b style="font-size:0.72rem">{blocked_str}</b>
         </div>
         <div class="sb-summary-row">
             <span>Slab(s)</span>
@@ -1183,7 +1217,7 @@ def generate_insights(cfg: BachatConfig, df: pd.DataFrame) -> List[str]:
     # 3 — float capture
     insights.append(
         f"Platform captures <b>{fmt_pkr(eco['avg_float_outstanding'])}</b> avg float "
-        f"per cycle via {cfg.blocked_slots} blocked slot(s), earning "
+        f"per cycle via {eco['blocked_slots']} blocked slot(s), earning "
         f"<b>{fmt_pkr(eco['float_nii'])}</b> NII/cycle at {annual_rate:.1f}%."
     )
 
@@ -1869,7 +1903,7 @@ def tab_sensitivity(cfg: BachatConfig):
     for blocks, color in zip(range(0, min(4, primary_dur)), PLOTLY_COLORWAY):
         profits = [cycle_economics(
             dataclasses.replace(cfg, slot_fee_pct=float(f),
-                                blocked_slots=blocks,
+                                blocked_slots_config={primary_dur: blocks},
                                 durations=[primary_dur],
                                 slot_fees_config={}),
             primary_dur, slab0)["net_profit"] for f in fees_range]
