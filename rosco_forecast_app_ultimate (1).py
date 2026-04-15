@@ -77,15 +77,15 @@ class BachatConfig:
     slot_fees_config: Dict     = field(default_factory=dict)
 
     # ── Interest / NII ─────────────────────────────────────────────────────────
-    kibor_rate: float          = 13.5
-    spread: float              = -3.0
+    kibor_rate: float          = 10.5
+    spread: float              = 0.0
     collection_day: int        = 1
     disbursement_day: int      = 15
 
     # ── Default risk ───────────────────────────────────────────────────────────
-    default_rate: float        = 2.0
-    recovery_rate: float       = 20.0
-    penalty_pct: float         = 2.0
+    default_rate: float        = 8.0
+    recovery_rate: float       = 70.0
+    penalty_pct: float         = 10.0
     default_pre_pct: float     = 30.0   # % of defaults occurring BEFORE payout
     default_post_pct: float    = 70.0   # % of defaults occurring AFTER payout
 
@@ -102,7 +102,7 @@ class BachatConfig:
     market_growth_rate: float  = 15.0
 
     # ── YoY projection ─────────────────────────────────────────────────────────
-    yoy_growth_rate: float     = 15.0
+    yoy_growth_rate: float     = 10.0
 
 
 # =============================================================================
@@ -994,10 +994,10 @@ def render_sidebar() -> BachatConfig:
     _sb_section("🏦", "FLOAT / NII", PURPLE)
 
     cfg.kibor_rate = st.sidebar.slider(
-        "KIBOR Rate %", 5.0, 30.0, 13.5, 0.25,
+        "KIBOR Rate %", 5.0, 30.0, 10.5, 0.25,
         help="Pakistan benchmark interest rate for NII calculations")
     cfg.spread = st.sidebar.slider(
-        "Spread vs KIBOR %", -10.0, 5.0, -3.0, 0.25,
+        "Spread vs KIBOR %", -10.0, 5.0, 0.0, 0.25,
         help="Placement rate relative to KIBOR (negative = below benchmark)")
 
     annual_rate = cfg.kibor_rate + cfg.spread
@@ -1026,13 +1026,13 @@ def render_sidebar() -> BachatConfig:
     _sb_section("⚠️", "DEFAULT RISK", DANGER)
 
     cfg.default_rate = st.sidebar.slider(
-        "User Default Rate %", 0.0, 30.0, 2.0, 0.5,
+        "User Default Rate %", 0.0, 30.0, 8.0, 0.5,
         help="% of user-held slots where the member stops paying after receiving the pot")
     cfg.recovery_rate = st.sidebar.slider(
-        "Recovery Rate %", 0.0, 100.0, 20.0, 5.0,
+        "Recovery Rate %", 0.0, 100.0, 70.0, 5.0,
         help="% of defaulted exposure recovered through collections or collateral")
     cfg.penalty_pct = st.sidebar.slider(
-        "Penalty % on Defaults", 0.0, 10.0, 2.0, 0.5,
+        "Penalty % on Defaults", 0.0, 20.0, 10.0, 0.5,
         help="Additional fee charged on the defaulted principal — becomes platform income")
 
     st.sidebar.caption("Pre/Post Payout Default Split — must sum to 100%")
@@ -1154,7 +1154,7 @@ def render_sidebar() -> BachatConfig:
         format_func=lambda x: f"{x} months  ({x//12} year{'s' if x//12>1 else ''})",
         help="Total number of months to simulate")
     cfg.yoy_growth_rate = st.sidebar.slider(
-        "YoY Projection Growth %", 0.0, 50.0, 15.0, 1.0,
+        "YoY Projection Growth %", 0.0, 50.0, 10.0, 1.0,
         help="Annual growth rate used to project P&L beyond the simulation window")
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
