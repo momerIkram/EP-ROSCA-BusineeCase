@@ -1,5 +1,5 @@
 """
-BACHAT KOMMITTEE — Pricing & Risk Model
+BACHAT KOMMITTEE — Pricing & Risk Model (v3.0)
 ==========================================
 Restores all v1 features dropped in v2, with full validation:
 
@@ -58,7 +58,7 @@ PLOTLY_COLORWAY = [BACHAT_GREEN, INFO, PURPLE, WARNING, DANGER, TEAL]
 class BachatConfig:
     """Single source of truth for all model inputs (v3.0)."""
     # ── User growth ────────────────────────────────────────────────────────────
-    starting_users: int        = 500
+    starting_users: int        = 100_000
     monthly_growth_rate: float = 8.0
     churn_rate: float          = 5.0
     returning_user_rate: float = 60.0
@@ -66,8 +66,8 @@ class BachatConfig:
     simulation_months: int     = 60
 
     # ── Portfolio ──────────────────────────────────────────────────────────────
-    durations: List[int]       = field(default_factory=lambda: [6])
-    slab_amounts: List[int]    = field(default_factory=lambda: [10_000])
+    durations: List[int]       = field(default_factory=lambda: [4, 6])
+    slab_amounts: List[int]    = field(default_factory=lambda: [5_000, 10_000])
     slot_fee_pct: float        = 5.0          # default fee; overridden by slot_fees_config
     # Per-duration blocked slots: {duration: n_blocked}.  Falls back to min(1, N-1).
     blocked_slots_config: Dict = field(default_factory=dict)
@@ -77,14 +77,14 @@ class BachatConfig:
     slot_fees_config: Dict     = field(default_factory=dict)
 
     # ── Interest / NII ─────────────────────────────────────────────────────────
-    kibor_rate: float          = 21.0
+    kibor_rate: float          = 13.5
     spread: float              = -3.0
     collection_day: int        = 1
     disbursement_day: int      = 15
 
     # ── Default risk ───────────────────────────────────────────────────────────
-    default_rate: float        = 8.0
-    recovery_rate: float       = 30.0
+    default_rate: float        = 2.0
+    recovery_rate: float       = 20.0
     penalty_pct: float         = 2.0
     default_pre_pct: float     = 30.0   # % of defaults occurring BEFORE payout
     default_post_pct: float    = 70.0   # % of defaults occurring AFTER payout
@@ -96,9 +96,9 @@ class BachatConfig:
     use_tam: bool              = False
     duration_share: Dict       = field(default_factory=dict)  # {duration: share_pct}
     slab_share: Dict           = field(default_factory=dict)  # {slab: share_pct}
-    market_size: int           = 5_000_000
-    sam_size: int              = 1_000_000
-    som_size: int              = 100_000
+    market_size: int           = 18_000_000
+    sam_size: int              = 1_800_000
+    som_size: int              = 1_000_000
     market_growth_rate: float  = 15.0
 
     # ── YoY projection ─────────────────────────────────────────────────────────
@@ -843,6 +843,27 @@ def inject_css():
     /* ── Dataframes ───────────────────────── */
     .stDataFrame {{ border: 1px solid {SLATE_200}; border-radius: 10px; }}
 
+    /* ── Metric cards ────────────────────── */
+    [data-testid="stMetric"] {{
+        background: {WHITE};
+        border: 1px solid {SLATE_200};
+        border-radius: 12px;
+        padding: 0.9rem 1rem;
+        box-shadow: 0 1px 4px rgba(15,23,42,0.05);
+    }}
+    [data-testid="stMetric"] label {{
+        font-size: 0.75rem !important;
+        font-weight: 600 !important;
+        color: {SLATE_500} !important;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }}
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {{
+        font-size: 1.35rem !important;
+        font-weight: 800 !important;
+        color: {INK} !important;
+    }}
+
     /* ── Streamlit chrome ─────────────────── */
     #MainMenu {{ visibility: hidden; }}
     footer {{ visibility: hidden; }}
@@ -881,33 +902,34 @@ def render_sidebar() -> BachatConfig:
 
     chosen_dur = st.sidebar.multiselect(
         "KOMMITTEE Durations (months)",
-        [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], default=[6],
+        [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], default=[4, 6],
         help="Select one or more cycle lengths to model simultaneously")
     if not chosen_dur:
         st.sidebar.error("Select at least one duration.")
-        chosen_dur = [6]
+        chosen_dur = [4, 6]
     cfg.durations = sorted(chosen_dur)
 
     SLAB_OPTIONS = [5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 50_000, 100_000]
     chosen_slabs = st.sidebar.multiselect(
         "Monthly Contribution Slabs (PKR)",
         SLAB_OPTIONS,
-        default=[10_000],
+        default=[5_000, 10_000],
         format_func=lambda x: f"PKR {x:,}",
         help="Each slab is modelled as a separate portfolio segment")
     if not chosen_slabs:
         st.sidebar.error("Select at least one slab amount.")
-        chosen_slabs = [10_000]
+        chosen_slabs = [5_000]
     cfg.slab_amounts = sorted(chosen_slabs)
 
     st.sidebar.caption("Platform-Blocked Slots per Duration")
     blocked_cfg: Dict = {}
+    _blocked_defaults = {4: 2, 6: 3}
     for dur in cfg.durations:
         max_b = dur - 1
-        default_b = min(1, max_b)
+        default_b = _blocked_defaults.get(dur, max(1, dur // 2))
         blocked_cfg[dur] = st.sidebar.slider(
             f"Blocked slots — {dur}M KOMMITTEE",
-            0, max(1, max_b), default_b,
+            0, max(1, max_b), min(default_b, max_b),
             key=f"blocked_{dur}",
             help=f"For {dur}-month KOMMITTEE: slots the platform occupies to capture float. "
                  f"Max = {max_b} (must leave at least 1 user slot).")
@@ -951,7 +973,7 @@ def render_sidebar() -> BachatConfig:
 
     cfg.starting_users = st.sidebar.number_input(
         "Starting Users (Month 1)",
-        min_value=10, max_value=100_000, value=500, step=50,
+        min_value=10, max_value=10_000_000, value=100_000, step=1_000,
         help="Number of users who join in the very first month")
     cfg.monthly_growth_rate = st.sidebar.slider(
         "Monthly Growth %", 0.0, 30.0, 8.0, 0.5,
@@ -972,7 +994,7 @@ def render_sidebar() -> BachatConfig:
     _sb_section("🏦", "FLOAT / NII", PURPLE)
 
     cfg.kibor_rate = st.sidebar.slider(
-        "KIBOR Rate %", 5.0, 30.0, 21.0, 0.25,
+        "KIBOR Rate %", 5.0, 30.0, 13.5, 0.25,
         help="Pakistan benchmark interest rate for NII calculations")
     cfg.spread = st.sidebar.slider(
         "Spread vs KIBOR %", -10.0, 5.0, -3.0, 0.25,
@@ -1004,10 +1026,10 @@ def render_sidebar() -> BachatConfig:
     _sb_section("⚠️", "DEFAULT RISK", DANGER)
 
     cfg.default_rate = st.sidebar.slider(
-        "User Default Rate %", 0.0, 30.0, 8.0, 0.5,
+        "User Default Rate %", 0.0, 30.0, 2.0, 0.5,
         help="% of user-held slots where the member stops paying after receiving the pot")
     cfg.recovery_rate = st.sidebar.slider(
-        "Recovery Rate %", 0.0, 100.0, 30.0, 5.0,
+        "Recovery Rate %", 0.0, 100.0, 20.0, 5.0,
         help="% of defaulted exposure recovered through collections or collateral")
     cfg.penalty_pct = st.sidebar.slider(
         "Penalty % on Defaults", 0.0, 10.0, 2.0, 0.5,
@@ -1101,14 +1123,20 @@ def render_sidebar() -> BachatConfig:
         if abs(s_sum - 100.0) > 0.5:
             st.sidebar.error(f"Slab shares sum to {s_sum:.1f}% (need 100%)")
 
-    cfg.market_size = st.sidebar.number_input(
-        "TAM (total KOMMITTEE users)", 100_000, 100_000_000, 5_000_000, 100_000,
+    _tam_options = [i * 1_000_000 for i in range(1, 101)]
+    cfg.market_size = st.sidebar.select_slider(
+        "TAM (total KOMMITTEE users)", options=_tam_options, value=18_000_000,
+        format_func=lambda x: f"{x:,}",
         help="Total addressable market — all KOMMITTEE participants in Pakistan")
-    cfg.sam_size = st.sidebar.number_input(
-        "SAM (serviceable)", 10_000, 50_000_000, 1_000_000, 50_000,
+    _sam_options = [i * 100_000 for i in range(1, 501)]
+    cfg.sam_size = st.sidebar.select_slider(
+        "SAM (serviceable)", options=_sam_options, value=1_800_000,
+        format_func=lambda x: f"{x:,}",
         help="Serviceable addressable market — users reachable by your platform")
-    cfg.som_size = st.sidebar.number_input(
-        "SOM (obtainable)", 1_000, 10_000_000, 100_000, 10_000,
+    _som_options = [i * 50_000 for i in range(1, 201)]
+    cfg.som_size = st.sidebar.select_slider(
+        "SOM (obtainable)", options=_som_options, value=1_000_000,
+        format_func=lambda x: f"{x:,}",
         help="Serviceable obtainable market — realistic near-term capture")
     cfg.market_growth_rate = st.sidebar.slider(
         "Market Growth Rate % p.a.", 0.0, 50.0, 15.0, 1.0,
@@ -1297,35 +1325,67 @@ def _sh(text: str):
 # =============================================================================
 
 def chart_kpi_sparklines(agg: pd.DataFrame) -> go.Figure:
-    """4-panel KPI sparklines: Revenue, Profit, Active Users, Default Loss."""
-    fig = make_subplots(
-        rows=1, cols=4,
-        subplot_titles=["Monthly Revenue", "Net Profit",
-                        "Active Users", "Default Loss"],
-    )
+    """4-panel KPI cards with headline value, delta badge, and area sparkline."""
     metrics = [
-        ("total_revenue_monthly", BACHAT_GREEN),
-        ("net_profit_monthly",    INFO),
-        ("active_users",          PURPLE),
-        ("default_loss_monthly",  DANGER),
+        ("total_revenue_monthly", "Monthly Revenue", BACHAT_GREEN, True),
+        ("net_profit_monthly",    "Net Profit",      INFO,         True),
+        ("active_users",          "Active Users",    PURPLE,       False),
+        ("default_loss_monthly",  "Default Loss",    DANGER,       True),
     ]
-    for col_idx, (col, color) in enumerate(metrics, 1):
-        y = agg[col].values if col in agg.columns else np.zeros(len(agg))
-        fig.add_trace(
-            go.Scatter(x=agg["month"], y=y, mode="lines",
-                       line=dict(color=color, width=2),
-                       fill="tozeroy", fillcolor=_hex_rgba(color, 0.08),
-                       showlegend=False),
-            row=1, col=col_idx,
-        )
-    fig.update_layout(
-        height=160, margin=dict(l=8, r=8, t=32, b=8),
-        template=PLOTLY_TEMPLATE, paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+
+    fig = make_subplots(
+        rows=2, cols=4,
+        row_heights=[0.38, 0.62],
+        vertical_spacing=0.0,
+        horizontal_spacing=0.06,
+        specs=[[{"type": "indicator"}] * 4,
+               [{"type": "xy"}] * 4],
     )
-    for ax in fig.layout:
-        if ax.startswith("xaxis") or ax.startswith("yaxis"):
-            fig.layout[ax].update(showgrid=False, showticklabels=False,
-                                  zeroline=False)
+
+    for col_idx, (col, label, color, is_currency) in enumerate(metrics, 1):
+        y = agg[col].values if col in agg.columns else np.zeros(len(agg))
+        latest = y[-1] if len(y) else 0
+        prev   = y[-2] if len(y) > 1 else latest
+        delta  = ((latest - prev) / prev * 100) if prev != 0 else 0
+        headline = fmt_pkr(latest) if is_currency else f"{latest:,.0f}"
+
+        fig.add_trace(go.Indicator(
+            mode="number+delta",
+            value=latest,
+            number={"font": {"size": 22, "color": INK, "family": "Inter"},
+                    "valueformat": ",.0f" if not is_currency else ",",
+                    "prefix": "" if not is_currency else ""},
+            delta={"reference": prev, "relative": True,
+                   "valueformat": ".1%",
+                   "increasing": {"color": BACHAT_GREEN if col != "default_loss_monthly" else DANGER},
+                   "decreasing": {"color": DANGER if col != "default_loss_monthly" else BACHAT_GREEN},
+                   "font": {"size": 12}},
+            title={"text": f"<b>{label}</b><br><span style='font-size:13px;color:{SLATE_500}'>"
+                           f"{headline}</span>",
+                   "font": {"size": 12, "color": SLATE_500, "family": "Inter"}},
+        ), row=1, col=col_idx)
+
+        fig.add_trace(go.Scatter(
+            x=agg["month"], y=y, mode="lines",
+            line=dict(color=color, width=2.5, shape="spline"),
+            fill="tozeroy",
+            fillcolor=_hex_rgba(color, 0.10),
+            showlegend=False,
+            hovertemplate=f"<b>{label}</b><br>"
+                          "Month %{x}<br>"
+                          "Value: %{y:,.0f}<extra></extra>",
+        ), row=2, col=col_idx)
+
+    for ax_key in list(fig.layout.to_plotly_json()):
+        if ax_key.startswith("xaxis") or ax_key.startswith("yaxis"):
+            fig.layout[ax_key].update(showgrid=False, showticklabels=False,
+                                      zeroline=False, showline=False)
+
+    fig.update_layout(
+        height=220, margin=dict(l=8, r=8, t=8, b=8),
+        template=PLOTLY_TEMPLATE, paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+        showlegend=False,
+    )
     return fig
 
 
@@ -1366,39 +1426,146 @@ def chart_revenue_combo(agg: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def chart_deposits_cumulative(agg: pd.DataFrame) -> go.Figure:
+    """Dual-area chart: cumulative deposits collected vs pots disbursed."""
+    contrib = agg["user_contributions_monthly"].values if "user_contributions_monthly" in agg.columns else np.zeros(len(agg))
+    disbursed = agg["pot_disbursed_monthly"].values if "pot_disbursed_monthly" in agg.columns else np.zeros(len(agg))
+    cum_dep = np.cumsum(contrib)
+    cum_dis = np.cumsum(disbursed)
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=agg["month"], y=cum_dep, name="Cumulative Deposits",
+        mode="lines", line=dict(color=BACHAT_GREEN, width=2.5, shape="spline"),
+        fill="tozeroy", fillcolor=_hex_rgba(BACHAT_GREEN, 0.12),
+        hovertemplate="Month %{x}<br>Deposits: %{y:,.0f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=agg["month"], y=cum_dis, name="Cumulative Disbursements",
+        mode="lines", line=dict(color=PURPLE, width=2.5, shape="spline"),
+        fill="tozeroy", fillcolor=_hex_rgba(PURPLE, 0.10),
+        hovertemplate="Month %{x}<br>Disbursed: %{y:,.0f}<extra></extra>",
+    ))
+    net = cum_dep - cum_dis
+    fig.add_trace(go.Scatter(
+        x=agg["month"], y=net, name="Net Pool Balance",
+        mode="lines", line=dict(color=INFO, width=2, dash="dash", shape="spline"),
+        hovertemplate="Month %{x}<br>Net Pool: %{y:,.0f}<extra></extra>",
+    ))
+    return _theme(fig, "Cumulative Deposits vs Disbursements", height=380)
+
+
+def chart_deposits_monthly(agg: pd.DataFrame) -> go.Figure:
+    """Bar + line combo: monthly deposit inflows vs pot disbursements."""
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    contrib = agg["user_contributions_monthly"] if "user_contributions_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
+    disbursed = agg["pot_disbursed_monthly"] if "pot_disbursed_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
+
+    fig.add_trace(go.Bar(
+        x=agg["month"], y=contrib, name="Deposits In",
+        marker_color=BACHAT_GREEN, opacity=0.80,
+        hovertemplate="Month %{x}<br>Deposits: %{y:,.0f}<extra></extra>",
+    ), secondary_y=False)
+    fig.add_trace(go.Bar(
+        x=agg["month"], y=disbursed, name="Pots Paid Out",
+        marker_color=PURPLE, opacity=0.65,
+        hovertemplate="Month %{x}<br>Disbursed: %{y:,.0f}<extra></extra>",
+    ), secondary_y=False)
+    net_flow = contrib.values - disbursed.values
+    fig.add_trace(go.Scatter(
+        x=agg["month"], y=net_flow, name="Net Flow",
+        mode="lines+markers",
+        line=dict(color=INFO, width=2.5),
+        marker=dict(size=4, color=INFO),
+        hovertemplate="Month %{x}<br>Net Flow: %{y:,.0f}<extra></extra>",
+    ), secondary_y=True)
+    fig.update_layout(
+        barmode="group", height=400,
+        margin=dict(l=16, r=16, t=48, b=36),
+        template=PLOTLY_TEMPLATE, paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                    xanchor="right", x=1.0, font=dict(size=11)),
+        hovermode="x unified",
+        title=dict(text="Monthly Deposits & Disbursements",
+                   font=dict(size=14, color=INK), x=0.0, xanchor="left"),
+    )
+    fig.update_yaxes(title_text="Amount (PKR)", secondary_y=False, gridcolor=SLATE_100)
+    fig.update_yaxes(title_text="Net Flow (PKR)", secondary_y=True, gridcolor=SLATE_100)
+    return fig
+
+
+def chart_float_timeline(agg: pd.DataFrame) -> go.Figure:
+    """Area chart of platform float outstanding over time."""
+    flt = agg["float_outstanding_monthly"] if "float_outstanding_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=agg["month"], y=flt, name="Float Outstanding",
+        mode="lines", line=dict(color=TEAL, width=2.5, shape="spline"),
+        fill="tozeroy", fillcolor=_hex_rgba(TEAL, 0.12),
+        hovertemplate="Month %{x}<br>Float: %{y:,.0f}<extra></extra>",
+    ))
+    return _theme(fig, "Platform Float Outstanding", height=320)
+
+
 def chart_profit_gauge(cfg: BachatConfig) -> go.Figure:
-    """Semi-circular gauges: margin % for primary duration × primary slab."""
+    """Clean bullet-style indicators: margin %, loss %, profit per user, ROI on float."""
     eco      = cycle_economics(cfg, cfg.durations[0])
     margin   = eco["net_profit"] / eco["total_revenue"] * 100 if eco["total_revenue"] else 0
     loss_pct = eco["net_default"] / eco["total_revenue"] * 100 if eco["total_revenue"] else 0
+    profit_per_user = eco["net_profit"] / eco["user_slots"] if eco["user_slots"] else 0
+    float_roi = (eco["net_profit"] / eco["avg_float_outstanding"] * 100
+                 if eco["avg_float_outstanding"] else 0)
 
-    fig = make_subplots(rows=1, cols=2,
-                        specs=[[{"type": "indicator"}, {"type": "indicator"}]])
     m_color = BACHAT_GREEN if margin > 30 else (WARNING if margin > 0 else DANGER)
-    l_color = DANGER if loss_pct > 20 else (WARNING if loss_pct > 8 else BACHAT_GREEN)
+    l_color = BACHAT_GREEN if loss_pct < 8 else (WARNING if loss_pct < 20 else DANGER)
 
-    fig.add_trace(go.Indicator(
-        mode="gauge+number", value=round(margin, 1),
-        title={"text": "Net Margin %", "font": {"size": 13, "color": INK}},
-        number={"suffix": "%", "font": {"size": 22, "color": m_color}},
-        gauge={"axis": {"range": [-20, 80]},
-               "bar": {"color": m_color, "thickness": 0.3},
-               "bgcolor": SLATE_100,
-               "threshold": {"line": {"color": SLATE_500, "width": 2},
-                             "thickness": 0.75, "value": 0}},
-    ), row=1, col=1)
-    fig.add_trace(go.Indicator(
-        mode="gauge+number", value=round(loss_pct, 1),
-        title={"text": "Loss / Revenue %", "font": {"size": 13, "color": INK}},
-        number={"suffix": "%", "font": {"size": 22, "color": l_color}},
-        gauge={"axis": {"range": [0, 60]},
-               "bar": {"color": l_color, "thickness": 0.3},
-               "bgcolor": SLATE_100,
-               "threshold": {"line": {"color": SLATE_500, "width": 2},
-                             "thickness": 0.75, "value": 20}},
-    ), row=1, col=2)
-    fig.update_layout(height=240, margin=dict(l=16, r=16, t=24, b=8),
-                      paper_bgcolor=WHITE)
+    fig = make_subplots(
+        rows=1, cols=4,
+        specs=[[{"type": "indicator"}] * 4],
+        horizontal_spacing=0.06,
+    )
+
+    indicators = [
+        ("Net Margin",       round(margin, 1),         "%",  m_color,  [-20, 80],  0),
+        ("Loss / Revenue",   round(loss_pct, 1),        "%",  l_color,  [0, 50],   20),
+        ("Profit / User",    round(profit_per_user, 0), "",   INFO,     [0, max(profit_per_user * 2, 1000)], None),
+        ("Float ROI",        round(float_roi, 1),       "%",  PURPLE,   [0, max(float_roi * 2, 100)], None),
+    ]
+
+    for i, (title, val, suffix, color, axis_range, threshold) in enumerate(indicators, 1):
+        gauge_cfg = {
+            "axis": {"range": axis_range, "tickfont": {"size": 10, "color": SLATE_300},
+                     "dtick": (axis_range[1] - axis_range[0]) / 4},
+            "bar": {"color": color, "thickness": 0.65},
+            "bgcolor": SLATE_100,
+            "borderwidth": 0,
+            "shape": "bullet",
+        }
+        if threshold is not None:
+            gauge_cfg["threshold"] = {
+                "line": {"color": SLATE_500, "width": 2},
+                "thickness": 0.85, "value": threshold,
+            }
+            gauge_cfg["steps"] = [
+                {"range": [axis_range[0], threshold], "color": _hex_rgba(color, 0.08)},
+                {"range": [threshold, axis_range[1]], "color": _hex_rgba(SLATE_300, 0.10)},
+            ]
+
+        fig.add_trace(go.Indicator(
+            mode="gauge+number",
+            value=val,
+            title={"text": f"<b>{title}</b>",
+                   "font": {"size": 12, "color": SLATE_500, "family": "Inter"}},
+            number={"suffix": suffix,
+                    "font": {"size": 24, "color": color, "family": "Inter"},
+                    "valueformat": ",.1f" if suffix == "%" else ",.0f"},
+            gauge=gauge_cfg,
+        ), row=1, col=i)
+
+    fig.update_layout(
+        height=170, margin=dict(l=16, r=16, t=36, b=16),
+        paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+    )
     return fig
 
 
@@ -1653,17 +1820,32 @@ def tab_overview(cfg: BachatConfig, df: pd.DataFrame):
     eco      = cycle_economics(cfg, cfg.durations[0])
     insights = generate_insights(cfg, df)
 
-    # KPI sparklines
+    # ── Headline metrics row ─────────────────────────────────────────────────
+    total_rev   = agg["total_revenue_monthly"].sum() if "total_revenue_monthly" in agg.columns else 0
+    total_profit = agg["net_profit_monthly"].sum() if "net_profit_monthly" in agg.columns else 0
+    peak_users  = agg["active_users"].max() if "active_users" in agg.columns else 0
+    total_loss  = agg["default_loss_monthly"].sum() if "default_loss_monthly" in agg.columns else 0
+    margin_pct  = (total_profit / total_rev * 100) if total_rev else 0
+
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("Total Revenue",   fmt_pkr(total_rev))
+    k2.metric("Net Profit",      fmt_pkr(total_profit))
+    k3.metric("Net Margin",      f"{margin_pct:.1f}%")
+    k4.metric("Peak Users",      f"{peak_users:,.0f}")
+    k5.metric("Default Losses",  fmt_pkr(total_loss))
+
+    st.markdown("")
+
+    # ── Trend sparklines + Bullet gauges ─────────────────────────────────────
     st.plotly_chart(chart_kpi_sparklines(agg),
                     use_container_width=True, config=_CFG_STATIC,
                     key="_pc_1")
 
-    # Gauges row
     st.plotly_chart(chart_profit_gauge(cfg),
                     use_container_width=True, config=_CFG_STATIC,
                     key="_pc_2")
 
-    # Combo chart + right panel
+    # ── Combo chart + insights panel ─────────────────────────────────────────
     main_col, right_col = st.columns([2, 1])
     with main_col:
         st.plotly_chart(chart_revenue_combo(agg),
@@ -1679,11 +1861,96 @@ def tab_overview(cfg: BachatConfig, df: pd.DataFrame):
             {items_html}
         </div>""", unsafe_allow_html=True)
 
-    # Income statement
+    # ── Income statement ─────────────────────────────────────────────────────
     _sh("Cycle Income Statement")
     st.plotly_chart(chart_income_statement(eco),
                     use_container_width=True, config=_CFG_STATIC,
                     key="_pc_4")
+
+
+def tab_deposits(cfg: BachatConfig, df: pd.DataFrame):
+    agg = _agg_monthly(df)
+
+    contrib = agg["user_contributions_monthly"] if "user_contributions_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
+    disbursed = agg["pot_disbursed_monthly"] if "pot_disbursed_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
+    flt = agg["float_outstanding_monthly"] if "float_outstanding_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
+    users = agg["active_users"] if "active_users" in agg.columns else pd.Series(np.ones(len(agg)))
+
+    total_dep = contrib.sum()
+    total_dis = disbursed.sum()
+    net_pool  = contrib.cumsum().iloc[-1] - disbursed.cumsum().iloc[-1] if len(agg) else 0
+    peak_flt  = flt.max()
+    avg_per_user = total_dep / users.sum() if users.sum() > 0 else 0
+
+    # ── Headline metrics ─────────────────────────────────────────────────────
+    k1, k2, k3, k4, k5 = st.columns(5)
+    k1.metric("Total Deposits",     fmt_pkr(total_dep))
+    k2.metric("Total Disbursed",    fmt_pkr(total_dis))
+    k3.metric("Net Pool Balance",   fmt_pkr(net_pool))
+    k4.metric("Peak Float",         fmt_pkr(peak_flt))
+    k5.metric("Avg Deposit / User", fmt_pkr(avg_per_user))
+
+    st.markdown("")
+
+    # ── Cumulative deposits vs disbursements ─────────────────────────────────
+    st.plotly_chart(chart_deposits_cumulative(agg),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_dep_1")
+
+    # ── Monthly flows + net flow indicator ───────────────────────────────────
+    left_col, right_col = st.columns([2, 1])
+    with left_col:
+        st.plotly_chart(chart_deposits_monthly(agg),
+                        use_container_width=True, config=_CFG_STATIC,
+                        key="_dep_2")
+    with right_col:
+        latest_net = (contrib.iloc[-1] - disbursed.iloc[-1]) if len(agg) else 0
+        net_color = BACHAT_GREEN if latest_net >= 0 else DANGER
+        net_arrow = "▲" if latest_net >= 0 else "▼"
+        st.markdown(f"""
+        <div style="background:{WHITE}; border:1px solid {SLATE_200};
+                    border-radius:14px; padding:1.5rem; text-align:center;
+                    margin-top:1rem;">
+            <div style="font-size:0.75rem; font-weight:600; color:{SLATE_500};
+                        text-transform:uppercase; letter-spacing:0.05em;
+                        margin-bottom:0.6rem;">Latest Month Net Flow</div>
+            <div style="font-size:2rem; font-weight:800; color:{net_color};
+                        letter-spacing:-0.02em;">
+                {net_arrow} {fmt_pkr(abs(latest_net))}
+            </div>
+            <div style="font-size:0.78rem; color:{SLATE_500}; margin-top:0.5rem;
+                        line-height:1.5;">
+                Deposits minus pot payouts.<br>
+                Positive = net inflow to the platform pool.
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+        utilisation = (total_dis / total_dep * 100) if total_dep else 0
+        velocity = contrib.iloc[-1] / (total_dep / len(agg)) * 100 if len(agg) and total_dep else 100
+        st.markdown(f"""
+        <div style="background:{SLATE_50}; border:1px solid {SLATE_200};
+                    border-radius:14px; padding:1rem 1.2rem; margin-top:0.8rem;">
+            <div style="font-size:0.7rem; font-weight:700; color:{SLATE_500};
+                        text-transform:uppercase; letter-spacing:0.05em;
+                        margin-bottom:0.5rem;">Quick Stats</div>
+            <div style="display:flex; justify-content:space-between;
+                        font-size:0.82rem; padding:0.3rem 0;
+                        border-bottom:1px solid {SLATE_200};">
+                <span style="color:{SLATE_500};">Payout Utilisation</span>
+                <b style="color:{INK};">{utilisation:.1f}%</b>
+            </div>
+            <div style="display:flex; justify-content:space-between;
+                        font-size:0.82rem; padding:0.3rem 0;">
+                <span style="color:{SLATE_500};">Deposit Velocity</span>
+                <b style="color:{INK};">{velocity:.0f}% of avg</b>
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+    # ── Float outstanding ────────────────────────────────────────────────────
+    _sh("Platform Float")
+    st.plotly_chart(chart_float_timeline(agg),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_dep_3")
 
 
 def tab_risk(cfg: BachatConfig, df: pd.DataFrame):
@@ -2192,6 +2459,7 @@ def main():
 
     tabs = st.tabs([
         "📊 Overview",
+        "💵 Deposits",
         "⚠️ Risk & Slots",
         "💰 Revenue & NII",
         "👥 Users",
@@ -2203,14 +2471,15 @@ def main():
     ])
 
     with tabs[0]: tab_overview(cfg, df)
-    with tabs[1]: tab_risk(cfg, df)
-    with tabs[2]: tab_revenue(cfg, df)
-    with tabs[3]: tab_users(cfg, df)
-    with tabs[4]: tab_pnl(cfg, df)
-    with tabs[5]: tab_scenarios(cfg)
-    with tabs[6]: tab_market(cfg, df)
-    with tabs[7]: tab_sensitivity(cfg)
-    with tabs[8]: tab_raw(df)
+    with tabs[1]: tab_deposits(cfg, df)
+    with tabs[2]: tab_risk(cfg, df)
+    with tabs[3]: tab_revenue(cfg, df)
+    with tabs[4]: tab_users(cfg, df)
+    with tabs[5]: tab_pnl(cfg, df)
+    with tabs[6]: tab_scenarios(cfg)
+    with tabs[7]: tab_market(cfg, df)
+    with tabs[8]: tab_sensitivity(cfg)
+    with tabs[9]: tab_raw(df)
 
 
 if __name__ == "__main__":
