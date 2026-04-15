@@ -1,5 +1,5 @@
 """
-BACHAT ROSCA — Pricing & Risk Model (v3.0)
+BACHAT KOMMITTEE — Pricing & Risk Model
 ==========================================
 Restores all v1 features dropped in v2, with full validation:
 
@@ -125,7 +125,7 @@ def validate_config(cfg: BachatConfig) -> Tuple[List[str], List[str]]:
     warnings: List[str] = []
 
     if not cfg.durations:
-        errors.append("Select at least one ROSCA duration.")
+        errors.append("Select at least one KOMMITTEE duration.")
     if not cfg.slab_amounts:
         errors.append("Select at least one slab amount.")
     for d in cfg.durations:
@@ -569,8 +569,8 @@ def fmt_pkr(x: float) -> str:
         return "—"
     s = "-" if x < 0 else ""
     x = abs(x)
-    if x >= 1e7:  return f"{s}PKR {x/1e7:.2f} Cr"
-    if x >= 1e5:  return f"{s}PKR {x/1e5:.2f} L"
+    if x >= 1e9:  return f"{s}PKR {x/1e9:.2f}B"
+    if x >= 1e6:  return f"{s}PKR {x/1e6:.2f}M"
     if x >= 1e3:  return f"{s}PKR {x/1e3:.1f}k"
     return f"{s}PKR {x:,.0f}"
 
@@ -846,7 +846,7 @@ def inject_css():
     /* ── Streamlit chrome ─────────────────── */
     #MainMenu {{ visibility: hidden; }}
     footer {{ visibility: hidden; }}
-    header {{ visibility: hidden; }}
+    header [data-testid="stDecoration"] {{ display: none; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -870,7 +870,7 @@ def render_sidebar() -> BachatConfig:
     # ── Brand header ─────────────────────────────────────────────────────────
     st.sidebar.markdown(f"""
     <div class="sb-brand">
-        <div class="sb-brand-name">◉ Bachat ROSCA</div>
+        <div class="sb-brand-name">◉ Bachat KOMMITTEE</div>
         <div class="sb-brand-sub">Pricing &amp; Risk Model</div>
         <span class="sb-brand-pill">v3.0</span>
     </div>""", unsafe_allow_html=True)
@@ -880,7 +880,7 @@ def render_sidebar() -> BachatConfig:
     _sb_section("📦", "PORTFOLIO", BACHAT_GREEN)
 
     chosen_dur = st.sidebar.multiselect(
-        "ROSCA Durations (months)",
+        "KOMMITTEE Durations (months)",
         [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], default=[6],
         help="Select one or more cycle lengths to model simultaneously")
     if not chosen_dur:
@@ -906,10 +906,10 @@ def render_sidebar() -> BachatConfig:
         max_b = dur - 1
         default_b = min(1, max_b)
         blocked_cfg[dur] = st.sidebar.slider(
-            f"Blocked slots — {dur}M ROSCA",
+            f"Blocked slots — {dur}M KOMMITTEE",
             0, max(1, max_b), default_b,
             key=f"blocked_{dur}",
-            help=f"For {dur}-month ROSCA: slots the platform occupies to capture float. "
+            help=f"For {dur}-month KOMMITTEE: slots the platform occupies to capture float. "
                  f"Max = {max_b} (must leave at least 1 user slot).")
     cfg.blocked_slots_config = blocked_cfg
 
@@ -932,7 +932,7 @@ def render_sidebar() -> BachatConfig:
         slot_fees: Dict = {}
         for dur in cfg.durations:
             b_dur = cfg.blocked_slots_config.get(dur, min(1, dur - 1))
-            st.markdown(f"**{dur}-Month ROSCA** ({b_dur} blocked, {dur - b_dur} user slots)")
+            st.markdown(f"**{dur}-Month KOMMITTEE** ({b_dur} blocked, {dur - b_dur} user slots)")
             cols = st.columns(3)
             for idx, slot in enumerate(range(b_dur + 1, dur + 1)):
                 with cols[idx % 3]:
@@ -964,7 +964,7 @@ def render_sidebar() -> BachatConfig:
         help="% of non-churned completers who re-join after their rest period")
     cfg.rest_period_months = st.sidebar.slider(
         "Rest Period (months)", 0, 6, 1,
-        help="Months a user sits out between ROSCA cycles")
+        help="Months a user sits out between KOMMITTEE cycles")
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
     # ── Float / NII ───────────────────────────────────────────────────────────
@@ -1102,8 +1102,8 @@ def render_sidebar() -> BachatConfig:
             st.sidebar.error(f"Slab shares sum to {s_sum:.1f}% (need 100%)")
 
     cfg.market_size = st.sidebar.number_input(
-        "TAM (total ROSCA users)", 100_000, 100_000_000, 5_000_000, 100_000,
-        help="Total addressable market — all ROSCA participants in Pakistan")
+        "TAM (total KOMMITTEE users)", 100_000, 100_000_000, 5_000_000, 100_000,
+        help="Total addressable market — all KOMMITTEE participants in Pakistan")
     cfg.sam_size = st.sidebar.number_input(
         "SAM (serviceable)", 10_000, 50_000_000, 1_000_000, 50_000,
         help="Serviceable addressable market — users reachable by your platform")
@@ -1112,7 +1112,7 @@ def render_sidebar() -> BachatConfig:
         help="Serviceable obtainable market — realistic near-term capture")
     cfg.market_growth_rate = st.sidebar.slider(
         "Market Growth Rate % p.a.", 0.0, 50.0, 15.0, 1.0,
-        help="Annual growth of the total ROSCA market in Pakistan")
+        help="Annual growth of the total KOMMITTEE market in Pakistan")
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
     # ── Simulation Horizon & YoY ──────────────────────────────────────────────
@@ -2111,7 +2111,7 @@ def tab_sensitivity(cfg: BachatConfig):
                    annotation_font=dict(size=11, color=WARNING))
     fig2.update_xaxes(title_text="Slot Fee % of Pot")
     fig2.update_yaxes(title_text="Net Profit per Cycle (PKR)")
-    st.plotly_chart(_theme(fig2, f"Profit vs Fee — {primary_dur}M ROSCA", height=400),
+    st.plotly_chart(_theme(fig2, f"Profit vs Fee — {primary_dur}M KOMMITTEE", height=400),
                     use_container_width=True, config=_CFG_STATIC,
                     key="_pc_16")
 
@@ -2150,7 +2150,7 @@ def tab_raw(df: pd.DataFrame):
 
 def main():
     st.set_page_config(
-        page_title="Bachat ROSCA — Pricing & Risk",
+        page_title="Bachat KOMMITTEE — Pricing & Risk",
         page_icon="◉",
         layout="wide",
         initial_sidebar_state="expanded",
@@ -2177,7 +2177,7 @@ def main():
     st.markdown(f"""
     <div class="hero">
         <div class="hero-left">
-            <h1>Bachat ROSCA — Pricing &amp; Risk</h1>
+            <h1>Bachat KOMMITTEE — Pricing &amp; Risk</h1>
             <p>Slot-conditional defaults · three-principal NII ·
                two-pass lifecycle · {cfg.simulation_months}-month horizon ·
                {cfg.fee_collection_mode} fees</p>
