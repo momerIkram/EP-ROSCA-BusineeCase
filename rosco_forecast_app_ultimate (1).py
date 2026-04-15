@@ -945,10 +945,6 @@ def render_sidebar() -> BachatConfig:
         help="Upfront: full fee at start (higher fee-NII). "
              "Monthly: fee spread over cycle (lower fee-NII).")
 
-    cfg.slot_fee_pct = st.sidebar.slider(
-        "Default Slot Fee % of Pot", 0.0, 15.0, 5.0, 0.5,
-        help="Fee charged to user slot-winners as % of the full pot. "
-             "Override per-slot below.")
 
     # Per-slot fee override expander
     _default_slot_fees = {
