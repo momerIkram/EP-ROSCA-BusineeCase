@@ -74,7 +74,10 @@ class BachatConfig:
     fee_collection_mode: str   = "Upfront"    # "Upfront" | "Monthly"
 
     # Per-slot fee overrides: key = "{duration}_{slot}", value = fee_pct (float)
-    slot_fees_config: Dict     = field(default_factory=dict)
+    slot_fees_config: Dict     = field(default_factory=lambda: {
+        "4_3": 8.0, "4_4": 0.0,
+        "6_4": 8.0, "6_5": 7.0, "6_6": 0.0,
+    })
 
     # ── Interest / NII ─────────────────────────────────────────────────────────
     kibor_rate: float          = 10.5
@@ -948,6 +951,10 @@ def render_sidebar() -> BachatConfig:
              "Override per-slot below.")
 
     # Per-slot fee override expander
+    _default_slot_fees = {
+        "4_3": 8.0, "4_4": 0.0,
+        "6_4": 8.0, "6_5": 7.0, "6_6": 0.0,
+    }
     with st.sidebar.expander("⚙ Per-Slot Fee Overrides (optional)"):
         st.caption("Override the default fee for any specific Duration × Slot. "
                    "Leave blank to use the default above.")
@@ -958,12 +965,14 @@ def render_sidebar() -> BachatConfig:
             cols = st.columns(3)
             for idx, slot in enumerate(range(b_dur + 1, dur + 1)):
                 with cols[idx % 3]:
+                    key = f"{dur}_{slot}"
+                    default_val = _default_slot_fees.get(key, cfg.slot_fee_pct)
                     val = st.number_input(
                         f"Slot {slot} fee %",
                         min_value=0.0, max_value=50.0,
-                        value=cfg.slot_fee_pct, step=0.5,
+                        value=default_val, step=0.5,
                         key=f"sfee_{dur}_{slot}")
-                    slot_fees[f"{dur}_{slot}"] = val
+                    slot_fees[key] = val
         cfg.slot_fees_config = slot_fees
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
