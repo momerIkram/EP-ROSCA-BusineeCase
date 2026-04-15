@@ -1324,8 +1324,24 @@ def _sh(text: str):
 # CHART FUNCTIONS
 # =============================================================================
 
+def _fmt_short(x: float, is_currency: bool = True) -> str:
+    """Compact human-readable format for sparkline annotations."""
+    if x == 0:
+        return "0"
+    s = "-" if x < 0 else ""
+    x = abs(x)
+    if is_currency:
+        if x >= 1e9:  return f"{s}PKR {x/1e9:.1f}B"
+        if x >= 1e6:  return f"{s}PKR {x/1e6:.1f}M"
+        if x >= 1e3:  return f"{s}PKR {x/1e3:.0f}k"
+        return f"{s}PKR {x:,.0f}"
+    if x >= 1e6:  return f"{s}{x/1e6:.2f}M"
+    if x >= 1e3:  return f"{s}{x/1e3:.1f}k"
+    return f"{s}{x:,.0f}"
+
+
 def chart_kpi_sparklines(agg: pd.DataFrame) -> go.Figure:
-    """4-panel KPI cards with headline value, delta badge, and area sparkline."""
+    """4-panel sparkline cards — each shows a title, formatted value, delta %, and area chart."""
     metrics = [
         ("total_revenue_monthly", "Monthly Revenue", BACHAT_GREEN, True),
         ("net_profit_monthly",    "Net Profit",      INFO,         True),
@@ -1334,36 +1350,19 @@ def chart_kpi_sparklines(agg: pd.DataFrame) -> go.Figure:
     ]
 
     fig = make_subplots(
-        rows=2, cols=4,
-        row_heights=[0.38, 0.62],
-        vertical_spacing=0.0,
+        rows=1, cols=4,
         horizontal_spacing=0.06,
-        specs=[[{"type": "indicator"}] * 4,
-               [{"type": "xy"}] * 4],
     )
 
+    annotations = []
     for col_idx, (col, label, color, is_currency) in enumerate(metrics, 1):
         y = agg[col].values if col in agg.columns else np.zeros(len(agg))
         latest = y[-1] if len(y) else 0
         prev   = y[-2] if len(y) > 1 else latest
         delta  = ((latest - prev) / prev * 100) if prev != 0 else 0
-        headline = fmt_pkr(latest) if is_currency else f"{latest:,.0f}"
-
-        fig.add_trace(go.Indicator(
-            mode="number+delta",
-            value=latest,
-            number={"font": {"size": 22, "color": INK, "family": "Inter"},
-                    "valueformat": ",.0f" if not is_currency else ",",
-                    "prefix": "" if not is_currency else ""},
-            delta={"reference": prev, "relative": True,
-                   "valueformat": ".1%",
-                   "increasing": {"color": BACHAT_GREEN if col != "default_loss_monthly" else DANGER},
-                   "decreasing": {"color": DANGER if col != "default_loss_monthly" else BACHAT_GREEN},
-                   "font": {"size": 12}},
-            title={"text": f"<b>{label}</b><br><span style='font-size:13px;color:{SLATE_500}'>"
-                           f"{headline}</span>",
-                   "font": {"size": 12, "color": SLATE_500, "family": "Inter"}},
-        ), row=1, col=col_idx)
+        headline = _fmt_short(latest, is_currency)
+        delta_sign = "+" if delta >= 0 else ""
+        delta_color = (BACHAT_GREEN if col != "default_loss_monthly" else DANGER) if delta >= 0 else (DANGER if col != "default_loss_monthly" else BACHAT_GREEN)
 
         fig.add_trace(go.Scatter(
             x=agg["month"], y=y, mode="lines",
@@ -1373,8 +1372,22 @@ def chart_kpi_sparklines(agg: pd.DataFrame) -> go.Figure:
             showlegend=False,
             hovertemplate=f"<b>{label}</b><br>"
                           "Month %{x}<br>"
-                          "Value: %{y:,.0f}<extra></extra>",
-        ), row=2, col=col_idx)
+                          f"Value: %{{y:,.0f}}<extra></extra>",
+        ), row=1, col=col_idx)
+
+        x_ref = f"x{col_idx} domain" if col_idx > 1 else "x domain"
+        y_ref = f"y{col_idx} domain" if col_idx > 1 else "y domain"
+        annotations.append(dict(
+            text=f"<b style='color:{SLATE_500};font-size:11px'>{label}</b>",
+            x=0.02, y=1.18, xref=x_ref, yref=y_ref,
+            showarrow=False, xanchor="left", font=dict(size=11),
+        ))
+        annotations.append(dict(
+            text=f"<b style='color:{INK};font-size:17px'>{headline}</b>"
+                 f"  <span style='color:{delta_color};font-size:11px'>{delta_sign}{delta:.1f}%</span>",
+            x=0.02, y=1.02, xref=x_ref, yref=y_ref,
+            showarrow=False, xanchor="left", font=dict(size=17),
+        ))
 
     for ax_key in list(fig.layout.to_plotly_json()):
         if ax_key.startswith("xaxis") or ax_key.startswith("yaxis"):
@@ -1382,9 +1395,10 @@ def chart_kpi_sparklines(agg: pd.DataFrame) -> go.Figure:
                                       zeroline=False, showline=False)
 
     fig.update_layout(
-        height=220, margin=dict(l=8, r=8, t=8, b=8),
+        height=180, margin=dict(l=8, r=8, t=60, b=8),
         template=PLOTLY_TEMPLATE, paper_bgcolor=WHITE, plot_bgcolor=WHITE,
         showlegend=False,
+        annotations=annotations,
     )
     return fig
 
@@ -1508,7 +1522,7 @@ def chart_float_timeline(agg: pd.DataFrame) -> go.Figure:
 
 
 def chart_profit_gauge(cfg: BachatConfig) -> go.Figure:
-    """Clean bullet-style indicators: margin %, loss %, profit per user, ROI on float."""
+    """Four horizontal gauge indicators: margin, loss, profit/user, float ROI."""
     eco      = cycle_economics(cfg, cfg.durations[0])
     margin   = eco["net_profit"] / eco["total_revenue"] * 100 if eco["total_revenue"] else 0
     loss_pct = eco["net_default"] / eco["total_revenue"] * 100 if eco["total_revenue"] else 0
@@ -1520,23 +1534,25 @@ def chart_profit_gauge(cfg: BachatConfig) -> go.Figure:
     l_color = BACHAT_GREEN if loss_pct < 8 else (WARNING if loss_pct < 20 else DANGER)
 
     fig = make_subplots(
-        rows=1, cols=4,
-        specs=[[{"type": "indicator"}] * 4],
-        horizontal_spacing=0.06,
+        rows=2, cols=2,
+        specs=[[{"type": "indicator"}] * 2] * 2,
+        horizontal_spacing=0.12,
+        vertical_spacing=0.25,
     )
 
     indicators = [
-        ("Net Margin",       round(margin, 1),         "%",  m_color,  [-20, 80],  0),
-        ("Loss / Revenue",   round(loss_pct, 1),        "%",  l_color,  [0, 50],   20),
-        ("Profit / User",    round(profit_per_user, 0), "",   INFO,     [0, max(profit_per_user * 2, 1000)], None),
-        ("Float ROI",        round(float_roi, 1),       "%",  PURPLE,   [0, max(float_roi * 2, 100)], None),
+        ("Net Margin",     round(margin, 1),         "%",  m_color, [-20, 80],  0,   1, 1),
+        ("Loss / Revenue", round(loss_pct, 1),       "%",  l_color, [0, 50],   20,   1, 2),
+        ("Profit / User",  round(profit_per_user, 0), "",  INFO,    [0, max(profit_per_user * 2, 1000)], None, 2, 1),
+        ("Float ROI",      round(float_roi, 1),      "%",  PURPLE,  [0, max(float_roi * 2, 100)], None, 2, 2),
     ]
 
-    for i, (title, val, suffix, color, axis_range, threshold) in enumerate(indicators, 1):
+    for title, val, suffix, color, axis_range, threshold, row, col in indicators:
         gauge_cfg = {
-            "axis": {"range": axis_range, "tickfont": {"size": 10, "color": SLATE_300},
+            "axis": {"range": axis_range,
+                     "tickfont": {"size": 10, "color": SLATE_300},
                      "dtick": (axis_range[1] - axis_range[0]) / 4},
-            "bar": {"color": color, "thickness": 0.65},
+            "bar": {"color": color, "thickness": 0.6},
             "bgcolor": SLATE_100,
             "borderwidth": 0,
             "shape": "bullet",
@@ -1555,15 +1571,15 @@ def chart_profit_gauge(cfg: BachatConfig) -> go.Figure:
             mode="gauge+number",
             value=val,
             title={"text": f"<b>{title}</b>",
-                   "font": {"size": 12, "color": SLATE_500, "family": "Inter"}},
+                   "font": {"size": 13, "color": SLATE_500, "family": "Inter"}},
             number={"suffix": suffix,
-                    "font": {"size": 24, "color": color, "family": "Inter"},
+                    "font": {"size": 26, "color": color, "family": "Inter"},
                     "valueformat": ",.1f" if suffix == "%" else ",.0f"},
             gauge=gauge_cfg,
-        ), row=1, col=i)
+        ), row=row, col=col)
 
     fig.update_layout(
-        height=170, margin=dict(l=16, r=16, t=36, b=16),
+        height=260, margin=dict(l=24, r=24, t=28, b=16),
         paper_bgcolor=WHITE, plot_bgcolor=WHITE,
     )
     return fig
