@@ -93,7 +93,7 @@ class BachatConfig:
     default_post_pct: float    = 70.0   # % of defaults occurring AFTER payout
 
     # ── Profit split ───────────────────────────────────────────────────────────
-    profit_split_party_a: float = 60.0
+    profit_split_party_a: float = 90.0
 
     # ── Market / TAM ───────────────────────────────────────────────────────────
     use_tam: bool              = False
@@ -1070,7 +1070,7 @@ def render_sidebar() -> BachatConfig:
     _sb_section("🤝", "PROFIT SPLIT", TEAL)
 
     cfg.profit_split_party_a = st.sidebar.slider(
-        "Party A Share %", 0.0, 100.0, 60.0, 1.0,
+        "Party A Share %", 0.0, 100.0, 90.0, 1.0,
         help="Platform/operator share of net profit")
     b_share = 100 - cfg.profit_split_party_a
     st.sidebar.markdown(f"""
