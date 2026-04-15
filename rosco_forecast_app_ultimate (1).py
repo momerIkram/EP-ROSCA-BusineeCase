@@ -1654,21 +1654,21 @@ def tab_overview(cfg: BachatConfig, df: pd.DataFrame):
     insights = generate_insights(cfg, df)
 
     # KPI sparklines
-    st.plotly_chart(chart_kpi_sparklines(agg,
-                    key="_pc_1"),
-                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(chart_kpi_sparklines(agg),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_1")
 
     # Gauges row
-    st.plotly_chart(chart_profit_gauge(cfg,
-                    key="_pc_2"),
-                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(chart_profit_gauge(cfg),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_2")
 
     # Combo chart + right panel
     main_col, right_col = st.columns([2, 1])
     with main_col:
-        st.plotly_chart(chart_revenue_combo(agg,
-                    key="_pc_3"),
-                        use_container_width=True, config=_CFG_STATIC)
+        st.plotly_chart(chart_revenue_combo(agg),
+                        use_container_width=True, config=_CFG_STATIC,
+                        key="_pc_3")
     with right_col:
         items_html = "".join(
             f'<div class="insight-item">{ins}</div>' for ins in insights
@@ -1681,9 +1681,9 @@ def tab_overview(cfg: BachatConfig, df: pd.DataFrame):
 
     # Income statement
     _sh("Cycle Income Statement")
-    st.plotly_chart(chart_income_statement(eco,
-                    key="_pc_4"),
-                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(chart_income_statement(eco),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_4")
 
 
 def tab_risk(cfg: BachatConfig, df: pd.DataFrame):
@@ -1693,9 +1693,9 @@ def tab_risk(cfg: BachatConfig, df: pd.DataFrame):
         "Post-payout: member receives pot then defaults (credit loss / receivable)."
     )
     agg = _agg_monthly(df)
-    st.plotly_chart(chart_default_split(agg,
-                    key="_pc_5"),
-                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(chart_default_split(agg),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_5")
 
     # KPI strip
     c1, c2, c3, c4 = st.columns(4)
@@ -1741,9 +1741,9 @@ def tab_risk(cfg: BachatConfig, df: pd.DataFrame):
 def tab_revenue(cfg: BachatConfig, df: pd.DataFrame):
     _sh("Revenue Components Over Time")
     agg = _agg_monthly(df)
-    st.plotly_chart(chart_revenue_combo(agg,
-                    key="_pc_6"),
-                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(chart_revenue_combo(agg),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_6")
 
     _sh("NII Breakdown")
     annual_rate = cfg.kibor_rate + cfg.spread
@@ -1778,9 +1778,9 @@ def tab_revenue(cfg: BachatConfig, df: pd.DataFrame):
 def tab_users(cfg: BachatConfig, df: pd.DataFrame):
     _sh("User Lifecycle")
     agg = _agg_monthly(df)
-    st.plotly_chart(chart_user_waterfall(agg,
-                    key="_pc_7"),
-                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(chart_user_waterfall(agg),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_7")
 
     # MoM growth metrics
     _sh("Month-on-Month & Year-on-Year Metrics")
@@ -1809,9 +1809,9 @@ def tab_users(cfg: BachatConfig, df: pd.DataFrame):
 def tab_pnl(cfg: BachatConfig, df: pd.DataFrame):
     _sh("Profit & Loss — Yearly Summary with Projections")
     proj = build_yearly_projection(df, cfg, extra_years=3)
-    st.plotly_chart(chart_yoy_projection(proj,
-                    key="_pc_8"),
-                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(chart_yoy_projection(proj),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_8")
 
     st.caption(f"Simulated years use model output. Projected years apply "
                f"{cfg.yoy_growth_rate:.0f}% YoY growth to the last simulated year.")
@@ -1975,12 +1975,12 @@ def tab_scenarios(cfg: BachatConfig):
     )
     scenarios = build_scenarios(cfg)
 
-    st.plotly_chart(chart_scenario_comparison(scenarios,
-                    key="_pc_11"),
-                    use_container_width=True, config=_CFG_STATIC)
-    st.plotly_chart(chart_scenario_revenue(scenarios,
-                    key="_pc_12"),
-                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(chart_scenario_comparison(scenarios),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_11")
+    st.plotly_chart(chart_scenario_revenue(scenarios),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_12")
 
     _sh("Scenario Summary Table")
     summary_rows = []
@@ -2013,13 +2013,13 @@ def tab_market(cfg: BachatConfig, df: pd.DataFrame):
     agg = _agg_monthly(df)
     c1, c2 = st.columns(2)
     with c1:
-        st.plotly_chart(chart_market_funnel(cfg, agg,
-                    key="_pc_13"),
-                        use_container_width=True, config=_CFG_STATIC)
+        st.plotly_chart(chart_market_funnel(cfg, agg),
+                        use_container_width=True, config=_CFG_STATIC,
+                        key="_pc_13")
     with c2:
-        st.plotly_chart(chart_market_growth(cfg,
-                    key="_pc_14"),
-                        use_container_width=True, config=_CFG_STATIC)
+        st.plotly_chart(chart_market_growth(cfg),
+                        use_container_width=True, config=_CFG_STATIC,
+                        key="_pc_14")
 
     # Penetration metrics
     _sh("Penetration Metrics")
@@ -2086,9 +2086,9 @@ def tab_sensitivity(cfg: BachatConfig):
                   annotation_font=dict(size=11, color=WARNING))
     fig.update_xaxes(title_text="User Default Rate (%)")
     fig.update_yaxes(title_text="Net Profit per Cycle (PKR)")
-    st.plotly_chart(_theme(fig, "Profit per Cycle vs Default Rate", height=400,
-                    key="_pc_15"),
-                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(_theme(fig, "Profit per Cycle vs Default Rate", height=400),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_15")
 
     _sh("Fee Sensitivity")
     st.caption("How net profit responds to fee % at different blocking levels.")
@@ -2111,9 +2111,9 @@ def tab_sensitivity(cfg: BachatConfig):
                    annotation_font=dict(size=11, color=WARNING))
     fig2.update_xaxes(title_text="Slot Fee % of Pot")
     fig2.update_yaxes(title_text="Net Profit per Cycle (PKR)")
-    st.plotly_chart(_theme(fig2, f"Profit vs Fee — {primary_dur}M ROSCA", height=400,
-                    key="_pc_16"),
-                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(_theme(fig2, f"Profit vs Fee — {primary_dur}M ROSCA", height=400),
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="_pc_16")
 
     _sh("Fee Mode Impact")
     st.caption("NII earned on collected fees: Upfront (half-cycle hold) vs Monthly (quarter-cycle hold).")
