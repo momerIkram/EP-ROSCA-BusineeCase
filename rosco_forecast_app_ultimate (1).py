@@ -63,7 +63,7 @@ class BachatConfig:
     churn_rate: float          = 5.0
     returning_user_rate: float = 60.0
     rest_period_months: int    = 1
-    simulation_months: int     = 60
+    simulation_months: int     = 48
 
     # ── Portfolio ──────────────────────────────────────────────────────────────
     durations: List[int]       = field(default_factory=lambda: [4, 6])
@@ -1150,7 +1150,7 @@ def render_sidebar() -> BachatConfig:
     cfg.simulation_months = st.sidebar.selectbox(
         "Forecast Length",
         [12, 24, 36, 48, 60],
-        index=4,
+        index=3,
         format_func=lambda x: f"{x} months  ({x//12} year{'s' if x//12>1 else ''})",
         help="Total number of months to simulate")
     cfg.yoy_growth_rate = st.sidebar.slider(
@@ -1856,10 +1856,6 @@ def tab_overview(cfg: BachatConfig, df: pd.DataFrame):
     st.plotly_chart(chart_kpi_sparklines(agg),
                     use_container_width=True, config=_CFG_STATIC,
                     key="_pc_1")
-
-    st.plotly_chart(chart_profit_gauge(cfg),
-                    use_container_width=True, config=_CFG_STATIC,
-                    key="_pc_2")
 
     # ── Combo chart + insights panel ─────────────────────────────────────────
     main_col, right_col = st.columns([2, 1])
