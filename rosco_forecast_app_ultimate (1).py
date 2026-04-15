@@ -1,17 +1,19 @@
 """
-BACHAT ROSCA — Pricing & Risk Model (v2.1)
+BACHAT ROSCA — Pricing & Risk Model (v3.0)
 ==========================================
-UI redesign: finance-dashboard inspired layout
-  - KPI cards with embedded sparklines
-  - Semi-circular gauge charts for margin metrics
-  - Combo bar+line dual-axis chart
-  - Horizontal income statement breakdown (right panel)
-  - Auto-generated Smart Insights
-  - Card-style chart containers with shadows
-  - Two-column overview layout (main | right panel)
+Restores all v1 features dropped in v2, with full validation:
 
-Engine is unchanged from v2.1 (slot-conditional defaults,
-three-principal NII, two-pass lifecycle, O(M) cumsum).
+  1. Pre / post-payout default split  (cfg.default_pre_pct / default_post_pct)
+  2. Fee collection mode              (Upfront vs Monthly, affects fee-NII timing)
+  3. Per-slot granular fee config     (slot_fees_config overrides default slot_fee_pct)
+  4. Multi-slab portfolio             (cfg.slab_amounts: List[int])
+  5. TAM distribution hierarchy       (duration_share × slab_share → user scaling)
+  6. Named scenario analysis          (Base / Optimistic / Pessimistic)
+  7. Market analysis                  (TAM / SAM / SOM, market growth rate)
+  8. YoY growth rate input            (yoy_growth_rate for P&L projections)
+  9. Full validation throughout       (validate_config → errors/warnings in sidebar)
+
+Engine: slot-conditional defaults, three-principal NII, two-pass lifecycle, O(M) cumsum.
 """
 
 import dataclasses
@@ -54,7 +56,8 @@ PLOTLY_COLORWAY = [BACHAT_GREEN, INFO, PURPLE, WARNING, DANGER, TEAL]
 
 @dataclass
 class BachatConfig:
-    """Single source of truth for all model inputs."""
+    """Single source of truth for all model inputs (v3.0)."""
+    # ── User growth ────────────────────────────────────────────────────────────
     starting_users: int        = 500
     monthly_growth_rate: float = 8.0
     churn_rate: float          = 5.0
@@ -62,25 +65,109 @@ class BachatConfig:
     rest_period_months: int    = 1
     simulation_months: int     = 60
 
-    durations: List[int]  = field(default_factory=lambda: [6])
-    slab_amount: int      = 10_000
-    slot_fee_pct: float   = 5.0
-    blocked_slots: int    = 1
+    # ── Portfolio ──────────────────────────────────────────────────────────────
+    durations: List[int]       = field(default_factory=lambda: [6])
+    slab_amounts: List[int]    = field(default_factory=lambda: [10_000])
+    slot_fee_pct: float        = 5.0          # default fee; overridden by slot_fees_config
+    blocked_slots: int         = 1
+    fee_collection_mode: str   = "Upfront"    # "Upfront" | "Monthly"
 
-    kibor_rate: float     = 21.0
-    spread: float         = -3.0
-    collection_day: int   = 1
-    disbursement_day: int = 15
+    # Per-slot fee overrides: key = "{duration}_{slot}", value = fee_pct (float)
+    slot_fees_config: Dict     = field(default_factory=dict)
 
-    default_rate: float   = 8.0
-    recovery_rate: float  = 30.0
-    penalty_pct: float    = 2.0
+    # ── Interest / NII ─────────────────────────────────────────────────────────
+    kibor_rate: float          = 21.0
+    spread: float              = -3.0
+    collection_day: int        = 1
+    disbursement_day: int      = 15
 
+    # ── Default risk ───────────────────────────────────────────────────────────
+    default_rate: float        = 8.0
+    recovery_rate: float       = 30.0
+    penalty_pct: float         = 2.0
+    default_pre_pct: float     = 30.0   # % of defaults occurring BEFORE payout
+    default_post_pct: float    = 70.0   # % of defaults occurring AFTER payout
+
+    # ── Profit split ───────────────────────────────────────────────────────────
     profit_split_party_a: float = 60.0
+
+    # ── Market / TAM ───────────────────────────────────────────────────────────
+    use_tam: bool              = False
+    duration_share: Dict       = field(default_factory=dict)  # {duration: share_pct}
+    slab_share: Dict           = field(default_factory=dict)  # {slab: share_pct}
+    market_size: int           = 5_000_000
+    sam_size: int              = 1_000_000
+    som_size: int              = 100_000
+    market_growth_rate: float  = 15.0
+
+    # ── YoY projection ─────────────────────────────────────────────────────────
+    yoy_growth_rate: float     = 15.0
 
 
 # =============================================================================
-# ENGINE  —  pure functions, no Streamlit (unchanged from v2.1)
+# VALIDATION
+# =============================================================================
+
+def validate_config(cfg: BachatConfig) -> Tuple[List[str], List[str]]:
+    """Return (errors, warnings). Errors block computation; warnings are advisory."""
+    errors: List[str]   = []
+    warnings: List[str] = []
+
+    if not cfg.durations:
+        errors.append("Select at least one ROSCA duration.")
+    if not cfg.slab_amounts:
+        errors.append("Select at least one slab amount.")
+    if cfg.blocked_slots >= min(cfg.durations, default=1):
+        errors.append(
+            f"Blocked slots ({cfg.blocked_slots}) must be < shortest duration "
+            f"({min(cfg.durations)}). No user slots would remain."
+        )
+    if cfg.collection_day >= cfg.disbursement_day:
+        errors.append(
+            f"Collection day ({cfg.collection_day}) must be < disbursement day "
+            f"({cfg.disbursement_day}) for positive base NII."
+        )
+    pre_post_sum = cfg.default_pre_pct + cfg.default_post_pct
+    if abs(pre_post_sum - 100.0) > 0.5:
+        errors.append(
+            f"Pre-payout ({cfg.default_pre_pct:.1f}%) + post-payout "
+            f"({cfg.default_post_pct:.1f}%) must sum to 100% (currently {pre_post_sum:.1f}%)."
+        )
+    if cfg.use_tam:
+        d_sum = sum(cfg.duration_share.get(d, 0.0) for d in cfg.durations)
+        if abs(d_sum - 100.0) > 0.5:
+            errors.append(
+                f"Duration shares sum to {d_sum:.1f}% — must equal 100%."
+            )
+        s_sum = sum(cfg.slab_share.get(s, 0.0) for s in cfg.slab_amounts)
+        if abs(s_sum - 100.0) > 0.5:
+            errors.append(
+                f"Slab shares sum to {s_sum:.1f}% — must equal 100%."
+            )
+        if cfg.som_size > cfg.sam_size:
+            warnings.append("SOM > SAM — SOM cannot exceed addressable market.")
+        if cfg.sam_size > cfg.market_size:
+            warnings.append("SAM > TAM — SAM cannot exceed total market.")
+
+    net_loss_rate = cfg.default_rate * (1 - cfg.recovery_rate / 100)
+    if net_loss_rate > 20:
+        warnings.append(
+            f"Net expected loss rate is {net_loss_rate:.1f}% — extremely high. "
+            "Verify default and recovery assumptions."
+        )
+    if cfg.kibor_rate + cfg.spread <= 0:
+        warnings.append("Effective NII rate is ≤ 0% — no interest income will accrue.")
+    if cfg.monthly_growth_rate > 20:
+        warnings.append(
+            f"Monthly growth rate {cfg.monthly_growth_rate:.1f}% implies "
+            f"{cfg.monthly_growth_rate*12:.0f}%+ annual growth — verify this is realistic."
+        )
+
+    return errors, warnings
+
+
+# =============================================================================
+# ENGINE  —  pure functions, no Streamlit
 # =============================================================================
 
 def held_days(deposit_month: int, payout_month: int,
@@ -103,6 +190,7 @@ def slot_conditional_default_loss(
     duration: int, blocked: int, slab: float,
     default_rate_pct: float, recovery_rate_pct: float
 ) -> Tuple[float, float]:
+    """Returns (gross_loss, net_loss). User slots only (blocked+1..N)."""
     p = default_rate_pct  / 100.0
     r = recovery_rate_pct / 100.0
     gross = sum(max_debtor_position(duration, s, slab) * p
@@ -120,7 +208,7 @@ def platform_float_capital(duration: int, blocked: int, slab: float) -> float:
 
 def base_nii_per_cycle(duration: int, slab: float, annual_rate_pct: float,
                        collection_day: int, disbursement_day: int) -> float:
-    """NII on full monthly pool sitting idle between collection and disbursement.
+    """NII on full monthly pool between collection and disbursement.
     30/360 convention. Principal = N × M (full pot, all members)."""
     if disbursement_day <= collection_day:
         return 0.0
@@ -130,26 +218,79 @@ def base_nii_per_cycle(duration: int, slab: float, annual_rate_pct: float,
 
 def float_nii_per_cycle(duration: int, blocked: int, slab: float,
                         annual_rate_pct: float) -> float:
-    """NII on platform working-capital float from blocked slots. Different
-    principal from base_nii — no double-counting."""
+    """NII on platform working-capital float from blocked slots.
+    Different principal from base_nii — no double-counting."""
     return platform_float_capital(duration, blocked, slab) * (annual_rate_pct / 100.0) / 12.0
 
 
-def fee_nii_per_cycle(total_fees: float, duration: int,
-                      annual_rate_pct: float) -> float:
-    """NII on collected fees held for half the cycle. Different principal."""
-    return nii(total_fees, annual_rate_pct, int((duration * 30) / 2))
+def cycle_fees_and_fee_nii(
+    cfg: BachatConfig, duration: int, slab: float, annual_rate_pct: float
+) -> Tuple[float, float]:
+    """Compute total fees and fee-NII for one cycle, respecting:
+      - per-slot fee overrides in cfg.slot_fees_config
+      - fee_collection_mode ("Upfront" vs "Monthly")
+
+    Upfront:  fee = pot × fee_pct%;  NII hold = half-cycle (N×30/2 days)
+    Monthly:  fee = slab × N × fee_pct%;  NII hold = quarter-cycle (N×30/4 days)
+    Note: fee amount is identical in both modes; timing differs → different NII.
+    """
+    N   = duration
+    pot = N * slab
+    total_fees = 0.0
+    for s in range(cfg.blocked_slots + 1, N + 1):
+        key     = f"{N}_{s}"
+        fee_pct = cfg.slot_fees_config.get(key, cfg.slot_fee_pct)
+        # Both modes charge fee_pct on the full pot (numerically equivalent)
+        total_fees += pot * (fee_pct / 100.0)
+
+    if cfg.fee_collection_mode == "Upfront":
+        hold_days_val = int(N * 30 / 2)   # collected at start, held ~half cycle
+    else:
+        hold_days_val = int(N * 30 / 4)   # collected monthly, avg ~quarter cycle
+
+    f_nii = nii(total_fees, annual_rate_pct, hold_days_val)
+    return total_fees, f_nii
 
 
-def user_lifecycle(cfg: BachatConfig, duration: int) -> pd.DataFrame:
-    """Two-pass cohort-tracked lifecycle. Pass 2 reads return_schedule[m]
-    (written by prior iterations) before processing finish_origin < m, so
-    second-generation churn and multi-cycle returns are correct."""
-    M    = cfg.simulation_months
-    g    = cfg.monthly_growth_rate / 100.0
+def cycle_default_loss_split(
+    cfg: BachatConfig, duration: int, slab: float
+) -> Dict:
+    """Default loss split into pre-payout and post-payout portions.
+
+    Pre-payout defaults: member stops paying before receiving the pot.
+      → Operational loss, immediately affects cash flow.
+    Post-payout defaults: member receives pot then stops paying.
+      → Credit loss, affects receivables provisioning.
+    """
+    gross, net = slot_conditional_default_loss(
+        duration, cfg.blocked_slots, slab, cfg.default_rate, cfg.recovery_rate)
+    penalty  = gross * (cfg.penalty_pct / 100.0)
+    pre_net  = net * (cfg.default_pre_pct  / 100.0)
+    post_net = net * (cfg.default_post_pct / 100.0)
+    return {
+        "gross": gross, "net": net,
+        "pre_net": pre_net, "post_net": post_net,
+        "penalty": penalty,
+    }
+
+
+def user_lifecycle(cfg: BachatConfig, duration: int,
+                   scale_factor: float = 1.0) -> pd.DataFrame:
+    """Two-pass cohort-tracked lifecycle.
+    Pass 1: project new_users growth (geometric).
+    Pass 2: forward loop — returning_users[m] is read from return_schedule[m]
+            before processing finish_origin < m, so second-generation churn
+            and multi-cycle returns are correct.
+    Pass 3: O(M) active-users via np.cumsum sliding window.
+
+    scale_factor: applied to starting_users for TAM distribution.
+    """
+    M        = cfg.simulation_months
+    g        = cfg.monthly_growth_rate / 100.0
     churn    = cfg.churn_rate          / 100.0
     ret_rate = cfg.returning_user_rate / 100.0
     rest     = cfg.rest_period_months
+    start    = float(cfg.starting_users) * scale_factor
 
     new_users       = np.zeros(M + 1)
     returning_users = np.zeros(M + 1)
@@ -159,8 +300,8 @@ def user_lifecycle(cfg: BachatConfig, duration: int) -> pd.DataFrame:
     active_users    = np.zeros(M + 1)
     return_schedule = np.zeros(M + 2)
 
-    new_users[1] = float(cfg.starting_users)
-    cumulative   = float(cfg.starting_users)
+    new_users[1] = start
+    cumulative   = start
     for m in range(2, M + 1):
         cumulative  *= (1.0 + g)
         new_users[m] = max(0.0, cumulative - cumulative / (1.0 + g))
@@ -179,11 +320,11 @@ def user_lifecycle(cfg: BachatConfig, duration: int) -> pd.DataFrame:
             if ret_month <= M:
                 return_schedule[ret_month] += survivors * ret_rate
 
-    combined  = new_users + returning_users
+    combined = new_users + returning_users
     cs = np.cumsum(combined)
     for m in range(1, M + 1):
-        start = max(1, m - duration + 1)
-        active_users[m] = cs[m] - cs[start - 1]
+        start_idx = max(1, m - duration + 1)
+        active_users[m] = cs[m] - cs[start_idx - 1]
 
     return pd.DataFrame({
         "month":                 np.arange(1, M + 1),
@@ -196,124 +337,209 @@ def user_lifecycle(cfg: BachatConfig, duration: int) -> pd.DataFrame:
     })
 
 
+def _tam_scale(cfg: BachatConfig, duration: int, slab: int) -> float:
+    """Scale factor for this duration×slab combination under TAM distribution.
+    Returns 1.0 if use_tam is False."""
+    if not cfg.use_tam:
+        return 1.0
+    n = len(cfg.durations) * len(cfg.slab_amounts)
+    d_pct = cfg.duration_share.get(duration, 100.0 / max(1, len(cfg.durations)))
+    s_pct = cfg.slab_share.get(slab,     100.0 / max(1, len(cfg.slab_amounts)))
+    return (d_pct / 100.0) * (s_pct / 100.0)
+
+
 def build_forecast(cfg: BachatConfig) -> pd.DataFrame:
-    """O(M) monthly forecast across all durations. All columns are _monthly."""
-    rows = []
+    """Monthly forecast across all durations × slab_amounts.
+    O(M) via cumsum per combo. All revenue columns are _monthly."""
+    rows        = []
     annual_rate = cfg.kibor_rate + cfg.spread
-    M = cfg.simulation_months
+    M           = cfg.simulation_months
 
     for duration in cfg.durations:
-        slab = cfg.slab_amount
-        N    = duration
-        pot  = N * slab
-        user_slots = N - cfg.blocked_slots
+        for slab in cfg.slab_amounts:
+            N            = duration
+            pot          = N * slab
+            scale        = _tam_scale(cfg, duration, slab)
+            user_slots   = N - cfg.blocked_slots
 
-        cycle_base_nii  = base_nii_per_cycle(N, slab, annual_rate,
-                                             cfg.collection_day, cfg.disbursement_day)
-        cycle_float_nii = float_nii_per_cycle(N, cfg.blocked_slots, slab, annual_rate)
-        cycle_fees      = user_slots * pot * (cfg.slot_fee_pct / 100.0)
-        cycle_fee_nii   = fee_nii_per_cycle(cycle_fees, N, annual_rate)
-        gross_def, net_def = slot_conditional_default_loss(
-            N, cfg.blocked_slots, slab, cfg.default_rate, cfg.recovery_rate)
-        cycle_penalty   = gross_def * (cfg.penalty_pct / 100.0)
-        cycle_float_pkr = platform_float_capital(N, cfg.blocked_slots, slab)
-        avg_float       = cycle_float_pkr / N if N > 0 else 0.0
+            cycle_base_nii  = base_nii_per_cycle(
+                N, slab, annual_rate, cfg.collection_day, cfg.disbursement_day)
+            cycle_float_nii = float_nii_per_cycle(N, cfg.blocked_slots, slab, annual_rate)
+            cycle_fees, cycle_fee_nii = cycle_fees_and_fee_nii(
+                cfg, N, slab, annual_rate)
+            def_split       = cycle_default_loss_split(cfg, N, slab)
+            net_def         = def_split["net"]
+            pre_net         = def_split["pre_net"]
+            post_net        = def_split["post_net"]
+            cycle_penalty   = def_split["penalty"]
+            cycle_float_pkr = platform_float_capital(N, cfg.blocked_slots, slab)
+            avg_float       = cycle_float_pkr / N if N > 0 else 0.0
 
-        lifecycle = user_lifecycle(cfg, N)
-        combined  = (lifecycle["new_users"].values +
-                     lifecycle["returning_users"].values).astype(float) / N
-        cs_groups = np.concatenate([[0.0], np.cumsum(combined)])
+            lifecycle = user_lifecycle(cfg, N, scale_factor=scale)
+            combined  = (lifecycle["new_users"].values +
+                         lifecycle["returning_users"].values).astype(float) / N
+            cs_groups = np.concatenate([[0.0], np.cumsum(combined)])
 
-        for m in range(1, M + 1):
-            row_lc = lifecycle.iloc[m - 1]
-            start  = max(0, m - N)
-            gr     = cs_groups[m] - cs_groups[start]
-            k      = gr / N
+            for m in range(1, M + 1):
+                row_lc = lifecycle.iloc[m - 1]
+                start  = max(0, m - N)
+                gr     = cs_groups[m] - cs_groups[start]
+                k      = gr / N
 
-            m_base   = cycle_base_nii  * k
-            m_float  = cycle_float_nii * k
-            m_fee_nii= cycle_fee_nii   * k
-            m_fees   = cycle_fees      * k
-            m_pen    = cycle_penalty   * k
-            m_loss   = net_def         * k
-            m_rev    = m_base + m_float + m_fee_nii + m_fees + m_pen
-            m_profit = m_rev - m_loss
-            m_a      = m_profit * (cfg.profit_split_party_a / 100.0)
+                m_base    = cycle_base_nii   * k
+                m_float   = cycle_float_nii  * k
+                m_fee_nii = cycle_fee_nii    * k
+                m_fees    = cycle_fees       * k
+                m_pen     = cycle_penalty    * k
+                m_loss    = net_def          * k
+                m_pre     = pre_net          * k
+                m_post    = post_net         * k
+                m_rev     = m_base + m_float + m_fee_nii + m_fees + m_pen
+                m_profit  = m_rev - m_loss
+                m_a       = m_profit * (cfg.profit_split_party_a / 100.0)
 
-            rows.append({
-                "month": m, "year": ((m - 1) // 12) + 1,
-                "duration": N, "slab_amount": slab,
-                "new_users":       int(row_lc["new_users"]),
-                "returning_users": int(row_lc["returning_users"]),
-                "active_users":    int(row_lc["active_users_in_cycle"]),
-                "churned_users":   int(row_lc["churned_users"]),
-                "groups_started_monthly": (row_lc["new_users"] + row_lc["returning_users"]) / N,
-                "groups_running_monthly": gr,
-                "pot_disbursed_monthly":      pot   * gr,
-                "user_contributions_monthly": N * slab * gr,
-                "float_outstanding_monthly":  avg_float * gr,
-                "base_nii_monthly":       m_base,
-                "float_nii_monthly":      m_float,
-                "fee_nii_monthly":        m_fee_nii,
-                "fees_monthly":           m_fees,
-                "penalty_income_monthly": m_pen,
-                "default_loss_monthly":   m_loss,
-                "total_revenue_monthly":  m_rev,
-                "net_profit_monthly":     m_profit,
-                "party_a_monthly":        m_a,
-                "party_b_monthly":        m_profit - m_a,
-            })
+                rows.append({
+                    "month": m, "year": ((m - 1) // 12) + 1,
+                    "duration": N, "slab_amount": slab,
+                    "new_users":       int(row_lc["new_users"]),
+                    "returning_users": int(row_lc["returning_users"]),
+                    "active_users":    int(row_lc["active_users_in_cycle"]),
+                    "churned_users":   int(row_lc["churned_users"]),
+                    "groups_started_monthly": (row_lc["new_users"] +
+                                               row_lc["returning_users"]) / N,
+                    "groups_running_monthly": gr,
+                    "pot_disbursed_monthly":          pot   * gr,
+                    "user_contributions_monthly":     N * slab * gr,
+                    "float_outstanding_monthly":      avg_float * gr,
+                    "base_nii_monthly":               m_base,
+                    "float_nii_monthly":              m_float,
+                    "fee_nii_monthly":                m_fee_nii,
+                    "fees_monthly":                   m_fees,
+                    "penalty_income_monthly":         m_pen,
+                    "pre_payout_loss_monthly":        m_pre,
+                    "post_payout_loss_monthly":       m_post,
+                    "default_loss_monthly":           m_loss,
+                    "total_revenue_monthly":          m_rev,
+                    "net_profit_monthly":             m_profit,
+                    "party_a_monthly":                m_a,
+                    "party_b_monthly":                m_profit - m_a,
+                })
 
     return pd.DataFrame(rows)
 
 
-def cycle_economics(cfg: BachatConfig, duration: int) -> Dict:
-    slab, N     = cfg.slab_amount, duration
+def cycle_economics(cfg: BachatConfig, duration: int, slab: int = 0) -> Dict:
+    """Per-cycle economics summary for a single duration × slab."""
+    if slab == 0:
+        slab = cfg.slab_amounts[0] if cfg.slab_amounts else 10_000
     annual_rate = cfg.kibor_rate + cfg.spread
+    N           = duration
     pot         = N * slab
-    user_slots  = N - cfg.blocked_slots
-    b_nii  = base_nii_per_cycle(N, slab, annual_rate, cfg.collection_day, cfg.disbursement_day)
-    fl_nii = float_nii_per_cycle(N, cfg.blocked_slots, slab, annual_rate)
-    fees   = user_slots * pot * (cfg.slot_fee_pct / 100.0)
-    f_nii  = fee_nii_per_cycle(fees, N, annual_rate)
-    gross_def, net_def = slot_conditional_default_loss(
-        N, cfg.blocked_slots, slab, cfg.default_rate, cfg.recovery_rate)
-    penalty   = gross_def * (cfg.penalty_pct / 100.0)
-    total_rev = b_nii + fl_nii + fees + f_nii + penalty
-    fpm       = platform_float_capital(N, cfg.blocked_slots, slab)
+
+    b_nii       = base_nii_per_cycle(N, slab, annual_rate,
+                                     cfg.collection_day, cfg.disbursement_day)
+    fl_nii      = float_nii_per_cycle(N, cfg.blocked_slots, slab, annual_rate)
+    fees, f_nii = cycle_fees_and_fee_nii(cfg, N, slab, annual_rate)
+    def_split   = cycle_default_loss_split(cfg, N, slab)
+    net_def     = def_split["net"]
+    penalty     = def_split["penalty"]
+    total_rev   = b_nii + fl_nii + fees + f_nii + penalty
+    fpm         = platform_float_capital(N, cfg.blocked_slots, slab)
+
     return {
-        "duration": N, "pot": pot, "user_slots": user_slots,
-        "base_nii": b_nii, "float_nii": fl_nii, "fees": fees, "fee_nii": f_nii,
-        "gross_default": gross_def, "net_default": net_def,
-        "penalty_income": penalty, "total_revenue": total_rev,
+        "duration": N, "slab": slab, "pot": pot,
+        "user_slots": N - cfg.blocked_slots,
+        "base_nii": b_nii, "float_nii": fl_nii,
+        "fees": fees, "fee_nii": f_nii,
+        "gross_default": def_split["gross"],
+        "net_default": net_def,
+        "pre_payout_loss": def_split["pre_net"],
+        "post_payout_loss": def_split["post_net"],
+        "penalty_income": penalty,
+        "total_revenue": total_rev,
         "net_profit": total_rev - net_def,
         "float_pkr_months": fpm,
         "avg_float_outstanding": fpm / N if N > 0 else 0.0,
         "max_single_default_loss": max(
-            (max_debtor_position(N, s, slab) for s in range(cfg.blocked_slots + 1, N + 1)),
+            (max_debtor_position(N, s, slab)
+             for s in range(cfg.blocked_slots + 1, N + 1)),
             default=0.0),
     }
 
 
-def build_slot_table(cfg: BachatConfig, duration: int) -> pd.DataFrame:
-    slab, N = cfg.slab_amount, duration
+def build_slot_table(cfg: BachatConfig, duration: int, slab: int = 0) -> pd.DataFrame:
+    if slab == 0:
+        slab = cfg.slab_amounts[0] if cfg.slab_amounts else 10_000
+    N   = duration
     rows = []
     for slot in range(1, N + 1):
-        is_plat = slot <= cfg.blocked_slots
-        max_d   = 0.0 if is_plat else max_debtor_position(N, slot, slab)
+        is_plat  = slot <= cfg.blocked_slots
+        max_d    = 0.0 if is_plat else max_debtor_position(N, slot, slab)
         exp_loss = (0.0 if is_plat else
                     max_d * (cfg.default_rate / 100.0) * (1 - cfg.recovery_rate / 100.0))
+        key      = f"{N}_{slot}"
+        fee_pct  = cfg.slot_fees_config.get(key, cfg.slot_fee_pct) if not is_plat else 0.0
         rows.append({
-            "Slot": slot,
-            "Holder": "PLATFORM" if is_plat else "USER",
-            "Receives Pot (PKR)": N * slab,
+            "Slot":                        slot,
+            "Holder":                      "PLATFORM" if is_plat else "USER",
+            "Receives Pot (PKR)":          N * slab,
             "Paid Before Receiving (PKR)": (slot - 1) * slab,
-            "Max Debtor Position (PKR)": max_d,
-            "Expected Loss (PKR)": exp_loss,
-            "Status": ("Platform-held (safe)" if is_plat
-                       else ("User: SAFE (last slot)" if slot == N else "User: AT RISK")),
+            "Max Debtor Position (PKR)":   max_d,
+            "Expected Loss (PKR)":         exp_loss,
+            "Fee %":                       fee_pct,
+            "Fee (PKR)":                   N * slab * (fee_pct / 100.0),
+            "Status":                      ("Platform-held (safe)" if is_plat else
+                                            ("User: SAFE (last slot)" if slot == N
+                                             else "User: AT RISK")),
         })
     return pd.DataFrame(rows)
+
+
+def build_scenarios(cfg: BachatConfig) -> Dict[str, pd.DataFrame]:
+    """Build Base / Optimistic / Pessimistic scenario forecasts."""
+    base = build_forecast(cfg)
+    opt  = build_forecast(dataclasses.replace(
+        cfg,
+        default_rate  = cfg.default_rate  * 0.50,
+        monthly_growth_rate = cfg.monthly_growth_rate * 1.25,
+        recovery_rate = min(100.0, cfg.recovery_rate * 1.20),
+    ))
+    pess = build_forecast(dataclasses.replace(
+        cfg,
+        default_rate  = cfg.default_rate  * 2.00,
+        monthly_growth_rate = cfg.monthly_growth_rate * 0.60,
+        recovery_rate = cfg.recovery_rate * 0.70,
+    ))
+    return {"Base": base, "Optimistic": opt, "Pessimistic": pess}
+
+
+def build_yearly_projection(df: pd.DataFrame, cfg: BachatConfig,
+                             extra_years: int = 3) -> pd.DataFrame:
+    """Actual simulated years + YoY-extrapolated extra years."""
+    yearly = (df.groupby("year")
+                .agg(revenue=("total_revenue_monthly", "sum"),
+                     profit =("net_profit_monthly",    "sum"),
+                     loss   =("default_loss_monthly",  "sum"),
+                     fees   =("fees_monthly",           "sum"),
+                     users  =("active_users",           "max"))
+                .reset_index())
+    yearly["source"] = "Simulated"
+
+    last_year = int(yearly["year"].max())
+    last_row  = yearly.iloc[-1]
+    g = cfg.yoy_growth_rate / 100.0
+    ext_rows = []
+    for i in range(1, extra_years + 1):
+        ext_rows.append({
+            "year":    last_year + i,
+            "revenue": last_row["revenue"] * (1 + g) ** i,
+            "profit":  last_row["profit"]  * (1 + g) ** i,
+            "loss":    last_row["loss"]    * (1 + g) ** i,
+            "fees":    last_row["fees"]    * (1 + g) ** i,
+            "users":   int(last_row["users"] * (1 + g) ** i),
+            "source":  "Projected",
+        })
+    return pd.concat([yearly, pd.DataFrame(ext_rows)], ignore_index=True)
 
 
 # =============================================================================
@@ -385,6 +611,20 @@ def inject_css():
         padding: 0.35rem 0.9rem;
         border-radius: 999px;
         white-space: nowrap;
+    }}
+
+    /* ── Validation banner ───────────────── */
+    .val-error {{
+        background: #FEF2F2; border: 1px solid {DANGER};
+        border-left: 4px solid {DANGER};
+        border-radius: 8px; padding: 0.7rem 1rem;
+        font-size: 0.82rem; color: {DANGER}; margin-bottom: 0.5rem;
+    }}
+    .val-warn {{
+        background: #FFFBEB; border: 1px solid {WARNING};
+        border-left: 4px solid {WARNING};
+        border-radius: 8px; padding: 0.7rem 1rem;
+        font-size: 0.82rem; color: #92400E; margin-bottom: 0.5rem;
     }}
 
     /* ── KPI / Chart cards ────────────────── */
@@ -594,7 +834,6 @@ def inject_css():
 
 
 def _sb_section(icon: str, title: str, color: str = BACHAT_GREEN):
-    """Render a section card header inside the sidebar."""
     st.sidebar.markdown(f"""
     <div class="sb-section-title">
         <span class="sb-section-icon"
@@ -602,6 +841,10 @@ def _sb_section(icon: str, title: str, color: str = BACHAT_GREEN):
         {title}
     </div>""", unsafe_allow_html=True)
 
+
+# =============================================================================
+# SIDEBAR
+# =============================================================================
 
 def render_sidebar() -> BachatConfig:
     cfg = BachatConfig()
@@ -611,35 +854,68 @@ def render_sidebar() -> BachatConfig:
     <div class="sb-brand">
         <div class="sb-brand-name">◉ Bachat ROSCA</div>
         <div class="sb-brand-sub">Pricing &amp; Risk Model</div>
-        <span class="sb-brand-pill">v2.1</span>
+        <span class="sb-brand-pill">v3.0</span>
     </div>""", unsafe_allow_html=True)
 
-    # ── Product ───────────────────────────────────────────────────────────────
+    # ── Portfolio (Durations + Slabs) ─────────────────────────────────────────
     st.sidebar.markdown('<div class="sb-section">', unsafe_allow_html=True)
-    _sb_section("📦", "PRODUCT", BACHAT_GREEN)
+    _sb_section("📦", "PORTFOLIO", BACHAT_GREEN)
 
-    chosen = st.sidebar.multiselect(
+    chosen_dur = st.sidebar.multiselect(
         "ROSCA Durations (months)",
         [3, 4, 5, 6, 7, 8, 9, 10, 11, 12], default=[6],
         help="Select one or more cycle lengths to model simultaneously")
-    if not chosen:
+    if not chosen_dur:
         st.sidebar.error("Select at least one duration.")
-        st.stop()
-    cfg.durations = sorted(chosen)
+        chosen_dur = [6]
+    cfg.durations = sorted(chosen_dur)
 
-    cfg.slab_amount = st.sidebar.number_input(
-        "Monthly Contribution (PKR)",
-        min_value=1_000, max_value=500_000, value=10_000, step=1_000,
-        help="Fixed amount each member contributes per month")
+    SLAB_OPTIONS = [5_000, 10_000, 15_000, 20_000, 25_000, 30_000, 50_000, 100_000]
+    chosen_slabs = st.sidebar.multiselect(
+        "Monthly Contribution Slabs (PKR)",
+        SLAB_OPTIONS,
+        default=[10_000],
+        format_func=lambda x: f"PKR {x:,}",
+        help="Each slab is modelled as a separate portfolio segment")
+    if not chosen_slabs:
+        st.sidebar.error("Select at least one slab amount.")
+        chosen_slabs = [10_000]
+    cfg.slab_amounts = sorted(chosen_slabs)
 
     max_b = min(cfg.durations) - 1
     cfg.blocked_slots = st.sidebar.slider(
         "Platform-Blocked Slots", 0, max(1, max_b), min(1, max_b),
         help="Early slots the platform takes to capture working-capital float")
 
+    cfg.fee_collection_mode = st.sidebar.radio(
+        "Fee Collection Mode",
+        ["Upfront", "Monthly"],
+        horizontal=True,
+        help="Upfront: full fee at start (higher fee-NII). "
+             "Monthly: fee spread over cycle (lower fee-NII).")
+
     cfg.slot_fee_pct = st.sidebar.slider(
-        "Slot Fee % of Pot", 0.0, 15.0, 5.0, 0.5,
-        help="Fee charged to user slot-winners as % of the full pot")
+        "Default Slot Fee % of Pot", 0.0, 15.0, 5.0, 0.5,
+        help="Fee charged to user slot-winners as % of the full pot. "
+             "Override per-slot below.")
+
+    # Per-slot fee override expander
+    with st.sidebar.expander("⚙ Per-Slot Fee Overrides (optional)"):
+        st.caption("Override the default fee for any specific Duration × Slot. "
+                   "Leave blank to use the default above.")
+        slot_fees: Dict = {}
+        for dur in cfg.durations:
+            st.markdown(f"**{dur}-Month ROSCA**")
+            cols = st.columns(3)
+            for idx, slot in enumerate(range(cfg.blocked_slots + 1, dur + 1)):
+                with cols[idx % 3]:
+                    val = st.number_input(
+                        f"Slot {slot} fee %",
+                        min_value=0.0, max_value=50.0,
+                        value=cfg.slot_fee_pct, step=0.5,
+                        key=f"sfee_{dur}_{slot}")
+                    slot_fees[f"{dur}_{slot}"] = val
+        cfg.slot_fees_config = slot_fees
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
     # ── User Growth ───────────────────────────────────────────────────────────
@@ -710,6 +986,18 @@ def render_sidebar() -> BachatConfig:
         "Penalty % on Defaults", 0.0, 10.0, 2.0, 0.5,
         help="Additional fee charged on the defaulted principal — becomes platform income")
 
+    st.sidebar.caption("Pre/Post Payout Default Split — must sum to 100%")
+    col_pre, col_post = st.sidebar.columns(2)
+    cfg.default_pre_pct  = col_pre.number_input(
+        "Pre-Payout %", 0.0, 100.0, 30.0, 5.0,
+        help="Defaults BEFORE user receives pot (operational loss)")
+    cfg.default_post_pct = col_post.number_input(
+        "Post-Payout %", 0.0, 100.0, 70.0, 5.0,
+        help="Defaults AFTER user receives pot (credit loss)")
+    pre_post_sum = cfg.default_pre_pct + cfg.default_post_pct
+    if abs(pre_post_sum - 100.0) > 0.5:
+        st.sidebar.error(f"Pre + Post = {pre_post_sum:.1f}% ≠ 100%")
+
     net_exp_pct = cfg.default_rate * (1 - cfg.recovery_rate / 100)
     exp_color   = BACHAT_GREEN_DARK if net_exp_pct < 5 else (WARNING if net_exp_pct < 12 else DANGER)
     st.sidebar.markdown(f"""
@@ -752,9 +1040,57 @@ def render_sidebar() -> BachatConfig:
     </div>""", unsafe_allow_html=True)
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-    # ── Simulation Horizon ────────────────────────────────────────────────────
+    # ── Market / TAM ──────────────────────────────────────────────────────────
     st.sidebar.markdown('<div class="sb-section">', unsafe_allow_html=True)
-    _sb_section("📅", "SIMULATION HORIZON", SLATE_500)
+    _sb_section("🌍", "MARKET / TAM", WARNING)
+
+    cfg.use_tam = st.sidebar.toggle(
+        "Enable TAM Distribution",
+        value=False,
+        help="Scale users per duration×slab by their market share percentages")
+
+    if cfg.use_tam:
+        st.sidebar.caption("Duration shares (must sum to 100%)")
+        d_shares: Dict = {}
+        even_d = 100.0 / len(cfg.durations)
+        for dur in cfg.durations:
+            d_shares[dur] = st.sidebar.slider(
+                f"{dur}M share %", 0.0, 100.0, even_d, 1.0,
+                key=f"dshare_{dur}")
+        cfg.duration_share = d_shares
+        d_sum = sum(d_shares.values())
+        if abs(d_sum - 100.0) > 0.5:
+            st.sidebar.error(f"Duration shares sum to {d_sum:.1f}% (need 100%)")
+
+        st.sidebar.caption("Slab shares (must sum to 100%)")
+        s_shares: Dict = {}
+        even_s = 100.0 / len(cfg.slab_amounts)
+        for slab in cfg.slab_amounts:
+            s_shares[slab] = st.sidebar.slider(
+                f"PKR {slab:,} share %", 0.0, 100.0, even_s, 1.0,
+                key=f"sshare_{slab}")
+        cfg.slab_share = s_shares
+        s_sum = sum(s_shares.values())
+        if abs(s_sum - 100.0) > 0.5:
+            st.sidebar.error(f"Slab shares sum to {s_sum:.1f}% (need 100%)")
+
+    cfg.market_size = st.sidebar.number_input(
+        "TAM (total ROSCA users)", 100_000, 100_000_000, 5_000_000, 100_000,
+        help="Total addressable market — all ROSCA participants in Pakistan")
+    cfg.sam_size = st.sidebar.number_input(
+        "SAM (serviceable)", 10_000, 50_000_000, 1_000_000, 50_000,
+        help="Serviceable addressable market — users reachable by your platform")
+    cfg.som_size = st.sidebar.number_input(
+        "SOM (obtainable)", 1_000, 10_000_000, 100_000, 10_000,
+        help="Serviceable obtainable market — realistic near-term capture")
+    cfg.market_growth_rate = st.sidebar.slider(
+        "Market Growth Rate % p.a.", 0.0, 50.0, 15.0, 1.0,
+        help="Annual growth of the total ROSCA market in Pakistan")
+    st.sidebar.markdown('</div>', unsafe_allow_html=True)
+
+    # ── Simulation Horizon & YoY ──────────────────────────────────────────────
+    st.sidebar.markdown('<div class="sb-section">', unsafe_allow_html=True)
+    _sb_section("📅", "HORIZON & PROJECTIONS", SLATE_500)
 
     cfg.simulation_months = st.sidebar.selectbox(
         "Forecast Length",
@@ -762,10 +1098,14 @@ def render_sidebar() -> BachatConfig:
         index=4,
         format_func=lambda x: f"{x} months  ({x//12} year{'s' if x//12>1 else ''})",
         help="Total number of months to simulate")
+    cfg.yoy_growth_rate = st.sidebar.slider(
+        "YoY Projection Growth %", 0.0, 50.0, 15.0, 1.0,
+        help="Annual growth rate used to project P&L beyond the simulation window")
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
     # ── Live Config Summary ───────────────────────────────────────────────────
-    pot = min(cfg.durations) * cfg.slab_amount
+    min_pot = min(cfg.durations) * min(cfg.slab_amounts)
+    slabs_str = ", ".join(f"PKR {s:,}" for s in cfg.slab_amounts)
     st.sidebar.markdown(f"""
     <div class="sb-summary">
         <div class="sb-summary-title">◉ Active Configuration</div>
@@ -774,20 +1114,28 @@ def render_sidebar() -> BachatConfig:
             <b>{", ".join(f"{d}M" for d in cfg.durations)}</b>
         </div>
         <div class="sb-summary-row">
-            <span>Pot (shortest)</span>
-            <b>PKR {pot:,}</b>
+            <span>Slab(s)</span>
+            <b>{slabs_str}</b>
+        </div>
+        <div class="sb-summary-row">
+            <span>Min Pot</span>
+            <b>PKR {min_pot:,}</b>
         </div>
         <div class="sb-summary-row">
             <span>Effective Rate</span>
             <b>{cfg.kibor_rate + cfg.spread:.2f}%</b>
         </div>
         <div class="sb-summary-row">
-            <span>Blocked Slots</span>
-            <b>{cfg.blocked_slots} of {min(cfg.durations)}</b>
+            <span>Fee Mode</span>
+            <b>{cfg.fee_collection_mode}</b>
         </div>
         <div class="sb-summary-row">
             <span>Net Loss Rate</span>
             <b>{cfg.default_rate * (1 - cfg.recovery_rate/100):.1f}%</b>
+        </div>
+        <div class="sb-summary-row">
+            <span>Pre / Post Default</span>
+            <b>{cfg.default_pre_pct:.0f}% / {cfg.default_post_pct:.0f}%</b>
         </div>
         <div class="sb-summary-row">
             <span>Horizon</span>
@@ -840,9 +1188,10 @@ def generate_insights(cfg: BachatConfig, df: pd.DataFrame) -> List[str]:
     )
 
     # 4 — breakeven default rate
+    slab0 = cfg.slab_amounts[0]
     for r in range(0, 51):
         c2 = dataclasses.replace(cfg, default_rate=float(r))
-        if cycle_economics(c2, cfg.durations[0])["net_profit"] < 0:
+        if cycle_economics(c2, cfg.durations[0], slab0)["net_profit"] < 0:
             safety = r - cfg.default_rate
             insights.append(
                 f"Breakeven default rate: <b>{r}%</b>. "
@@ -851,13 +1200,17 @@ def generate_insights(cfg: BachatConfig, df: pd.DataFrame) -> List[str]:
             )
             break
 
-    # 5 — default share of revenue
-    total_loss = df["default_loss_monthly"].sum()
+    # 5 — default split
+    total_pre  = df["pre_payout_loss_monthly"].sum()
+    total_post = df["post_payout_loss_monthly"].sum()
+    total_loss = total_pre + total_post
     total_rev  = df["total_revenue_monthly"].sum()
     loss_pct   = total_loss / total_rev * 100 if total_rev else 0
     insights.append(
-        f"Default losses consume <b>{loss_pct:.1f}%</b> of total revenue "
-        f"({fmt_pkr(total_loss)} of {fmt_pkr(total_rev)})."
+        f"Default losses consume <b>{loss_pct:.1f}%</b> of revenue "
+        f"({fmt_pkr(total_loss)}): "
+        f"<b>{fmt_pkr(total_pre)}</b> pre-payout (operational) + "
+        f"<b>{fmt_pkr(total_post)}</b> post-payout (credit)."
     )
 
     # 6 — returning-user share
@@ -876,8 +1229,11 @@ def generate_insights(cfg: BachatConfig, df: pd.DataFrame) -> List[str]:
 
 
 # =============================================================================
-# VIZ
+# VIZ HELPERS
 # =============================================================================
+
+_CFG_STATIC = {"displayModeBar": False}
+
 
 def _theme(fig: go.Figure, title: str = "", height: int = 380) -> go.Figure:
     fig.update_layout(
@@ -898,751 +1254,602 @@ def _theme(fig: go.Figure, title: str = "", height: int = 380) -> go.Figure:
     return fig
 
 
-# ── KPI card with sparkline (text annotations + sparkline trace) ─────────────
-
-def chart_kpi(label: str, value_str: str, sub: str,
-              data: np.ndarray, color: str,
-              delta_str: str = "", height: int = 155) -> go.Figure:
-    """Full KPI card as a single Plotly figure.
-    Sparkline occupies the bottom 38% of the y-axis range;
-    metric text floats above via annotations — no double rendering."""
-    y  = list(data) if data is not None and len(data) > 0 else [0, 0]
-    x  = list(range(len(y)))
-    lo, hi = min(y), max(y)
-    span   = (hi - lo) if hi != lo else 1.0
-    # Scale so data sits in [0, 0.38]; text lives in [0.42, 1]
-    ys = [(v - lo) / span * 0.38 for v in y]
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=x, y=ys, mode="lines",
-        line=dict(color=color, width=2.5),
-        fill="tozeroy", fillcolor=_hex_rgba(color, 0.18),
-        hoverinfo="skip",
-    ))
-
-    # Metric label
-    fig.add_annotation(
-        text=label, xref="paper", yref="paper",
-        x=0.05, y=0.98, xanchor="left", yanchor="top", showarrow=False,
-        font=dict(size=10, color=SLATE_500, family="Inter"),
-    )
-    # Main value
-    fig.add_annotation(
-        text=f"<b>{value_str}</b>", xref="paper", yref="paper",
-        x=0.05, y=0.83, xanchor="left", yanchor="top", showarrow=False,
-        font=dict(size=20, color=INK, family="Inter"),
-    )
-    # Sub-label
-    if sub:
-        fig.add_annotation(
-            text=sub, xref="paper", yref="paper",
-            x=0.05, y=0.61, xanchor="left", yanchor="top", showarrow=False,
-            font=dict(size=10, color=SLATE_500, family="Inter"),
-        )
-    # Delta badge (top-right)
-    if delta_str:
-        dc = BACHAT_GREEN_DARK if delta_str.startswith("+") else DANGER
-        fig.add_annotation(
-            text=f"<b>{delta_str}</b>", xref="paper", yref="paper",
-            x=0.97, y=0.98, xanchor="right", yanchor="top", showarrow=False,
-            font=dict(size=11, color=dc, family="Inter"),
-        )
-
-    fig.update_layout(
-        height=height,
-        margin=dict(l=14, r=14, t=14, b=8),
-        plot_bgcolor=WHITE, paper_bgcolor=WHITE,
-        xaxis=dict(visible=False, fixedrange=True),
-        yaxis=dict(visible=False, fixedrange=True, range=[0, 1.05]),
-        showlegend=False,
-    )
-    return fig
-
-
-# ── Gauge ─────────────────────────────────────────────────────────────────────
-
-def chart_gauge(value: float, title: str, max_val: float = 100.0,
-                suffix: str = "%", color: str = BACHAT_GREEN) -> go.Figure:
-    """Semi-circular gauge with colour-banded background."""
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=value,
-        number={"suffix": suffix, "font": {"size": 30, "color": INK, "family": "Inter"},
-                "valueformat": ".1f"},
-        title={"text": title,
-               "font": {"size": 12, "color": SLATE_500, "family": "Inter"}},
-        gauge={
-            "axis": {"range": [0, max_val], "tickwidth": 1,
-                     "tickcolor": SLATE_300, "tickfont": {"size": 9}},
-            "bar": {"color": color, "thickness": 0.28},
-            "bgcolor": WHITE, "borderwidth": 0,
-            "steps": [
-                {"range": [0,           max_val * 0.33], "color": "#FEE2E2"},
-                {"range": [max_val*0.33, max_val * 0.66], "color": "#FEF3C7"},
-                {"range": [max_val*0.66, max_val],        "color": BACHAT_GREEN_LIGHT},
-            ],
-            "threshold": {"line": {"color": INK, "width": 2.5},
-                          "thickness": 0.85, "value": value},
-        },
-    ))
-    fig.update_layout(
-        height=210,
-        margin=dict(l=24, r=24, t=30, b=10),
-        paper_bgcolor=WHITE,
-        font=dict(family="Inter"),
-    )
-    return fig
-
-
-# ── Combo: stacked revenue bars + dual-axis profit margin line ────────────────
-
-def chart_combo(df: pd.DataFrame) -> go.Figure:
-    d     = _agg_monthly(df)
-    total = d["total_revenue_monthly"].replace(0, np.nan)
-    margin = d["net_profit_monthly"] / total * 100
-
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-
-    components = [
-        ("Slot Fees",  "fees_monthly",           BACHAT_GREEN),
-        ("Base NII",   "base_nii_monthly",        INFO),
-        ("Float NII",  "float_nii_monthly",       PURPLE),
-        ("Fee NII",    "fee_nii_monthly",         TEAL),
-        ("Penalty",    "penalty_income_monthly",  WARNING),
-    ]
-    for name, col, clr in components:
-        fig.add_trace(go.Bar(x=d["month"], y=d[col], name=name,
-                             marker_color=clr, marker_opacity=0.88),
-                      secondary_y=False)
-
-    fig.add_trace(go.Scatter(
-        x=d["month"], y=margin,
-        mode="lines+markers", name="Profit Margin %",
-        line=dict(color=INK, width=2.5),
-        marker=dict(size=4, color=INK),
-    ), secondary_y=True)
-
-    fig.update_layout(
-        barmode="stack", height=390,
-        margin=dict(l=16, r=16, t=50, b=36),
-        plot_bgcolor=WHITE, paper_bgcolor=WHITE,
-        font=dict(family="Inter", size=12, color=SLATE_700),
-        legend=dict(orientation="h", y=1.04, x=1.0,
-                    xanchor="right", font=dict(size=10)),
-        hovermode="x unified",
-        title=dict(text="Monthly Revenue Composition & Profit Margin",
-                   font=dict(size=14, color=INK), x=0),
-        xaxis=dict(title="Month", gridcolor=SLATE_100, linecolor=SLATE_200),
-    )
-    fig.update_yaxes(title_text="Revenue (PKR)", secondary_y=False,
-                     gridcolor=SLATE_100, linecolor=SLATE_200)
-    fig.update_yaxes(title_text="Profit Margin %", secondary_y=True,
-                     ticksuffix="%", showgrid=False)
-    return fig
-
-
-# ── Horizontal income statement (right panel) ─────────────────────────────────
-
-def chart_income_h(df: pd.DataFrame) -> go.Figure:
-    total_rev = df["total_revenue_monthly"].sum()
-    items = [
-        ("Revenue",     "total_revenue_monthly",  BACHAT_GREEN),
-        ("Slot Fees",   "fees_monthly",            INFO),
-        ("Base NII",    "base_nii_monthly",        PURPLE),
-        ("Float NII",   "float_nii_monthly",       TEAL),
-        ("Fee NII",     "fee_nii_monthly",         "#A78BFA"),
-        ("Penalty",     "penalty_income_monthly",  WARNING),
-        ("Default Loss","default_loss_monthly",    DANGER),
-        ("Net Profit",  "net_profit_monthly",      INK),
-    ]
-    labels = [i[0] for i in items]
-    values = [df[i[1]].sum() for i in items]
-    colors = [i[2] for i in items]
-    pcts   = [abs(v) / total_rev * 100 if total_rev else 0 for v in values]
-
-    fig = go.Figure(go.Bar(
-        y=labels, x=pcts,
-        orientation="h",
-        marker_color=colors,
-        text=[fmt_pkr(v) for v in values],
-        textposition="inside",
-        insidetextanchor="start",
-        textfont=dict(size=10, color=WHITE, family="Inter"),
-        hovertemplate="%{y}: %{x:.1f}%<extra></extra>",
-    ))
-    fig.update_layout(
-        height=300,
-        margin=dict(l=10, r=10, t=42, b=10),
-        paper_bgcolor=WHITE, plot_bgcolor=SLATE_50,
-        xaxis=dict(visible=False, fixedrange=True, range=[0, 115]),
-        yaxis=dict(autorange="reversed",
-                   tickfont=dict(size=11, color=SLATE_700, family="Inter"),
-                   gridcolor=SLATE_200),
-        showlegend=False,
-        title=dict(text="Income Statement", font=dict(size=13, color=INK,
-                                                      family="Inter"), x=0),
-    )
-    return fig
-
-
-# ── P&L line chart ────────────────────────────────────────────────────────────
-
-def chart_pnl(df: pd.DataFrame) -> go.Figure:
-    d = _agg_monthly(df)
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=d["month"], y=d["total_revenue_monthly"],
-                             mode="lines", name="Revenue",
-                             line=dict(color=BACHAT_GREEN, width=2.5)))
-    fig.add_trace(go.Scatter(x=d["month"], y=d["default_loss_monthly"],
-                             mode="lines", name="Default Loss",
-                             line=dict(color=DANGER, width=2, dash="dot")))
-    fig.add_trace(go.Scatter(x=d["month"], y=d["net_profit_monthly"],
-                             mode="lines", name="Net Profit",
-                             line=dict(color=INK, width=3),
-                             fill="tozeroy",
-                             fillcolor=_hex_rgba(BACHAT_GREEN, 0.08)))
-    return _theme(fig, "Revenue vs Default Loss vs Net Profit", height=390)
-
-
-# ── User lifecycle ────────────────────────────────────────────────────────────
-
-def chart_users(df: pd.DataFrame) -> go.Figure:
-    d = _agg_monthly(df)
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=d["month"], y=d["active_users"],
-                             mode="lines", name="Active",
-                             line=dict(color=BACHAT_GREEN, width=3),
-                             fill="tozeroy",
-                             fillcolor=_hex_rgba(BACHAT_GREEN, 0.1)))
-    fig.add_trace(go.Scatter(x=d["month"], y=d["new_users"],
-                             mode="lines", name="New",
-                             line=dict(color=INFO, width=2)))
-    fig.add_trace(go.Scatter(x=d["month"], y=d["returning_users"],
-                             mode="lines", name="Returning",
-                             line=dict(color=PURPLE, width=2)))
-    return _theme(fig, "User Lifecycle", height=360)
-
-
-# ── Float outstanding ─────────────────────────────────────────────────────────
-
-def chart_float(df: pd.DataFrame) -> go.Figure:
-    d = _agg_monthly(df)
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=d["month"], y=d["float_outstanding_monthly"],
-                             mode="lines", name="Float",
-                             line=dict(color=PURPLE, width=3),
-                             fill="tozeroy",
-                             fillcolor=_hex_rgba(PURPLE, 0.12)))
-    return _theme(fig, "Platform Float Capital Outstanding", height=310)
-
-
-# ── Slot risk ─────────────────────────────────────────────────────────────────
-
-def chart_slot_risk(slot_df: pd.DataFrame) -> go.Figure:
-    colors = [
-        BACHAT_GREEN if h == "PLATFORM"
-        else (DANGER if "AT RISK" in s else BACHAT_GREEN_DARK)
-        for h, s in zip(slot_df["Holder"], slot_df["Status"])
-    ]
-    fig = go.Figure(go.Bar(
-        x=[f"Slot {s}" for s in slot_df["Slot"]],
-        y=slot_df["Max Debtor Position (PKR)"],
-        marker_color=colors,
-        text=[fmt_pkr(v) for v in slot_df["Max Debtor Position (PKR)"]],
-        textposition="outside", textfont=dict(size=11),
-    ))
-    return _theme(fig, "Per-Slot Maximum Default Exposure", height=360)
-
-
-# ── Blocking sensitivity ──────────────────────────────────────────────────────
-
-def chart_blocking_sensitivity(cfg: BachatConfig, duration: int) -> go.Figure:
-    blocks_range = list(range(0, duration))
-    profits, exposures, floats = [], [], []
-    for k in blocks_range:
-        c2  = dataclasses.replace(cfg, blocked_slots=k, durations=[duration])
-        eco = cycle_economics(c2, duration)
-        profits.append(eco["net_profit"])
-        exposures.append(eco["net_default"])
-        floats.append(eco["avg_float_outstanding"])
-
-    fig = make_subplots(specs=[[{"secondary_y": True}]])
-    fig.add_trace(go.Bar(x=blocks_range, y=profits, name="Net Profit / cycle",
-                         marker_color=BACHAT_GREEN, marker_opacity=0.85),
-                  secondary_y=False)
-    fig.add_trace(go.Scatter(x=blocks_range, y=exposures,
-                             name="Expected Default Loss",
-                             line=dict(color=DANGER, width=3),
-                             mode="lines+markers"),
-                  secondary_y=False)
-    fig.add_trace(go.Scatter(x=blocks_range, y=floats,
-                             name="Avg Float Outstanding",
-                             line=dict(color=PURPLE, width=2.5, dash="dot"),
-                             mode="lines+markers"),
-                  secondary_y=True)
-    fig.update_xaxes(title_text="Number of Blocked Slots")
-    fig.update_yaxes(title_text="Profit / Loss (PKR)", secondary_y=False)
-    fig.update_yaxes(title_text="Float (PKR)", secondary_y=True, showgrid=False)
-    fig.update_layout(
-        height=400, barmode="overlay",
-        margin=dict(l=16, r=16, t=50, b=36),
-        plot_bgcolor=WHITE, paper_bgcolor=WHITE,
-        font=dict(family="Inter", size=12, color=SLATE_700),
-        legend=dict(orientation="h", y=1.04, x=1.0, xanchor="right",
-                    font=dict(size=10)),
-        title=dict(text=f"Blocking Strategy Sensitivity — {duration}-month ROSCA",
-                   font=dict(size=14, color=INK), x=0),
-        hovermode="x unified",
-    )
-    return fig
-
-
-# ── Duration comparison ───────────────────────────────────────────────────────
-
-def chart_duration_comparison(df: pd.DataFrame) -> go.Figure:
-    s = df.groupby("duration").agg(
-        revenue=("total_revenue_monthly", "sum"),
-        profit =("net_profit_monthly",    "sum"),
-    ).reset_index()
-    fig = go.Figure()
-    fig.add_trace(go.Bar(x=s["duration"].astype(str) + "M",
-                         y=s["revenue"], name="Revenue",
-                         marker_color=BACHAT_GREEN, marker_opacity=0.85))
-    fig.add_trace(go.Bar(x=s["duration"].astype(str) + "M",
-                         y=s["profit"],  name="Net Profit",
-                         marker_color=INFO, marker_opacity=0.85))
-    fig.update_layout(barmode="group")
-    return _theme(fig, "Revenue & Net Profit by Duration", height=320)
-
-
-# =============================================================================
-# TABS
-# =============================================================================
-
-_CFG_STATIC = {"displayModeBar": False, "staticPlot": False,
-               "scrollZoom": False}
-
-
 def _sh(text: str):
     st.markdown(f'<div class="sh">{text}</div>', unsafe_allow_html=True)
 
 
+# =============================================================================
+# CHART FUNCTIONS
+# =============================================================================
+
+def chart_kpi_sparklines(agg: pd.DataFrame) -> go.Figure:
+    """4-panel KPI sparklines: Revenue, Profit, Active Users, Default Loss."""
+    fig = make_subplots(
+        rows=1, cols=4,
+        subplot_titles=["Monthly Revenue", "Net Profit",
+                        "Active Users", "Default Loss"],
+    )
+    metrics = [
+        ("total_revenue_monthly", BACHAT_GREEN),
+        ("net_profit_monthly",    INFO),
+        ("active_users",          PURPLE),
+        ("default_loss_monthly",  DANGER),
+    ]
+    for col_idx, (col, color) in enumerate(metrics, 1):
+        y = agg[col].values if col in agg.columns else np.zeros(len(agg))
+        fig.add_trace(
+            go.Scatter(x=agg["month"], y=y, mode="lines",
+                       line=dict(color=color, width=2),
+                       fill="tozeroy", fillcolor=_hex_rgba(color, 0.08),
+                       showlegend=False),
+            row=1, col=col_idx,
+        )
+    fig.update_layout(
+        height=160, margin=dict(l=8, r=8, t=32, b=8),
+        template=PLOTLY_TEMPLATE, paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+    )
+    for ax in fig.layout:
+        if ax.startswith("xaxis") or ax.startswith("yaxis"):
+            fig.layout[ax].update(showgrid=False, showticklabels=False,
+                                  zeroline=False)
+    return fig
+
+
+def chart_revenue_combo(agg: pd.DataFrame) -> go.Figure:
+    """Combo bar+line: stacked revenue components + net profit line."""
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    components = [
+        ("fees_monthly",           "Fees",         BACHAT_GREEN),
+        ("base_nii_monthly",       "Base NII",     INFO),
+        ("float_nii_monthly",      "Float NII",    PURPLE),
+        ("fee_nii_monthly",        "Fee NII",      TEAL),
+        ("penalty_income_monthly", "Penalty",      WARNING),
+    ]
+    for col, name, color in components:
+        if col in agg.columns:
+            fig.add_trace(go.Bar(x=agg["month"], y=agg[col], name=name,
+                                 marker_color=color, opacity=0.85), secondary_y=False)
+    fig.add_trace(
+        go.Scatter(x=agg["month"], y=agg["net_profit_monthly"],
+                   name="Net Profit", mode="lines",
+                   line=dict(color=DANGER, width=2.5, dash="solid"),
+                   showlegend=True),
+        secondary_y=True,
+    )
+    fig.update_layout(barmode="stack", height=400,
+                      margin=dict(l=16, r=16, t=48, b=36),
+                      template=PLOTLY_TEMPLATE, paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+                      legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                                  xanchor="right", x=1.0, font=dict(size=11)),
+                      hovermode="x unified")
+    fig.update_yaxes(title_text="Revenue (PKR)", secondary_y=False,
+                     gridcolor=SLATE_100)
+    fig.update_yaxes(title_text="Net Profit (PKR)", secondary_y=True,
+                     gridcolor=SLATE_100)
+    fig.update_layout(title=dict(
+        text="Revenue Components vs Net Profit",
+        font=dict(size=14, color=INK), x=0.0, xanchor="left"))
+    return fig
+
+
+def chart_profit_gauge(cfg: BachatConfig) -> go.Figure:
+    """Semi-circular gauges: margin % for primary duration × primary slab."""
+    eco      = cycle_economics(cfg, cfg.durations[0])
+    margin   = eco["net_profit"] / eco["total_revenue"] * 100 if eco["total_revenue"] else 0
+    loss_pct = eco["net_default"] / eco["total_revenue"] * 100 if eco["total_revenue"] else 0
+
+    fig = make_subplots(rows=1, cols=2,
+                        specs=[[{"type": "indicator"}, {"type": "indicator"}]])
+    m_color = BACHAT_GREEN if margin > 30 else (WARNING if margin > 0 else DANGER)
+    l_color = DANGER if loss_pct > 20 else (WARNING if loss_pct > 8 else BACHAT_GREEN)
+
+    fig.add_trace(go.Indicator(
+        mode="gauge+number", value=round(margin, 1),
+        title={"text": "Net Margin %", "font": {"size": 13, "color": INK}},
+        number={"suffix": "%", "font": {"size": 22, "color": m_color}},
+        gauge={"axis": {"range": [-20, 80]},
+               "bar": {"color": m_color, "thickness": 0.3},
+               "bgcolor": SLATE_100,
+               "threshold": {"line": {"color": SLATE_500, "width": 2},
+                             "thickness": 0.75, "value": 0}},
+    ), row=1, col=1)
+    fig.add_trace(go.Indicator(
+        mode="gauge+number", value=round(loss_pct, 1),
+        title={"text": "Loss / Revenue %", "font": {"size": 13, "color": INK}},
+        number={"suffix": "%", "font": {"size": 22, "color": l_color}},
+        gauge={"axis": {"range": [0, 60]},
+               "bar": {"color": l_color, "thickness": 0.3},
+               "bgcolor": SLATE_100,
+               "threshold": {"line": {"color": SLATE_500, "width": 2},
+                             "thickness": 0.75, "value": 20}},
+    ), row=1, col=2)
+    fig.update_layout(height=240, margin=dict(l=16, r=16, t=24, b=8),
+                      paper_bgcolor=WHITE)
+    return fig
+
+
+def chart_income_statement(eco: Dict) -> go.Figure:
+    """Horizontal waterfall-style income statement."""
+    labels = ["Fees", "Base NII", "Float NII", "Fee NII", "Penalty",
+              "Gross Revenue", "Default Loss", "Net Profit"]
+    values = [eco["fees"], eco["base_nii"], eco["float_nii"],
+              eco["fee_nii"], eco["penalty_income"],
+              eco["total_revenue"], -eco["net_default"],
+              eco["net_profit"]]
+    colors = [BACHAT_GREEN, INFO, PURPLE, TEAL, WARNING,
+              BACHAT_GREEN_DARK, DANGER,
+              BACHAT_GREEN if eco["net_profit"] >= 0 else DANGER]
+
+    fig = go.Figure(go.Bar(
+        x=values, y=labels, orientation="h",
+        marker_color=colors, text=[fmt_pkr(v) for v in values],
+        textposition="outside", textfont=dict(size=11),
+    ))
+    fig.update_layout(
+        height=340, margin=dict(l=8, r=60, t=32, b=8),
+        template=PLOTLY_TEMPLATE, paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+        xaxis=dict(showgrid=True, gridcolor=SLATE_100, zeroline=True,
+                   zerolinecolor=SLATE_300),
+        yaxis=dict(autorange="reversed"),
+        title=dict(text="Cycle Income Statement (per group)",
+                   font=dict(size=13, color=INK), x=0.0),
+    )
+    return fig
+
+
+def chart_default_split(agg: pd.DataFrame) -> go.Figure:
+    """Stacked bar: pre vs post payout default loss over time."""
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=agg["month"], y=agg.get("pre_payout_loss_monthly", 0),
+        name="Pre-Payout (Operational)", marker_color=WARNING))
+    fig.add_trace(go.Bar(
+        x=agg["month"], y=agg.get("post_payout_loss_monthly", 0),
+        name="Post-Payout (Credit)", marker_color=DANGER))
+    fig.update_layout(barmode="stack")
+    return _theme(fig, "Default Loss: Pre vs Post Payout", height=380)
+
+
+def chart_user_waterfall(agg: pd.DataFrame) -> go.Figure:
+    """Area chart: new, returning, active users over time."""
+    fig = go.Figure()
+    for col, name, color in [
+        ("active_users",    "Active",    BACHAT_GREEN),
+        ("new_users",       "New",       INFO),
+        ("returning_users", "Returning", PURPLE),
+        ("churned_users",   "Churned",   DANGER),
+    ]:
+        if col in agg.columns:
+            fig.add_trace(go.Scatter(
+                x=agg["month"], y=agg[col], name=name, mode="lines",
+                line=dict(color=color, width=2),
+                fill="tozeroy" if col == "active_users" else "none",
+                fillcolor=_hex_rgba(color, 0.08)))
+    return _theme(fig, "User Lifecycle", height=380)
+
+
+def chart_scenario_comparison(scenarios: Dict[str, pd.DataFrame]) -> go.Figure:
+    """Line chart comparing net profit across Base/Optimistic/Pessimistic."""
+    colors = {"Base": INFO, "Optimistic": BACHAT_GREEN, "Pessimistic": DANGER}
+    fig = go.Figure()
+    for name, df in scenarios.items():
+        agg = _agg_monthly(df)
+        fig.add_trace(go.Scatter(
+            x=agg["month"], y=agg["net_profit_monthly"],
+            name=name, mode="lines",
+            line=dict(color=colors.get(name, SLATE_500), width=2.5,
+                      dash="solid" if name == "Base" else
+                           "dot" if name == "Optimistic" else "dash")))
+    fig.add_hline(y=0, line=dict(color=SLATE_300, width=1, dash="dot"))
+    return _theme(fig, "Scenario Comparison — Monthly Net Profit", height=400)
+
+
+def chart_scenario_revenue(scenarios: Dict[str, pd.DataFrame]) -> go.Figure:
+    """Bar chart of total revenue per scenario per year."""
+    colors = {"Base": INFO, "Optimistic": BACHAT_GREEN, "Pessimistic": DANGER}
+    fig = go.Figure()
+    for name, df in scenarios.items():
+        yearly = df.groupby("year")["total_revenue_monthly"].sum().reset_index()
+        fig.add_trace(go.Bar(
+            x=yearly["year"], y=yearly["total_revenue_monthly"],
+            name=name, marker_color=colors.get(name, SLATE_500)))
+    fig.update_layout(barmode="group")
+    return _theme(fig, "Annual Revenue by Scenario", height=380)
+
+
+def chart_market_funnel(cfg: BachatConfig, df: pd.DataFrame) -> go.Figure:
+    """TAM / SAM / SOM funnel with simulated user penetration."""
+    sim_users = int(df["active_users"].max()) if "active_users" in df.columns else 0
+    fig = go.Figure(go.Funnel(
+        y=["TAM", "SAM", "SOM", "Simulated Peak"],
+        x=[cfg.market_size, cfg.sam_size, cfg.som_size, sim_users],
+        textinfo="value+percent initial",
+        marker=dict(color=[SLATE_300, INFO, BACHAT_GREEN, BACHAT_GREEN_DARK]),
+        connector=dict(line=dict(color=SLATE_200, width=1)),
+    ))
+    fig.update_layout(height=340, margin=dict(l=16, r=16, t=48, b=8),
+                      paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+                      title=dict(text="Market Penetration Funnel",
+                                 font=dict(size=14, color=INK), x=0.0))
+    return fig
+
+
+def chart_market_growth(cfg: BachatConfig) -> go.Figure:
+    """Projected TAM/SAM/SOM growth over 5 years."""
+    years = list(range(1, 6))
+    g     = cfg.market_growth_rate / 100.0
+    fig   = go.Figure()
+    for name, base, color in [
+        ("TAM", cfg.market_size, SLATE_300),
+        ("SAM", cfg.sam_size,    INFO),
+        ("SOM", cfg.som_size,    BACHAT_GREEN),
+    ]:
+        vals = [base * (1 + g) ** (y - 1) for y in years]
+        fig.add_trace(go.Scatter(x=years, y=vals, name=name, mode="lines+markers",
+                                 line=dict(color=color, width=2.5)))
+    return _theme(fig, f"Market Size Projection ({cfg.market_growth_rate:.0f}% p.a.)",
+                  height=340)
+
+
+def chart_yoy_projection(proj: pd.DataFrame) -> go.Figure:
+    """Bar + line: actual vs projected revenue and profit YoY."""
+    fig = make_subplots(specs=[[{"secondary_y": True}]])
+    sim  = proj[proj["source"] == "Simulated"]
+    ext  = proj[proj["source"] == "Projected"]
+
+    fig.add_trace(go.Bar(x=sim["year"], y=sim["revenue"],
+                         name="Revenue (Simulated)", marker_color=BACHAT_GREEN,
+                         opacity=0.85), secondary_y=False)
+    fig.add_trace(go.Bar(x=ext["year"], y=ext["revenue"],
+                         name="Revenue (Projected)", marker_color=BACHAT_GREEN,
+                         opacity=0.45, marker_pattern_shape="/"), secondary_y=False)
+    fig.add_trace(go.Scatter(x=proj["year"], y=proj["profit"],
+                             name="Net Profit", mode="lines+markers",
+                             line=dict(color=INFO, width=2.5)), secondary_y=True)
+    fig.update_layout(barmode="group", height=380,
+                      margin=dict(l=16, r=16, t=48, b=36),
+                      template=PLOTLY_TEMPLATE, paper_bgcolor=WHITE, plot_bgcolor=WHITE,
+                      hovermode="x unified",
+                      legend=dict(orientation="h", yanchor="bottom", y=1.02,
+                                  xanchor="right", x=1.0),
+                      title=dict(text="YoY Revenue & Profit (Simulated + Projected)",
+                                 font=dict(size=14, color=INK), x=0.0))
+    fig.update_yaxes(title_text="Revenue (PKR)", secondary_y=False,
+                     gridcolor=SLATE_100)
+    fig.update_yaxes(title_text="Net Profit (PKR)", secondary_y=True)
+    return fig
+
+
+# =============================================================================
+# TAB FUNCTIONS
+# =============================================================================
+
 def tab_overview(cfg: BachatConfig, df: pd.DataFrame):
-    agg         = _agg_monthly(df)
-    eco         = cycle_economics(cfg, cfg.durations[0])
-    total_rev   = df["total_revenue_monthly"].sum()
-    total_profit= df["net_profit_monthly"].sum()
-    total_users = df["new_users"].sum() + df["returning_users"].sum()
-    avg_active  = agg["active_users"].mean()
+    agg      = _agg_monthly(df)
+    eco      = cycle_economics(cfg, cfg.durations[0])
+    insights = generate_insights(cfg, df)
 
-    # YoY delta for KPI deltas (last year vs year 1)
-    def _yr_delta(col):
-        yr_max = df["year"].max()
-        y1  = df[df["year"]==1][col].sum()
-        yn  = df[df["year"]==yr_max][col].sum()
-        d   = (yn - y1) / y1 * 100 if y1 else 0
-        return f"{d:+.1f}%" if yr_max > 1 else ""
+    # KPI sparklines
+    st.plotly_chart(chart_kpi_sparklines(agg),
+                    use_container_width=True, config=_CFG_STATIC)
 
-    # Verdict
-    verdict_cls  = "verdict-good" if eco["net_profit"] >= 0 else "verdict-bad"
-    verdict_text = ("✓ PROFITABLE · MANAGEABLE RISK" if eco["net_profit"] >= 0
-                    else "✗ UNPROFITABLE · ADJUST PARAMETERS")
-    st.markdown(f'<div class="verdict {verdict_cls}">{verdict_text}</div>',
-                unsafe_allow_html=True)
+    # Gauges row
+    st.plotly_chart(chart_profit_gauge(cfg),
+                    use_container_width=True, config=_CFG_STATIC)
 
-    # ── Layout: left (3) | right (1) ─────────────────────────────────────────
-    left, right = st.columns([3.2, 1.0], gap="medium")
-
-    with left:
-        # ── Row 1: KPI sparkline cards ────────────────────────────────────
-        k1, k2, k3, k4 = st.columns(4, gap="small")
-        with k1:
-            st.plotly_chart(
-                chart_kpi("TOTAL REVENUE", fmt_pkr(total_rev),
-                          f"Over {cfg.simulation_months} months",
-                          agg["total_revenue_monthly"].values, BACHAT_GREEN,
-                          _yr_delta("total_revenue_monthly")),
-                use_container_width=True, config=_CFG_STATIC)
-        with k2:
-            tone = "+" if total_profit >= 0 else ""
-            margin = total_profit / total_rev * 100 if total_rev else 0
-            st.plotly_chart(
-                chart_kpi("NET PROFIT", fmt_pkr(total_profit),
-                          f"Margin: {margin:.1f}%",
-                          agg["net_profit_monthly"].values,
-                          BACHAT_GREEN if total_profit >= 0 else DANGER,
-                          _yr_delta("net_profit_monthly")),
-                use_container_width=True, config=_CFG_STATIC)
-        with k3:
-            st.plotly_chart(
-                chart_kpi("AVG ACTIVE USERS", f"{avg_active:,.0f}",
-                          f"Total joined: {total_users:,}",
-                          agg["active_users"].values, INFO,
-                          _yr_delta("new_users")),
-                use_container_width=True, config=_CFG_STATIC)
-        with k4:
-            total_float = df["float_outstanding_monthly"].sum()
-            st.plotly_chart(
-                chart_kpi("FLOAT CAPTURED", fmt_pkr(total_float),
-                          f"{cfg.blocked_slots} blocked slot(s)",
-                          agg["float_outstanding_monthly"].values, PURPLE,
-                          ""),
-                use_container_width=True, config=_CFG_STATIC)
-
-        # ── Row 2: gauge metrics ──────────────────────────────────────────
-        _sh("Key Ratios")
-        g1, g2, g3 = st.columns(3, gap="small")
-        with g1:
-            pm = total_profit / total_rev * 100 if total_rev else 0
-            st.plotly_chart(chart_gauge(pm, "Net Profit Margin", 60, "%",
-                                        BACHAT_GREEN if pm >= 0 else DANGER),
-                            use_container_width=True, config=_CFG_STATIC)
-        with g2:
-            total_fees = df["fees_monthly"].sum()
-            fee_yield  = total_fees / df["user_contributions_monthly"].sum() * 100 \
-                         if df["user_contributions_monthly"].sum() else 0
-            st.plotly_chart(chart_gauge(fee_yield, "Fee Yield %", 15, "%", INFO),
-                            use_container_width=True, config=_CFG_STATIC)
-        with g3:
-            total_loss = df["default_loss_monthly"].sum()
-            def_impact = total_loss / total_rev * 100 if total_rev else 0
-            st.plotly_chart(chart_gauge(def_impact, "Default Impact on Revenue",
-                                        30, "%", DANGER),
-                            use_container_width=True, config=_CFG_STATIC)
-
-        # ── Duration comparison (multi-duration only) ─────────────────────
-        if len(cfg.durations) > 1:
-            _sh("By Duration")
-            st.plotly_chart(chart_duration_comparison(df),
-                            use_container_width=True, config=_CFG_STATIC)
-
-        # ── Combo chart ───────────────────────────────────────────────────
-        _sh("Monthly Revenue & Profit Margin")
-        st.plotly_chart(chart_combo(df),
+    # Combo chart + right panel
+    main_col, right_col = st.columns([2, 1])
+    with main_col:
+        st.plotly_chart(chart_revenue_combo(agg),
                         use_container_width=True, config=_CFG_STATIC)
-
-    # ── Right panel ───────────────────────────────────────────────────────
-    with right:
-        st.markdown(f"""
-        <div style="background:{SLATE_50}; border:1px solid {SLATE_200};
-                    border-radius:10px; padding:0.7rem 0.9rem; margin-bottom:0.8rem;
-                    font-size:0.8rem; color:{SLATE_500};">
-            <b style="color:{INK};">Showing data for:</b><br>
-            Last {cfg.simulation_months} months
-            across {len(cfg.durations)} duration(s) —
-            {", ".join(f"{d}M" for d in cfg.durations)}
-        </div>""", unsafe_allow_html=True)
-
-        st.plotly_chart(chart_income_h(df),
-                        use_container_width=True, config=_CFG_STATIC)
-
-        # Smart Insights
+    with right_col:
+        items_html = "".join(
+            f'<div class="insight-item">{ins}</div>' for ins in insights
+        )
         st.markdown(f"""
         <div class="insights-panel">
-            <h4>💡 Smart Insights</h4>""", unsafe_allow_html=True)
-        for ins in generate_insights(cfg, df):
-            st.markdown(f'<div class="insight-item">{ins}</div>',
-                        unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
+            <h4>Smart Insights</h4>
+            {items_html}
+        </div>""", unsafe_allow_html=True)
 
-
-def tab_risk(cfg: BachatConfig, df: pd.DataFrame):
-    _sh("Slot-Level Risk Decomposition")
-    st.caption(
-        "Platform-held slots are safe by construction. User exposure = "
-        "(N − slot) × monthly contribution. Last slot is always safe."
-    )
-
-    for dur in cfg.durations:
-        header = f"{dur}-month ROSCA"
-        with (st.expander(header, expanded=True) if len(cfg.durations) > 1
-              else st.container()):
-            eco     = cycle_economics(cfg, dur)
-            slot_df = build_slot_table(cfg, dur)
-
-            left, right = st.columns([1.6, 1.0], gap="medium")
-            with left:
-                st.plotly_chart(chart_slot_risk(slot_df),
-                                use_container_width=True, config=_CFG_STATIC)
-            with right:
-                k1, k2 = st.columns(2, gap="small")
-                with k1:
-                    st.plotly_chart(
-                        chart_kpi("POT PER GROUP", fmt_pkr(eco["pot"]),
-                                  f"{dur} × {fmt_pkr(cfg.slab_amount)}",
-                                  [], BACHAT_GREEN),
-                        use_container_width=True, config=_CFG_STATIC)
-                    st.plotly_chart(
-                        chart_kpi("MAX SINGLE DEFAULT",
-                                  fmt_pkr(eco["max_single_default_loss"]),
-                                  "Worst-case exposure", [], DANGER),
-                        use_container_width=True, config=_CFG_STATIC)
-                with k2:
-                    st.plotly_chart(
-                        chart_kpi("NET DEFAULT LOSS",
-                                  fmt_pkr(eco["net_default"]),
-                                  f"After {cfg.recovery_rate:.0f}% recovery",
-                                  [], WARNING),
-                        use_container_width=True, config=_CFG_STATIC)
-                    st.plotly_chart(
-                        chart_kpi("PENALTY INCOME",
-                                  fmt_pkr(eco["penalty_income"]),
-                                  f"{cfg.penalty_pct:.1f}% on defaulted",
-                                  [], TEAL),
-                        use_container_width=True, config=_CFG_STATIC)
-
-            display_df = slot_df.copy()
-            for col in ["Receives Pot (PKR)", "Paid Before Receiving (PKR)",
-                        "Max Debtor Position (PKR)", "Expected Loss (PKR)"]:
-                display_df[col] = display_df[col].apply(fmt_pkr)
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
-
-    _sh("Blocking Strategy Sensitivity")
-    st.caption(
-        "Net profit, default exposure, and float vs blocked-slot count. "
-        "Sweet spot is usually 1–2 blocked slots."
-    )
-    st.plotly_chart(chart_blocking_sensitivity(cfg, cfg.durations[0]),
+    # Income statement
+    _sh("Cycle Income Statement")
+    st.plotly_chart(chart_income_statement(eco),
                     use_container_width=True, config=_CFG_STATIC)
 
 
-def tab_revenue(cfg: BachatConfig, df: pd.DataFrame):
-    agg = _agg_monthly(df)
-
-    _sh("Revenue Composition")
+def tab_risk(cfg: BachatConfig, df: pd.DataFrame):
+    _sh("Default Loss — Pre vs Post Payout")
     st.caption(
-        "Five sources, three distinct NII principals — no double-counting. "
-        "Slot Fees are the headline; each NII type earns on a different balance."
+        "Pre-payout: member stops paying before receiving the pot (operational loss). "
+        "Post-payout: member receives pot then defaults (credit loss / receivable)."
     )
+    agg = _agg_monthly(df)
+    st.plotly_chart(chart_default_split(agg),
+                    use_container_width=True, config=_CFG_STATIC)
 
-    left, right = st.columns([2.2, 1.0], gap="medium")
+    # KPI strip
+    c1, c2, c3, c4 = st.columns(4)
+    total_pre  = df["pre_payout_loss_monthly"].sum()
+    total_post = df["post_payout_loss_monthly"].sum()
+    total_loss = total_pre + total_post
+    total_rev  = df["total_revenue_monthly"].sum()
+    c1.metric("Total Default Loss",    fmt_pkr(total_loss))
+    c2.metric("Pre-Payout (Ops)",      fmt_pkr(total_pre),
+              f"{cfg.default_pre_pct:.0f}% of loss")
+    c3.metric("Post-Payout (Credit)",  fmt_pkr(total_post),
+              f"{cfg.default_post_pct:.0f}% of loss")
+    c4.metric("Loss / Revenue",
+              f"{total_loss/total_rev*100:.1f}%" if total_rev else "—")
 
-    with left:
-        # Stacked area revenue
-        fig = go.Figure()
-        components = [
-            ("Slot Fees",  "fees_monthly",          BACHAT_GREEN),
-            ("Base NII",   "base_nii_monthly",       INFO),
-            ("Float NII",  "float_nii_monthly",      PURPLE),
-            ("Fee NII",    "fee_nii_monthly",        TEAL),
-            ("Penalty",    "penalty_income_monthly", WARNING),
-        ]
-        for name, col, clr in components:
-            fig.add_trace(go.Bar(x=agg["month"], y=agg[col], name=name,
-                                 marker_color=clr, marker_opacity=0.88))
-        fig.update_layout(barmode="stack")
-        _theme(fig, "Monthly Revenue Stack", height=360)
-        st.plotly_chart(fig, use_container_width=True, config=_CFG_STATIC)
+    _sh("Slot-by-Slot Exposure Table")
+    for dur in cfg.durations:
+        for slab in cfg.slab_amounts:
+            eco = cycle_economics(cfg, dur, slab)
+            verdict_cls = ("verdict-good" if eco["net_profit"] > 0 else "verdict-bad")
+            st.markdown(
+                f'<span class="verdict {verdict_cls}">'
+                f'{dur}M / PKR {slab:,} — Net profit per cycle: '
+                f'{fmt_pkr(eco["net_profit"])}'
+                f'</span>', unsafe_allow_html=True
+            )
+            st.dataframe(build_slot_table(cfg, dur, slab),
+                         use_container_width=True, hide_index=True)
 
-    with right:
-        eco     = cycle_economics(cfg, cfg.durations[0])
-        annual  = cfg.kibor_rate + cfg.spread
-        per_cyc = [
-            ("Slot Fees",  eco["fees"],         BACHAT_GREEN),
-            ("Base NII",   eco["base_nii"],      INFO),
-            ("Float NII",  eco["float_nii"],     PURPLE),
-            ("Fee NII",    eco["fee_nii"],       TEAL),
-            ("Penalty",    eco["penalty_income"],WARNING),
-            ("Net Profit", eco["net_profit"],    INK),
-        ]
-        labels = [i[0] for i in per_cyc]
-        values = [i[1] for i in per_cyc]
-        colors = [i[2] for i in per_cyc]
-        pcts   = [v / eco["total_revenue"] * 100 if eco["total_revenue"] else 0
-                  for v in values]
+    _sh("Audit Trail")
+    st.markdown("""
+    <div class="audit-box">
+    <b>Slot-conditional default loss</b>: only user-held slots (blocked+1 … N)
+    contribute to expected loss. Slot <i>s</i> exposure = (N−s)×M, so early
+    slot recipients are highest-risk.<br><br>
+    <b>Pre/post-payout split</b>: pre-payout defaults reduce platform cash flow
+    (no pot was paid so the exposure is the un-recovered contributions); post-payout
+    defaults create a receivable on the member who received the pot.
+    Both are included in the cycle net loss.
+    </div>""", unsafe_allow_html=True)
 
-        fig2 = go.Figure(go.Bar(
-            y=labels, x=[abs(p) for p in pcts], orientation="h",
-            marker_color=colors,
-            text=[fmt_pkr(v) for v in values],
-            textposition="inside", insidetextanchor="start",
-            textfont=dict(size=10, color=WHITE),
-        ))
-        fig2.update_layout(
-            height=310,
-            margin=dict(l=10, r=10, t=42, b=10),
-            paper_bgcolor=WHITE, plot_bgcolor=SLATE_50,
-            xaxis=dict(visible=False, fixedrange=True),
-            yaxis=dict(autorange="reversed",
-                       tickfont=dict(size=11, color=SLATE_700)),
-            showlegend=False,
-            title=dict(text="Per-Cycle Breakdown",
-                       font=dict(size=13, color=INK), x=0),
-        )
-        st.plotly_chart(fig2, use_container_width=True, config=_CFG_STATIC)
 
-    _sh("NII Methodology — Audit Note")
-    idle = max(0, cfg.disbursement_day - cfg.collection_day)
+def tab_revenue(cfg: BachatConfig, df: pd.DataFrame):
+    _sh("Revenue Components Over Time")
+    agg = _agg_monthly(df)
+    st.plotly_chart(chart_revenue_combo(agg),
+                    use_container_width=True, config=_CFG_STATIC)
+
+    _sh("NII Breakdown")
+    annual_rate = cfg.kibor_rate + cfg.spread
+    rows_eco = []
+    for dur in cfg.durations:
+        for slab in cfg.slab_amounts:
+            eco = cycle_economics(cfg, dur, slab)
+            rows_eco.append({
+                "Duration": f"{dur}M",
+                "Slab (PKR)": f"{slab:,}",
+                "Fee Mode": cfg.fee_collection_mode,
+                "Base NII": fmt_pkr(eco["base_nii"]),
+                "Float NII": fmt_pkr(eco["float_nii"]),
+                "Fee NII": fmt_pkr(eco["fee_nii"]),
+                "Total Fees": fmt_pkr(eco["fees"]),
+                "Penalty": fmt_pkr(eco["penalty_income"]),
+                "Total Rev": fmt_pkr(eco["total_revenue"]),
+                "Net Profit": fmt_pkr(eco["net_profit"]),
+            })
+    st.dataframe(pd.DataFrame(rows_eco), use_container_width=True, hide_index=True)
+
     st.markdown(f"""
     <div class="audit-box">
-    <b>Base NII</b> — Full pot ({cfg.durations[0]} × PKR {cfg.slab_amount:,}) sits idle
-    for {idle} days/month (collection day {cfg.collection_day} →
-    disbursement day {cfg.disbursement_day}). 30/360 convention.
-    Rate = {annual:.2f}% (KIBOR + spread).<br><br>
-    <b>Float NII</b> — When the platform takes the first {cfg.blocked_slots} slot(s),
-    it holds other members' contributions as working capital.
-    Principal = PKR-months of float × monthly rate.
-    <em>Entirely different principal from Base NII.</em><br><br>
-    <b>Fee NII</b> — Collected fees sit for ~{cfg.durations[0]*15} days on average
-    (half-cycle). Computed only on the fee principal.
-    <em>No overlap with either above.</em><br><br>
-    <b>Total NII = Base + Float + Fee, zero overlap.</b>
-    The v1 model applied the same principal to all three — corrected here.
+    <b>Three principals, no double-counting:</b><br>
+    • <b>Base NII</b>: full monthly pool (N×M) × {annual_rate:.2f}% × (disbursement_day − collection_day)/365.<br>
+    • <b>Float NII</b>: working-capital blocked in platform slots — entirely different principal.<br>
+    • <b>Fee NII</b>: collected fees held for {'half' if cfg.fee_collection_mode == 'Upfront' else 'a quarter of'} the cycle
+      ({cfg.fee_collection_mode} mode → {'N×30/2' if cfg.fee_collection_mode == 'Upfront' else 'N×30/4'} day hold).
     </div>""", unsafe_allow_html=True)
 
 
 def tab_users(cfg: BachatConfig, df: pd.DataFrame):
+    _sh("User Lifecycle")
     agg = _agg_monthly(df)
+    st.plotly_chart(chart_user_waterfall(agg),
+                    use_container_width=True, config=_CFG_STATIC)
 
-    total_new  = df["new_users"].sum()
-    total_ret  = df["returning_users"].sum()
-    total_all  = total_new + total_ret
-    total_chur = df["churned_users"].sum()
-    avg_active = agg["active_users"].mean()
+    # MoM growth metrics
+    _sh("Month-on-Month & Year-on-Year Metrics")
+    yearly = df.groupby("year").agg(
+        active_users=("active_users", "max"),
+        revenue     =("total_revenue_monthly", "sum"),
+        profit      =("net_profit_monthly",     "sum"),
+    ).reset_index()
+    yearly["users_yoy_%"]   = yearly["active_users"].pct_change() * 100
+    yearly["revenue_yoy_%"] = yearly["revenue"].pct_change()       * 100
+    yearly["profit_yoy_%"]  = yearly["profit"].pct_change()        * 100
+    st.dataframe(yearly.round(1), use_container_width=True, hide_index=True)
 
-    _sh("User Lifecycle Overview")
-    k1, k2, k3, k4 = st.columns(4, gap="small")
-    with k1:
-        st.plotly_chart(
-            chart_kpi("NEW USERS", f"{total_new:,}",
-                      f"{cfg.monthly_growth_rate:.1f}% monthly growth",
-                      agg["new_users"].values, BACHAT_GREEN),
-            use_container_width=True, config=_CFG_STATIC)
-    with k2:
-        ret_pct = total_ret / total_all * 100 if total_all else 0
-        st.plotly_chart(
-            chart_kpi("RETURNING", f"{total_ret:,}",
-                      f"{ret_pct:.0f}% of total activity",
-                      agg["returning_users"].values, PURPLE),
-            use_container_width=True, config=_CFG_STATIC)
-    with k3:
-        st.plotly_chart(
-            chart_kpi("CHURNED", f"{total_chur:,}",
-                      f"{cfg.churn_rate:.0f}% per cycle",
-                      agg["churned_users"].values, DANGER),
-            use_container_width=True, config=_CFG_STATIC)
-    with k4:
-        st.plotly_chart(
-            chart_kpi("AVG ACTIVE", f"{avg_active:,.0f}",
-                      "Users in-cycle per month",
-                      agg["active_users"].values, INFO),
-            use_container_width=True, config=_CFG_STATIC)
-
-    left, right = st.columns([2, 1], gap="medium")
-    with left:
-        st.plotly_chart(chart_users(df),
-                        use_container_width=True, config=_CFG_STATIC)
-    with right:
-        st.plotly_chart(chart_float(df),
-                        use_container_width=True, config=_CFG_STATIC)
-
-    _sh("Monthly Detail")
-    show = agg[["month", "new_users", "returning_users",
-                "active_users", "churned_users",
-                "groups_running_monthly"]].copy()
-    show.insert(1, "year", ((show["month"] - 1) // 12 + 1))
-    show["groups_running_monthly"] = show["groups_running_monthly"].round(1)
-    st.dataframe(show, use_container_width=True, hide_index=True, height=380)
+    st.markdown(f"""
+    <div class="audit-box">
+    <b>Two-pass lifecycle:</b> returning_users[m] is resolved from return_schedule[m]
+    <em>before</em> processing finish_origin &lt; m — ensuring second-generation churn
+    and multi-cycle return rates compound correctly.<br><br>
+    Growth rate: <b>{cfg.monthly_growth_rate:.1f}%/mo</b> |
+    Churn: <b>{cfg.churn_rate:.1f}%</b> |
+    Return rate: <b>{cfg.returning_user_rate:.1f}%</b> |
+    Rest: <b>{cfg.rest_period_months} month(s)</b>
+    </div>""", unsafe_allow_html=True)
 
 
 def tab_pnl(cfg: BachatConfig, df: pd.DataFrame):
-    yearly = df.groupby("year").agg(
-        new_users   =("new_users",             "sum"),
-        revenue     =("total_revenue_monthly",  "sum"),
-        def_loss    =("default_loss_monthly",   "sum"),
-        net_profit  =("net_profit_monthly",     "sum"),
-        party_a     =("party_a_monthly",        "sum"),
-        party_b     =("party_b_monthly",        "sum"),
-    ).reset_index()
+    _sh("Profit & Loss — Yearly Summary with Projections")
+    proj = build_yearly_projection(df, cfg, extra_years=3)
+    st.plotly_chart(chart_yoy_projection(proj),
+                    use_container_width=True, config=_CFG_STATIC)
 
-    a_lbl = f"Party A ({cfg.profit_split_party_a:.0f}%)"
-    b_lbl = f"Party B ({100-cfg.profit_split_party_a:.0f}%)"
-    yearly.columns = ["Year", "New Users", "Revenue",
-                      "Default Loss", "Net Profit", a_lbl, b_lbl]
+    st.caption(f"Simulated years use model output. Projected years apply "
+               f"{cfg.yoy_growth_rate:.0f}% YoY growth to the last simulated year.")
+    st.dataframe(proj.assign(
+        revenue=proj["revenue"].map(fmt_pkr),
+        profit =proj["profit"].map(fmt_pkr),
+        loss   =proj["loss"].map(fmt_pkr),
+        fees   =proj["fees"].map(fmt_pkr),
+    ), use_container_width=True, hide_index=True)
 
-    # KPI row for totals
-    _sh("5-Year Summary")
-    k1, k2, k3, k4 = st.columns(4, gap="small")
-    with k1:
-        st.plotly_chart(
-            chart_kpi("5-YR REVENUE", fmt_pkr(yearly["Revenue"].sum()),
-                      f"{len(yearly)} years",
-                      yearly["Revenue"].values, BACHAT_GREEN),
-            use_container_width=True, config=_CFG_STATIC)
-    with k2:
-        st.plotly_chart(
-            chart_kpi("5-YR NET PROFIT", fmt_pkr(yearly["Net Profit"].sum()),
-                      f"Margin: {yearly['Net Profit'].sum()/yearly['Revenue'].sum()*100:.1f}%",
-                      yearly["Net Profit"].values,
-                      BACHAT_GREEN if yearly["Net Profit"].sum() >= 0 else DANGER),
-            use_container_width=True, config=_CFG_STATIC)
-    with k3:
-        st.plotly_chart(
-            chart_kpi(a_lbl.upper(), fmt_pkr(yearly[a_lbl].sum()),
-                      "Platform share", yearly[a_lbl].values, INFO),
-            use_container_width=True, config=_CFG_STATIC)
-    with k4:
-        st.plotly_chart(
-            chart_kpi(b_lbl.upper(), fmt_pkr(yearly[b_lbl].sum()),
-                      "Partner share", yearly[b_lbl].values, PURPLE),
-            use_container_width=True, config=_CFG_STATIC)
+    _sh("Monthly P&L Breakdown")
+    agg = _agg_monthly(df)
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=agg["month"], y=agg["total_revenue_monthly"],
+                             name="Revenue", mode="lines",
+                             line=dict(color=BACHAT_GREEN, width=2.5)))
+    fig.add_trace(go.Scatter(x=agg["month"], y=agg["net_profit_monthly"],
+                             name="Net Profit", mode="lines",
+                             line=dict(color=INFO, width=2.5)))
+    fig.add_trace(go.Scatter(x=agg["month"], y=agg["default_loss_monthly"],
+                             name="Default Loss", mode="lines",
+                             line=dict(color=DANGER, width=2, dash="dash")))
+    fig.add_trace(go.Scatter(x=agg["month"], y=agg["party_a_monthly"],
+                             name="Party A", mode="lines",
+                             line=dict(color=PURPLE, width=2, dash="dot")))
+    st.plotly_chart(_theme(fig, "P&L Over Time", height=400),
+                    use_container_width=True, config=_CFG_STATIC)
 
-    left, right = st.columns([2, 1], gap="medium")
+    # Donut split
+    _sh("Cumulative Revenue Allocation")
+    total_fees    = df["fees_monthly"].sum()
+    total_b_nii   = df["base_nii_monthly"].sum()
+    total_fl_nii  = df["float_nii_monthly"].sum()
+    total_fee_nii = df["fee_nii_monthly"].sum()
+    total_pen     = df["penalty_income_monthly"].sum()
+    total_loss    = df["default_loss_monthly"].sum()
+    total_profit  = df["net_profit_monthly"].sum()
+    party_a       = df["party_a_monthly"].sum()
 
-    with left:
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=yearly["Year"], y=yearly["Revenue"],
-                             name="Revenue", marker_color=BACHAT_GREEN,
-                             marker_opacity=0.85))
-        fig.add_trace(go.Bar(x=yearly["Year"], y=-yearly["Default Loss"],
-                             name="Default Loss", marker_color=DANGER,
-                             marker_opacity=0.85))
-        fig.add_trace(go.Scatter(x=yearly["Year"], y=yearly["Net Profit"],
-                                 name="Net Profit", mode="lines+markers",
-                                 line=dict(color=INK, width=3),
-                                 marker=dict(size=10, color=INK)))
-        fig.update_layout(barmode="relative")
-        st.plotly_chart(_theme(fig, "Annual P&L", height=360),
+    fig_d = go.Figure(go.Pie(
+        labels=["Fees", "Base NII", "Float NII", "Fee NII",
+                "Penalty", "Default Loss", "Net Profit"],
+        values=[total_fees, total_b_nii, total_fl_nii, total_fee_nii,
+                total_pen, total_loss, max(0, total_profit)],
+        hole=0.5,
+        marker=dict(colors=[BACHAT_GREEN, INFO, PURPLE, TEAL,
+                             WARNING, DANGER, BACHAT_GREEN_DARK]),
+        textinfo="label+percent",
+        textfont=dict(size=11),
+    ))
+    c1, c2 = st.columns([1, 1])
+    with c1:
+        st.plotly_chart(fig_d, use_container_width=True, config=_CFG_STATIC)
+    with c2:
+        st.metric("Party A (Platform)", fmt_pkr(party_a),
+                  f"{cfg.profit_split_party_a:.0f}% share")
+        st.metric("Party B (Investors)", fmt_pkr(total_profit - party_a),
+                  f"{100-cfg.profit_split_party_a:.0f}% share")
+        st.metric("Total Revenue", fmt_pkr(
+            total_fees+total_b_nii+total_fl_nii+total_fee_nii+total_pen))
+        st.metric("Total Default Loss", fmt_pkr(total_loss))
+
+
+def tab_scenarios(cfg: BachatConfig):
+    _sh("Scenario Analysis — Base / Optimistic / Pessimistic")
+    st.caption(
+        "Optimistic: default rate ×0.5, growth ×1.25, recovery ×1.2. "
+        "Pessimistic: default rate ×2.0, growth ×0.6, recovery ×0.7."
+    )
+    scenarios = build_scenarios(cfg)
+
+    st.plotly_chart(chart_scenario_comparison(scenarios),
+                    use_container_width=True, config=_CFG_STATIC)
+    st.plotly_chart(chart_scenario_revenue(scenarios),
+                    use_container_width=True, config=_CFG_STATIC)
+
+    _sh("Scenario Summary Table")
+    summary_rows = []
+    for name, sdf in scenarios.items():
+        total_rev    = sdf["total_revenue_monthly"].sum()
+        total_profit = sdf["net_profit_monthly"].sum()
+        total_loss   = sdf["default_loss_monthly"].sum()
+        peak_users   = int(sdf["active_users"].max())
+        summary_rows.append({
+            "Scenario":       name,
+            "Total Revenue":  fmt_pkr(total_rev),
+            "Total Profit":   fmt_pkr(total_profit),
+            "Total Loss":     fmt_pkr(total_loss),
+            "Loss / Rev %":   f"{total_loss/total_rev*100:.1f}%" if total_rev else "—",
+            "Peak Active Users": f"{peak_users:,}",
+        })
+    st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, hide_index=True)
+
+    st.markdown("""
+    <div class="audit-box">
+    <b>Scenario assumptions are multiplicative adjustments on the current config.</b>
+    They are not separate parameter sets — the Base scenario is your exact sidebar
+    configuration. Use this tab to stress-test model resilience to economic shocks.
+    </div>""", unsafe_allow_html=True)
+
+
+def tab_market(cfg: BachatConfig, df: pd.DataFrame):
+    _sh("Market Opportunity — TAM / SAM / SOM")
+
+    agg = _agg_monthly(df)
+    c1, c2 = st.columns(2)
+    with c1:
+        st.plotly_chart(chart_market_funnel(cfg, agg),
+                        use_container_width=True, config=_CFG_STATIC)
+    with c2:
+        st.plotly_chart(chart_market_growth(cfg),
                         use_container_width=True, config=_CFG_STATIC)
 
-    with right:
-        display = yearly.copy()
-        for col in display.columns[2:]:
-            display[col] = display[col].apply(
-                lambda x: fmt_pkr(x) if isinstance(x, float) else f"{x:,}")
-        st.dataframe(display, use_container_width=True, hide_index=True)
+    # Penetration metrics
+    _sh("Penetration Metrics")
+    sim_peak    = int(agg["active_users"].max())
+    som_pct     = sim_peak / cfg.som_size  * 100 if cfg.som_size  else 0
+    sam_pct     = sim_peak / cfg.sam_size  * 100 if cfg.sam_size  else 0
+    tam_pct     = sim_peak / cfg.market_size * 100 if cfg.market_size else 0
 
-        # Profit split donut
-        total_a = yearly[a_lbl].sum()
-        total_b = yearly[b_lbl].sum()
-        fig_d = go.Figure(go.Pie(
-            labels=[a_lbl, b_lbl],
-            values=[max(0, total_a), max(0, total_b)],
-            hole=0.55,
-            marker_colors=[BACHAT_GREEN, INFO],
-            textinfo="percent+label",
-            textfont=dict(size=11, family="Inter"),
-        ))
-        fig_d.update_layout(
-            height=240, margin=dict(l=10, r=10, t=30, b=10),
-            paper_bgcolor=WHITE,
-            title=dict(text="Profit Split", font=dict(size=13, color=INK), x=0),
-            showlegend=False,
-        )
-        st.plotly_chart(fig_d, use_container_width=True, config=_CFG_STATIC)
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("TAM",           f"{cfg.market_size:,}")
+    col2.metric("SAM",           f"{cfg.sam_size:,}",
+                f"{cfg.sam_size/cfg.market_size*100:.1f}% of TAM")
+    col3.metric("SOM",           f"{cfg.som_size:,}",
+                f"{cfg.som_size/cfg.sam_size*100:.1f}% of SAM" if cfg.sam_size else "—")
+    col4.metric("Simulated Peak", f"{sim_peak:,}",
+                f"{som_pct:.1f}% of SOM")
+
+    _sh("TAM Distribution Config")
+    if cfg.use_tam:
+        st.success("TAM distribution is ENABLED — users are scaled by duration × slab shares.")
+        share_rows = []
+        for dur in cfg.durations:
+            for slab in cfg.slab_amounts:
+                d_pct = cfg.duration_share.get(dur, 100.0/len(cfg.durations))
+                s_pct = cfg.slab_share.get(slab, 100.0/len(cfg.slab_amounts))
+                share_rows.append({
+                    "Duration": f"{dur}M",
+                    "Slab": f"PKR {slab:,}",
+                    "Duration Share %": f"{d_pct:.1f}%",
+                    "Slab Share %": f"{s_pct:.1f}%",
+                    "Combined Scale": f"{d_pct*s_pct/100:.2f}%",
+                })
+        st.dataframe(pd.DataFrame(share_rows), use_container_width=True, hide_index=True)
+    else:
+        st.info("TAM distribution is DISABLED. Enable it in the sidebar to scale users "
+                "by duration × slab market shares.")
+
+    st.markdown(f"""
+    <div class="audit-box">
+    <b>Market growth projection</b> uses {cfg.market_growth_rate:.0f}% p.a. compounded
+    on the current TAM/SAM/SOM inputs.<br><br>
+    <b>Penetration benchmark:</b> simulated peak active users ({sim_peak:,}) represents
+    <b>{tam_pct:.3f}%</b> of TAM, <b>{sam_pct:.2f}%</b> of SAM,
+    <b>{som_pct:.1f}%</b> of SOM.
+    </div>""", unsafe_allow_html=True)
 
 
 def tab_sensitivity(cfg: BachatConfig):
     _sh("Default Rate Sensitivity")
     st.caption("Net profit per cycle vs default rate. Zero-crossing = breakeven.")
 
+    slab0 = cfg.slab_amounts[0]
     rates = np.arange(0, 31, 1)
-    fig = go.Figure()
+    fig   = go.Figure()
     for dur, color in zip([3, 6, 9, 12], PLOTLY_COLORWAY):
         profits = [cycle_economics(
-            dataclasses.replace(cfg, default_rate=float(r), durations=[dur]), dur
-        )["net_profit"] for r in rates]
+            dataclasses.replace(cfg, default_rate=float(r), durations=[dur]),
+            dur, slab0)["net_profit"] for r in rates]
         fig.add_trace(go.Scatter(x=rates, y=profits, mode="lines",
                                  name=f"{dur}M", line=dict(color=color, width=2.5)))
     fig.add_hline(y=0, line=dict(color=SLATE_500, width=1.5, dash="dash"))
@@ -1658,12 +1865,14 @@ def tab_sensitivity(cfg: BachatConfig):
     st.caption("How net profit responds to fee % at different blocking levels.")
     fees_range  = np.arange(0, 16, 0.5)
     primary_dur = cfg.durations[0]
-    fig2 = go.Figure()
+    fig2        = go.Figure()
     for blocks, color in zip(range(0, min(4, primary_dur)), PLOTLY_COLORWAY):
         profits = [cycle_economics(
             dataclasses.replace(cfg, slot_fee_pct=float(f),
-                                blocked_slots=blocks, durations=[primary_dur]),
-            primary_dur)["net_profit"] for f in fees_range]
+                                blocked_slots=blocks,
+                                durations=[primary_dur],
+                                slot_fees_config={}),
+            primary_dur, slab0)["net_profit"] for f in fees_range]
         fig2.add_trace(go.Scatter(x=fees_range, y=profits, mode="lines",
                                   name=f"{blocks} blocked",
                                   line=dict(color=color, width=2.5)))
@@ -1676,15 +1885,33 @@ def tab_sensitivity(cfg: BachatConfig):
     st.plotly_chart(_theme(fig2, f"Profit vs Fee — {primary_dur}M ROSCA", height=400),
                     use_container_width=True, config=_CFG_STATIC)
 
+    _sh("Fee Mode Impact")
+    st.caption("NII earned on collected fees: Upfront (half-cycle hold) vs Monthly (quarter-cycle hold).")
+    mode_data = []
+    for dur in cfg.durations:
+        for slab in cfg.slab_amounts:
+            eco_up  = cycle_economics(
+                dataclasses.replace(cfg, fee_collection_mode="Upfront"), dur, slab)
+            eco_mo  = cycle_economics(
+                dataclasses.replace(cfg, fee_collection_mode="Monthly"), dur, slab)
+            mode_data.append({
+                "Duration": f"{dur}M",
+                "Slab": f"PKR {slab:,}",
+                "Fee NII — Upfront": fmt_pkr(eco_up["fee_nii"]),
+                "Fee NII — Monthly": fmt_pkr(eco_mo["fee_nii"]),
+                "Difference": fmt_pkr(eco_up["fee_nii"] - eco_mo["fee_nii"]),
+            })
+    st.dataframe(pd.DataFrame(mode_data), use_container_width=True, hide_index=True)
+
 
 def tab_raw(df: pd.DataFrame):
     _sh("Raw Forecast Data")
-    st.caption("All revenue/cost columns are suffixed _monthly — "
-               "no mixing with cycle-lifetime values.")
+    st.caption("All revenue/cost columns are suffixed _monthly. "
+               "pre_payout_loss_monthly + post_payout_loss_monthly = default_loss_monthly.")
     st.dataframe(df, use_container_width=True, height=480)
     csv = df.to_csv(index=False).encode("utf-8")
     st.download_button("⬇ Download as CSV", csv,
-                       "bachat_forecast.csv", "text/csv")
+                       "bachat_forecast_v3.csv", "text/csv")
 
 
 # =============================================================================
@@ -1701,35 +1928,59 @@ def main():
     inject_css()
 
     cfg = render_sidebar()
-    df  = build_forecast(cfg)
+
+    # ── Validation gate ───────────────────────────────────────────────────────
+    errors, warnings = validate_config(cfg)
+    if errors:
+        for err in errors:
+            st.markdown(f'<div class="val-error">🚫 {err}</div>',
+                        unsafe_allow_html=True)
+        st.stop()
+    for warn in warnings:
+        st.markdown(f'<div class="val-warn">⚠ {warn}</div>',
+                    unsafe_allow_html=True)
+
+    df = build_forecast(cfg)
 
     annual_rate = cfg.kibor_rate + cfg.spread
+    slabs_str   = " · ".join(f"PKR {s:,}/mo" for s in cfg.slab_amounts)
     st.markdown(f"""
     <div class="hero">
         <div class="hero-left">
             <h1>Bachat ROSCA — Pricing &amp; Risk</h1>
             <p>Slot-conditional defaults · three-principal NII ·
-               two-pass lifecycle · {cfg.simulation_months}-month horizon</p>
+               two-pass lifecycle · {cfg.simulation_months}-month horizon ·
+               {cfg.fee_collection_mode} fees</p>
         </div>
         <div class="hero-pill">
             KIBOR {cfg.kibor_rate:.2f}% + Spread {cfg.spread:+.2f}%
             = <b>{annual_rate:.2f}%</b> &nbsp;|&nbsp;
             {", ".join(f"{d}M" for d in cfg.durations)} &nbsp;|&nbsp;
-            PKR {cfg.slab_amount:,}/mo
+            {slabs_str}
         </div>
     </div>""", unsafe_allow_html=True)
 
-    tabs = st.tabs(["📊 Overview", "⚠️ Risk & Slots",
-                    "💰 Revenue & NII", "👥 Users",
-                    "📈 P&L", "🔬 Sensitivity", "🗂 Raw Data"])
+    tabs = st.tabs([
+        "📊 Overview",
+        "⚠️ Risk & Slots",
+        "💰 Revenue & NII",
+        "👥 Users",
+        "📈 P&L",
+        "🎭 Scenarios",
+        "🌍 Market",
+        "🔬 Sensitivity",
+        "🗂 Raw Data",
+    ])
 
     with tabs[0]: tab_overview(cfg, df)
     with tabs[1]: tab_risk(cfg, df)
     with tabs[2]: tab_revenue(cfg, df)
     with tabs[3]: tab_users(cfg, df)
     with tabs[4]: tab_pnl(cfg, df)
-    with tabs[5]: tab_sensitivity(cfg)
-    with tabs[6]: tab_raw(df)
+    with tabs[5]: tab_scenarios(cfg)
+    with tabs[6]: tab_market(cfg, df)
+    with tabs[7]: tab_sensitivity(cfg)
+    with tabs[8]: tab_raw(df)
 
 
 if __name__ == "__main__":
