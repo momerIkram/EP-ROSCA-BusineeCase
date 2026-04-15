@@ -1554,6 +1554,96 @@ def chart_yoy_projection(proj: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def chart_profit_split_area(agg: pd.DataFrame) -> go.Figure:
+    """Stacked area: Party A vs Party B net profit share over time."""
+    party_a = agg["party_a_monthly"]
+    party_b = agg["party_b_monthly"]
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=agg["month"], y=party_a,
+        name="Party A (Platform)", mode="lines",
+        line=dict(color=BACHAT_GREEN, width=0),
+        fill="tozeroy", fillcolor=_hex_rgba(BACHAT_GREEN, 0.55),
+        stackgroup="split",
+    ))
+    fig.add_trace(go.Scatter(
+        x=agg["month"], y=party_b,
+        name="Party B (Investors)", mode="lines",
+        line=dict(color=INFO, width=0),
+        fill="tonexty", fillcolor=_hex_rgba(INFO, 0.45),
+        stackgroup="split",
+    ))
+    # Net profit line on top
+    fig.add_trace(go.Scatter(
+        x=agg["month"], y=agg["net_profit_monthly"],
+        name="Net Profit (total)", mode="lines",
+        line=dict(color=INK, width=2, dash="dot"),
+    ))
+    return _theme(fig, "Party A vs Party B — Monthly Profit Split", height=360)
+
+
+def chart_profit_split_donut(party_a: float, party_b: float,
+                              pct_a: float) -> go.Figure:
+    """Donut focused purely on profit split between the two parties."""
+    pct_b = 100 - pct_a
+    colors = [BACHAT_GREEN, INFO]
+    fig = go.Figure(go.Pie(
+        labels=[f"Party A  ({pct_a:.0f}%)", f"Party B  ({pct_b:.0f}%)"],
+        values=[max(0, party_a), max(0, party_b)],
+        hole=0.62,
+        marker=dict(colors=colors,
+                    line=dict(color=WHITE, width=3)),
+        textinfo="label+value",
+        texttemplate="%{label}<br><b>%{value:,.0f}</b>",
+        textfont=dict(size=11, color=INK),
+        insidetextorientation="horizontal",
+        pull=[0.04, 0],
+        direction="clockwise",
+        sort=False,
+    ))
+    fig.update_layout(
+        height=280,
+        margin=dict(l=8, r=8, t=40, b=8),
+        paper_bgcolor=WHITE,
+        showlegend=False,
+        title=dict(text="Cumulative Profit Split",
+                   font=dict(size=13, color=INK), x=0.5, xanchor="center"),
+        annotations=[dict(
+            text=f"<b>{pct_a:.0f}% / {pct_b:.0f}%</b>",
+            x=0.5, y=0.5, showarrow=False,
+            font=dict(size=16, color=INK, family="Inter"),
+        )],
+    )
+    return fig
+
+
+def chart_profit_split_yearly(df: pd.DataFrame, cfg: BachatConfig) -> go.Figure:
+    """Grouped bar — Party A vs B profit per year."""
+    yearly = df.groupby("year").agg(
+        party_a=("party_a_monthly", "sum"),
+        party_b=("party_b_monthly", "sum"),
+    ).reset_index()
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=yearly["year"], y=yearly["party_a"],
+        name=f"Party A ({cfg.profit_split_party_a:.0f}%)",
+        marker_color=BACHAT_GREEN,
+        text=[fmt_pkr(v) for v in yearly["party_a"]],
+        textposition="outside", textfont=dict(size=10),
+    ))
+    fig.add_trace(go.Bar(
+        x=yearly["year"], y=yearly["party_b"],
+        name=f"Party B ({100-cfg.profit_split_party_a:.0f}%)",
+        marker_color=INFO,
+        text=[fmt_pkr(v) for v in yearly["party_b"]],
+        textposition="outside", textfont=dict(size=10),
+    ))
+    fig.update_layout(barmode="group")
+    fig.update_xaxes(title_text="Year", tickmode="linear")
+    fig.update_yaxes(title_text="Profit (PKR)")
+    return _theme(fig, "Annual Profit by Party", height=360)
+
+
 # =============================================================================
 # TAB FUNCTIONS
 # =============================================================================
@@ -1564,17 +1654,20 @@ def tab_overview(cfg: BachatConfig, df: pd.DataFrame):
     insights = generate_insights(cfg, df)
 
     # KPI sparklines
-    st.plotly_chart(chart_kpi_sparklines(agg),
+    st.plotly_chart(chart_kpi_sparklines(agg,
+                    key="_pc_1"),
                     use_container_width=True, config=_CFG_STATIC)
 
     # Gauges row
-    st.plotly_chart(chart_profit_gauge(cfg),
+    st.plotly_chart(chart_profit_gauge(cfg,
+                    key="_pc_2"),
                     use_container_width=True, config=_CFG_STATIC)
 
     # Combo chart + right panel
     main_col, right_col = st.columns([2, 1])
     with main_col:
-        st.plotly_chart(chart_revenue_combo(agg),
+        st.plotly_chart(chart_revenue_combo(agg,
+                    key="_pc_3"),
                         use_container_width=True, config=_CFG_STATIC)
     with right_col:
         items_html = "".join(
@@ -1588,7 +1681,8 @@ def tab_overview(cfg: BachatConfig, df: pd.DataFrame):
 
     # Income statement
     _sh("Cycle Income Statement")
-    st.plotly_chart(chart_income_statement(eco),
+    st.plotly_chart(chart_income_statement(eco,
+                    key="_pc_4"),
                     use_container_width=True, config=_CFG_STATIC)
 
 
@@ -1599,7 +1693,8 @@ def tab_risk(cfg: BachatConfig, df: pd.DataFrame):
         "Post-payout: member receives pot then defaults (credit loss / receivable)."
     )
     agg = _agg_monthly(df)
-    st.plotly_chart(chart_default_split(agg),
+    st.plotly_chart(chart_default_split(agg,
+                    key="_pc_5"),
                     use_container_width=True, config=_CFG_STATIC)
 
     # KPI strip
@@ -1646,7 +1741,8 @@ def tab_risk(cfg: BachatConfig, df: pd.DataFrame):
 def tab_revenue(cfg: BachatConfig, df: pd.DataFrame):
     _sh("Revenue Components Over Time")
     agg = _agg_monthly(df)
-    st.plotly_chart(chart_revenue_combo(agg),
+    st.plotly_chart(chart_revenue_combo(agg,
+                    key="_pc_6"),
                     use_container_width=True, config=_CFG_STATIC)
 
     _sh("NII Breakdown")
@@ -1682,7 +1778,8 @@ def tab_revenue(cfg: BachatConfig, df: pd.DataFrame):
 def tab_users(cfg: BachatConfig, df: pd.DataFrame):
     _sh("User Lifecycle")
     agg = _agg_monthly(df)
-    st.plotly_chart(chart_user_waterfall(agg),
+    st.plotly_chart(chart_user_waterfall(agg,
+                    key="_pc_7"),
                     use_container_width=True, config=_CFG_STATIC)
 
     # MoM growth metrics
@@ -1712,7 +1809,8 @@ def tab_users(cfg: BachatConfig, df: pd.DataFrame):
 def tab_pnl(cfg: BachatConfig, df: pd.DataFrame):
     _sh("Profit & Loss — Yearly Summary with Projections")
     proj = build_yearly_projection(df, cfg, extra_years=3)
-    st.plotly_chart(chart_yoy_projection(proj),
+    st.plotly_chart(chart_yoy_projection(proj,
+                    key="_pc_8"),
                     use_container_width=True, config=_CFG_STATIC)
 
     st.caption(f"Simulated years use model output. Projected years apply "
@@ -1740,10 +1838,10 @@ def tab_pnl(cfg: BachatConfig, df: pd.DataFrame):
                              name="Party A", mode="lines",
                              line=dict(color=PURPLE, width=2, dash="dot")))
     st.plotly_chart(_theme(fig, "P&L Over Time", height=400),
-                    use_container_width=True, config=_CFG_STATIC)
+                    use_container_width=True, config=_CFG_STATIC,
+                    key="pnl_monthly_breakdown")
 
-    # Donut split
-    _sh("Cumulative Revenue Allocation")
+    # ── Profit Split ─────────────────────────────────────────────────────────
     total_fees    = df["fees_monthly"].sum()
     total_b_nii   = df["base_nii_monthly"].sum()
     total_fl_nii  = df["float_nii_monthly"].sum()
@@ -1751,9 +1849,104 @@ def tab_pnl(cfg: BachatConfig, df: pd.DataFrame):
     total_pen     = df["penalty_income_monthly"].sum()
     total_loss    = df["default_loss_monthly"].sum()
     total_profit  = df["net_profit_monthly"].sum()
-    party_a       = df["party_a_monthly"].sum()
+    party_a_total = df["party_a_monthly"].sum()
+    party_b_total = total_profit - party_a_total
+    pct_a         = cfg.profit_split_party_a
+    pct_b         = 100 - pct_a
+    total_rev     = total_fees + total_b_nii + total_fl_nii + total_fee_nii + total_pen
 
-    fig_d = go.Figure(go.Pie(
+    _sh("Profit Split — Party A vs Party B")
+
+    # ── KPI strip ────────────────────────────────────────────────────────────
+    k1, k2, k3, k4, k5, k6 = st.columns(6)
+    k1.metric("Total Revenue",   fmt_pkr(total_rev))
+    k2.metric("Total Net Profit", fmt_pkr(total_profit),
+              f"{total_profit/total_rev*100:.1f}% margin" if total_rev else None)
+    k3.metric("Default Loss",    fmt_pkr(total_loss),
+              f"−{total_loss/total_rev*100:.1f}% of rev" if total_rev else None)
+    k4.metric(f"Party A  ({pct_a:.0f}%)", fmt_pkr(party_a_total),
+              "Platform / Operator")
+    k5.metric(f"Party B  ({pct_b:.0f}%)", fmt_pkr(party_b_total),
+              "Investors / Partners")
+    k6.metric("A : B Ratio",
+              f"{party_a_total/party_b_total:.1f}x" if party_b_total else "∞")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Donut  +  Stacked area  (side by side) ────────────────────────────────
+    col_donut, col_area = st.columns([1, 2])
+    with col_donut:
+        st.plotly_chart(
+            chart_profit_split_donut(party_a_total, party_b_total, pct_a),
+            use_container_width=True, config=_CFG_STATIC,
+            key="pnl_split_donut")
+        # Labelled breakdown under donut
+        st.markdown(f"""
+        <div style="background:{BACHAT_GREEN_LIGHT}; border:1px solid {BACHAT_GREEN};
+                    border-radius:10px; padding:0.85rem 1rem; margin-top:0.5rem;">
+            <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase;
+                        letter-spacing:0.06em; color:{BACHAT_GREEN_DARK}; margin-bottom:0.6rem;">
+                Profit Allocation
+            </div>
+            <div style="display:flex; justify-content:space-between;
+                        font-size:0.82rem; padding:0.3rem 0;
+                        border-bottom:1px solid rgba(0,160,80,0.2);">
+                <span style="color:{SLATE_700};">
+                    <b style="color:{BACHAT_GREEN};">●</b>&nbsp;
+                    Party A (Platform)&nbsp;&nbsp;<span style="color:{SLATE_500};">{pct_a:.0f}%</span>
+                </span>
+                <b style="color:{INK};">{fmt_pkr(party_a_total)}</b>
+            </div>
+            <div style="display:flex; justify-content:space-between;
+                        font-size:0.82rem; padding:0.3rem 0;">
+                <span style="color:{SLATE_700};">
+                    <b style="color:{INFO};">●</b>&nbsp;
+                    Party B (Investors)&nbsp;&nbsp;<span style="color:{SLATE_500};">{pct_b:.0f}%</span>
+                </span>
+                <b style="color:{INK};">{fmt_pkr(party_b_total)}</b>
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+    with col_area:
+        st.plotly_chart(
+            chart_profit_split_area(agg),
+            use_container_width=True, config=_CFG_STATIC,
+            key="pnl_split_area")
+
+    # ── Annual grouped bar ────────────────────────────────────────────────────
+    st.plotly_chart(
+        chart_profit_split_yearly(df, cfg),
+        use_container_width=True, config=_CFG_STATIC,
+        key="pnl_split_yearly")
+
+    # ── Yearly breakdown table ────────────────────────────────────────────────
+    _sh("Year-by-Year Profit Allocation")
+    yt = df.groupby("year").agg(
+        revenue       =("total_revenue_monthly",   "sum"),
+        net_profit    =("net_profit_monthly",       "sum"),
+        default_loss  =("default_loss_monthly",     "sum"),
+        party_a       =("party_a_monthly",          "sum"),
+        party_b       =("party_b_monthly",          "sum"),
+    ).reset_index()
+    yt["margin_%"]     = (yt["net_profit"] / yt["revenue"] * 100).round(1)
+    yt["A_pct_check"]  = (yt["party_a"]   / yt["net_profit"] * 100).round(1)
+
+    display_yt = yt.copy()
+    display_yt["revenue"]      = yt["revenue"].map(fmt_pkr)
+    display_yt["net_profit"]   = yt["net_profit"].map(fmt_pkr)
+    display_yt["default_loss"] = yt["default_loss"].map(fmt_pkr)
+    display_yt["party_a"]      = yt["party_a"].map(fmt_pkr)
+    display_yt["party_b"]      = yt["party_b"].map(fmt_pkr)
+    display_yt["margin_%"]     = yt["margin_%"].astype(str) + "%"
+    display_yt["A_pct_check"]  = yt["A_pct_check"].astype(str) + "%"
+    display_yt.columns = ["Year", "Revenue", "Net Profit", "Default Loss",
+                          f"Party A ({pct_a:.0f}%)", f"Party B ({pct_b:.0f}%)",
+                          "Net Margin", "A's Actual %"]
+    st.dataframe(display_yt, use_container_width=True, hide_index=True)
+
+    # ── Revenue allocation donut ──────────────────────────────────────────────
+    _sh("Cumulative Revenue Allocation")
+    fig_rev = go.Figure(go.Pie(
         labels=["Fees", "Base NII", "Float NII", "Fee NII",
                 "Penalty", "Default Loss", "Net Profit"],
         values=[total_fees, total_b_nii, total_fl_nii, total_fee_nii,
@@ -1764,17 +1957,14 @@ def tab_pnl(cfg: BachatConfig, df: pd.DataFrame):
         textinfo="label+percent",
         textfont=dict(size=11),
     ))
-    c1, c2 = st.columns([1, 1])
-    with c1:
-        st.plotly_chart(fig_d, use_container_width=True, config=_CFG_STATIC)
-    with c2:
-        st.metric("Party A (Platform)", fmt_pkr(party_a),
-                  f"{cfg.profit_split_party_a:.0f}% share")
-        st.metric("Party B (Investors)", fmt_pkr(total_profit - party_a),
-                  f"{100-cfg.profit_split_party_a:.0f}% share")
-        st.metric("Total Revenue", fmt_pkr(
-            total_fees+total_b_nii+total_fl_nii+total_fee_nii+total_pen))
-        st.metric("Total Default Loss", fmt_pkr(total_loss))
+    fig_rev.update_layout(
+        height=340, margin=dict(l=8, r=8, t=40, b=8),
+        paper_bgcolor=WHITE,
+        title=dict(text="Revenue Waterfall — Where Does Each Rupee Go?",
+                   font=dict(size=13, color=INK), x=0.0),
+    )
+    st.plotly_chart(fig_rev, use_container_width=True, config=_CFG_STATIC,
+                    key="pnl_rev_alloc_donut")
 
 
 def tab_scenarios(cfg: BachatConfig):
@@ -1785,9 +1975,11 @@ def tab_scenarios(cfg: BachatConfig):
     )
     scenarios = build_scenarios(cfg)
 
-    st.plotly_chart(chart_scenario_comparison(scenarios),
+    st.plotly_chart(chart_scenario_comparison(scenarios,
+                    key="_pc_11"),
                     use_container_width=True, config=_CFG_STATIC)
-    st.plotly_chart(chart_scenario_revenue(scenarios),
+    st.plotly_chart(chart_scenario_revenue(scenarios,
+                    key="_pc_12"),
                     use_container_width=True, config=_CFG_STATIC)
 
     _sh("Scenario Summary Table")
@@ -1821,10 +2013,12 @@ def tab_market(cfg: BachatConfig, df: pd.DataFrame):
     agg = _agg_monthly(df)
     c1, c2 = st.columns(2)
     with c1:
-        st.plotly_chart(chart_market_funnel(cfg, agg),
+        st.plotly_chart(chart_market_funnel(cfg, agg,
+                    key="_pc_13"),
                         use_container_width=True, config=_CFG_STATIC)
     with c2:
-        st.plotly_chart(chart_market_growth(cfg),
+        st.plotly_chart(chart_market_growth(cfg,
+                    key="_pc_14"),
                         use_container_width=True, config=_CFG_STATIC)
 
     # Penetration metrics
@@ -1892,7 +2086,8 @@ def tab_sensitivity(cfg: BachatConfig):
                   annotation_font=dict(size=11, color=WARNING))
     fig.update_xaxes(title_text="User Default Rate (%)")
     fig.update_yaxes(title_text="Net Profit per Cycle (PKR)")
-    st.plotly_chart(_theme(fig, "Profit per Cycle vs Default Rate", height=400),
+    st.plotly_chart(_theme(fig, "Profit per Cycle vs Default Rate", height=400,
+                    key="_pc_15"),
                     use_container_width=True, config=_CFG_STATIC)
 
     _sh("Fee Sensitivity")
@@ -1916,7 +2111,8 @@ def tab_sensitivity(cfg: BachatConfig):
                    annotation_font=dict(size=11, color=WARNING))
     fig2.update_xaxes(title_text="Slot Fee % of Pot")
     fig2.update_yaxes(title_text="Net Profit per Cycle (PKR)")
-    st.plotly_chart(_theme(fig2, f"Profit vs Fee — {primary_dur}M ROSCA", height=400),
+    st.plotly_chart(_theme(fig2, f"Profit vs Fee — {primary_dur}M ROSCA", height=400,
+                    key="_pc_16"),
                     use_container_width=True, config=_CFG_STATIC)
 
     _sh("Fee Mode Impact")
