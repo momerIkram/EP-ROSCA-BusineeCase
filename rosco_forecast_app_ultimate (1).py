@@ -873,88 +873,120 @@ def inject_css():
     header [data-testid="stDecoration"] {{ display: none; }}
 
     /* ================================================================
-       RESPONSIVE — Tablet (≤ 768px)
+       RESPONSIVE — Tablet & Mobile (≤ 768px)
        ================================================================ */
     @media (max-width: 768px) {{
-        .main .block-container {{
-            padding-top: 1rem;
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
-            max-width: 100%;
+        /* Force sidebar collapsed on mobile so main content gets full width */
+        section[data-testid="stSidebar"] {{
+            min-width: 0 !important;
+            max-width: 0 !important;
+            transform: translateX(-100%);
+        }}
+        section[data-testid="stSidebar"][aria-expanded="true"] {{
+            min-width: 85vw !important;
+            max-width: 85vw !important;
+            transform: translateX(0);
+            z-index: 999;
+            position: fixed !important;
+            top: 0; left: 0; bottom: 0;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.25);
         }}
 
-        /* Hero — stack vertically */
+        .main .block-container {{
+            padding-top: 1rem;
+            padding-left: 0.6rem;
+            padding-right: 0.6rem;
+            max-width: 100% !important;
+            min-width: 0 !important;
+        }}
+
+        /* Hero — stack vertically, allow wrapping */
         .hero {{
             flex-direction: column;
             align-items: flex-start;
-            gap: 0.6rem;
-            padding: 1rem 1.2rem;
+            gap: 0.5rem;
+            padding: 0.9rem 1rem;
             border-radius: 10px;
+            border-left-width: 3px;
         }}
-        .hero-left h1 {{ font-size: 1.2rem; }}
-        .hero-left p  {{ font-size: 0.78rem; }}
+        .hero-left h1 {{
+            font-size: 1.1rem;
+            line-height: 1.3;
+            word-break: break-word;
+        }}
+        .hero-left p {{
+            font-size: 0.72rem;
+            line-height: 1.4;
+            word-break: break-word;
+        }}
+        .hero-pill {{
+            font-size: 0.65rem;
+            padding: 0.3rem 0.6rem;
+            white-space: normal;
+            word-break: break-word;
+            line-height: 1.4;
+        }}
 
-        /* Metric card columns — wrap into grid */
+        /* All column rows — wrap into 2-col grid */
         [data-testid="stHorizontalBlock"] {{
             flex-wrap: wrap !important;
-            gap: 0.5rem !important;
+            gap: 0.45rem !important;
         }}
         [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
-            flex: 1 1 calc(50% - 0.5rem) !important;
-            min-width: calc(50% - 0.5rem) !important;
+            flex: 1 1 calc(50% - 0.45rem) !important;
+            min-width: calc(50% - 0.45rem) !important;
             max-width: 100% !important;
             width: auto !important;
         }}
+
+        /* Metric cards — compact */
         [data-testid="stMetric"] {{
-            padding: 0.6rem 0.7rem;
-            border-radius: 10px;
+            padding: 0.5rem 0.6rem;
+            border-radius: 8px;
         }}
         [data-testid="stMetric"] [data-testid="stMetricValue"] {{
-            font-size: 1.05rem !important;
+            font-size: 0.95rem !important;
         }}
         [data-testid="stMetric"] label {{
-            font-size: 0.65rem !important;
+            font-size: 0.62rem !important;
         }}
 
-        /* Tabs — scrollable, smaller padding */
+        /* Tabs — horizontal scroll */
         .stTabs [data-baseweb="tab-list"] {{
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
+            flex-wrap: nowrap !important;
         }}
-        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{
-            display: none;
-        }}
+        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{ display: none; }}
         .stTabs [data-baseweb="tab"] {{
-            padding: 0.5rem 0.7rem;
-            font-size: 0.74rem;
+            padding: 0.45rem 0.65rem;
+            font-size: 0.7rem;
             white-space: nowrap;
             flex-shrink: 0;
         }}
 
-        /* Charts — reduce border radius, smaller shadow */
+        /* Charts */
         [data-testid="stPlotlyChart"] > div {{
-            border-radius: 10px;
-            box-shadow: 0 1px 4px rgba(15,23,42,0.04);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(15,23,42,0.04);
         }}
 
         /* Section headers */
-        .sh {{ font-size: 0.88rem; margin: 1.2rem 0 0.6rem; }}
+        .sh {{ font-size: 0.85rem; margin: 1rem 0 0.5rem; }}
 
         /* Insights panel */
-        .insights-panel {{
-            padding: 0.8rem 0.9rem;
-            border-radius: 10px;
-        }}
-        .insights-panel h4 {{ font-size: 0.72rem; }}
-        .insight-item {{ font-size: 0.76rem; padding: 0.45rem 0; }}
+        .insights-panel {{ padding: 0.7rem 0.8rem; border-radius: 10px; }}
+        .insights-panel h4 {{ font-size: 0.7rem; }}
+        .insight-item {{ font-size: 0.74rem; padding: 0.4rem 0; }}
 
         /* Sidebar sections */
-        .sb-section {{ margin: 0.4rem 0.4rem; padding: 0.65rem 0.7rem 0.5rem; }}
-        .sb-summary {{ margin: 0.4rem 0.4rem 0; padding: 0.6rem 0.7rem; }}
+        .sb-section {{ margin: 0.4rem 0.4rem; padding: 0.6rem 0.65rem 0.45rem; }}
+        .sb-summary {{ margin: 0.4rem 0.4rem 0; padding: 0.55rem 0.65rem; }}
 
-        /* Audit box */
-        .audit-box {{ font-size: 0.8rem; padding: 0.8rem 1rem; }}
+        /* Audit / verdict */
+        .audit-box {{ font-size: 0.78rem; padding: 0.7rem 0.9rem; }}
+        .verdict {{ font-size: 0.72rem; padding: 0.3rem 0.7rem; }}
     }}
 
     /* ================================================================
@@ -962,40 +994,26 @@ def inject_css():
        ================================================================ */
     @media (max-width: 480px) {{
         .main .block-container {{
-            padding-left: 0.3rem;
-            padding-right: 0.3rem;
+            padding-left: 0.35rem;
+            padding-right: 0.35rem;
         }}
 
-        /* Metric columns — single column stack */
+        /* Single-column stack for metrics */
         [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
             flex: 1 1 100% !important;
             min-width: 100% !important;
         }}
-        [data-testid="stMetric"] [data-testid="stMetricValue"] {{
-            font-size: 0.95rem !important;
-        }}
 
-        /* Hero even tighter */
-        .hero {{
-            padding: 0.8rem 0.9rem;
-            border-left-width: 3px;
-            margin-bottom: 1rem;
-        }}
-        .hero-left h1 {{ font-size: 1.05rem; }}
-        .hero-pill {{ font-size: 0.68rem; padding: 0.25rem 0.65rem; }}
+        .hero-left h1 {{ font-size: 0.95rem; }}
+        .hero-pill {{ font-size: 0.6rem; }}
 
-        /* Tabs — even smaller */
         .stTabs [data-baseweb="tab"] {{
-            padding: 0.4rem 0.55rem;
-            font-size: 0.68rem;
+            padding: 0.35rem 0.5rem;
+            font-size: 0.65rem;
         }}
 
-        /* Verdict pill */
-        .verdict {{ font-size: 0.74rem; padding: 0.35rem 0.7rem; }}
-
-        /* Sidebar brand */
-        .sb-brand {{ padding: 0.9rem 0.8rem 0.7rem; }}
-        .sb-brand-name {{ font-size: 0.9rem; }}
+        .sb-brand {{ padding: 0.8rem 0.7rem 0.6rem; }}
+        .sb-brand-name {{ font-size: 0.88rem; }}
     }}
     </style>
     """, unsafe_allow_html=True)
