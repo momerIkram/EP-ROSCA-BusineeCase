@@ -871,6 +871,132 @@ def inject_css():
     #MainMenu {{ visibility: hidden; }}
     footer {{ visibility: hidden; }}
     header [data-testid="stDecoration"] {{ display: none; }}
+
+    /* ================================================================
+       RESPONSIVE — Tablet (≤ 768px)
+       ================================================================ */
+    @media (max-width: 768px) {{
+        .main .block-container {{
+            padding-top: 1rem;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            max-width: 100%;
+        }}
+
+        /* Hero — stack vertically */
+        .hero {{
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.6rem;
+            padding: 1rem 1.2rem;
+            border-radius: 10px;
+        }}
+        .hero-left h1 {{ font-size: 1.2rem; }}
+        .hero-left p  {{ font-size: 0.78rem; }}
+
+        /* Metric card columns — wrap into grid */
+        [data-testid="stHorizontalBlock"] {{
+            flex-wrap: wrap !important;
+            gap: 0.5rem !important;
+        }}
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
+            flex: 1 1 calc(50% - 0.5rem) !important;
+            min-width: calc(50% - 0.5rem) !important;
+            max-width: 100% !important;
+            width: auto !important;
+        }}
+        [data-testid="stMetric"] {{
+            padding: 0.6rem 0.7rem;
+            border-radius: 10px;
+        }}
+        [data-testid="stMetric"] [data-testid="stMetricValue"] {{
+            font-size: 1.05rem !important;
+        }}
+        [data-testid="stMetric"] label {{
+            font-size: 0.65rem !important;
+        }}
+
+        /* Tabs — scrollable, smaller padding */
+        .stTabs [data-baseweb="tab-list"] {{
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }}
+        .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{
+            display: none;
+        }}
+        .stTabs [data-baseweb="tab"] {{
+            padding: 0.5rem 0.7rem;
+            font-size: 0.74rem;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }}
+
+        /* Charts — reduce border radius, smaller shadow */
+        [data-testid="stPlotlyChart"] > div {{
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(15,23,42,0.04);
+        }}
+
+        /* Section headers */
+        .sh {{ font-size: 0.88rem; margin: 1.2rem 0 0.6rem; }}
+
+        /* Insights panel */
+        .insights-panel {{
+            padding: 0.8rem 0.9rem;
+            border-radius: 10px;
+        }}
+        .insights-panel h4 {{ font-size: 0.72rem; }}
+        .insight-item {{ font-size: 0.76rem; padding: 0.45rem 0; }}
+
+        /* Sidebar sections */
+        .sb-section {{ margin: 0.4rem 0.4rem; padding: 0.65rem 0.7rem 0.5rem; }}
+        .sb-summary {{ margin: 0.4rem 0.4rem 0; padding: 0.6rem 0.7rem; }}
+
+        /* Audit box */
+        .audit-box {{ font-size: 0.8rem; padding: 0.8rem 1rem; }}
+    }}
+
+    /* ================================================================
+       RESPONSIVE — Small phone (≤ 480px)
+       ================================================================ */
+    @media (max-width: 480px) {{
+        .main .block-container {{
+            padding-left: 0.3rem;
+            padding-right: 0.3rem;
+        }}
+
+        /* Metric columns — single column stack */
+        [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+        }}
+        [data-testid="stMetric"] [data-testid="stMetricValue"] {{
+            font-size: 0.95rem !important;
+        }}
+
+        /* Hero even tighter */
+        .hero {{
+            padding: 0.8rem 0.9rem;
+            border-left-width: 3px;
+            margin-bottom: 1rem;
+        }}
+        .hero-left h1 {{ font-size: 1.05rem; }}
+        .hero-pill {{ font-size: 0.68rem; padding: 0.25rem 0.65rem; }}
+
+        /* Tabs — even smaller */
+        .stTabs [data-baseweb="tab"] {{
+            padding: 0.4rem 0.55rem;
+            font-size: 0.68rem;
+        }}
+
+        /* Verdict pill */
+        .verdict {{ font-size: 0.74rem; padding: 0.35rem 0.7rem; }}
+
+        /* Sidebar brand */
+        .sb-brand {{ padding: 0.9rem 0.8rem 0.7rem; }}
+        .sb-brand-name {{ font-size: 0.9rem; }}
+    }}
     </style>
     """, unsafe_allow_html=True)
 
