@@ -876,20 +876,30 @@ def inject_css():
        RESPONSIVE — Tablet & Mobile (≤ 768px)
        ================================================================ */
     @media (max-width: 768px) {{
-        /* Force sidebar collapsed on mobile so main content gets full width */
+        /* Force sidebar into overlay mode on mobile */
         section[data-testid="stSidebar"] {{
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            bottom: 0 !important;
+            z-index: 999 !important;
+            width: 85vw !important;
             min-width: 0 !important;
-            max-width: 0 !important;
-            transform: translateX(-100%);
+            max-width: 85vw !important;
+            transform: translateX(-100%) !important;
+            transition: transform 0.3s ease !important;
+            box-shadow: none !important;
         }}
         section[data-testid="stSidebar"][aria-expanded="true"] {{
-            min-width: 85vw !important;
-            max-width: 85vw !important;
-            transform: translateX(0);
-            z-index: 999;
-            position: fixed !important;
-            top: 0; left: 0; bottom: 0;
-            box-shadow: 4px 0 24px rgba(0,0,0,0.25);
+            transform: translateX(0) !important;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.3) !important;
+        }}
+        /* Ensure main content always gets full width */
+        .main,
+        [data-testid="stAppViewContainer"],
+        [data-testid="stAppViewContainer"] > .main {{
+            width: 100% !important;
+            min-width: 0 !important;
         }}
 
         .main .block-container {{
@@ -2581,7 +2591,7 @@ def main():
         page_title="Bachat KOMMITTEE — Pricing & Risk",
         page_icon="◉",
         layout="wide",
-        initial_sidebar_state="expanded",
+        initial_sidebar_state="collapsed",
     )
     inject_css()
 
