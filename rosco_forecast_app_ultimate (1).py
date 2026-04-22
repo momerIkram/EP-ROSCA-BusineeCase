@@ -1,5 +1,5 @@
 """
-BACHAT KOMMITTEE — Pricing & Risk Model
+BACHAT KOMMITTEE — Pricing & Risk Model (v3.0)
 ==========================================
 Restores all v1 features dropped in v2, with full validation:
 
@@ -625,6 +625,7 @@ def inject_css():
     .hero-left p {{
         margin: 0.2rem 0 0 0; color: {SLATE_500}; font-size: 0.9rem;
     }}
+    .hero-sub-mobile {{ display: none; }}
     .hero-pill {{
         background: {BACHAT_GREEN_LIGHT};
         border: 1px solid {BACHAT_GREEN};
@@ -827,6 +828,7 @@ def inject_css():
     }}
     .sb-summary-row:last-child {{ border-bottom: none; }}
     .sb-summary-row b {{ color: {INK}; font-weight: 700; }}
+    .sb-summary-small {{ font-size: 0.72rem; }}
 
     /* ── Tabs ─────────────────────────────── */
     .stTabs [data-baseweb="tab-list"] {{
@@ -868,6 +870,130 @@ def inject_css():
         color: {INK} !important;
     }}
 
+    /* ── Flow card & Quick Stats (Deposits tab) ── */
+    .flow-card {{
+        background: {WHITE};
+        border: 1px solid {SLATE_200};
+        border-radius: 14px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-top: 1rem;
+    }}
+    .flow-card-label {{
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: {SLATE_500};
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.6rem;
+    }}
+    .flow-card-value {{
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+    }}
+    .flow-card-desc {{
+        font-size: 0.78rem;
+        color: {SLATE_500};
+        margin-top: 0.5rem;
+        line-height: 1.5;
+    }}
+    .quick-stats {{
+        background: {SLATE_50};
+        border: 1px solid {SLATE_200};
+        border-radius: 14px;
+        padding: 1rem 1.2rem;
+        margin-top: 0.8rem;
+    }}
+    .quick-stats-title {{
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: {SLATE_500};
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }}
+    .quick-stats-row {{
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.82rem;
+        padding: 0.3rem 0;
+    }}
+    .quick-stats-row span {{ color: {SLATE_500}; }}
+    .quick-stats-row b {{ color: {INK}; }}
+
+    /* ── Allocation card (P&L tab) ─────────── */
+    .alloc-card {{
+        background: {BACHAT_GREEN_LIGHT};
+        border: 1px solid {BACHAT_GREEN};
+        border-radius: 10px;
+        padding: 0.85rem 1rem;
+        margin-top: 0.5rem;
+    }}
+    .alloc-card-title {{
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: {BACHAT_GREEN_DARK};
+        margin-bottom: 0.6rem;
+    }}
+    .alloc-card-row {{
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.82rem;
+        padding: 0.3rem 0;
+    }}
+    .alloc-card-row span {{ color: {SLATE_700}; }}
+    .alloc-card-row b {{ color: {INK}; }}
+    .alloc-pct {{ color: {SLATE_500}; }}
+
+    /* ── Sidebar info chip (rate / loss) ──── */
+    .sb-chip {{
+        background: {WHITE};
+        border: 1px solid {SLATE_200};
+        border-radius: 6px;
+        padding: 0.45rem 0.7rem;
+        margin-top: 0.3rem;
+        font-size: 0.78rem;
+        color: {SLATE_700};
+    }}
+    .sb-chip b {{
+        font-size: 0.92rem;
+    }}
+
+    /* ── Sidebar split bar ────────────────── */
+    .sb-split-bar {{
+        background: {WHITE};
+        border: 1px solid {SLATE_200};
+        border-radius: 6px;
+        overflow: hidden;
+        margin-top: 0.35rem;
+    }}
+    .sb-split-track {{
+        display: flex;
+        height: 22px;
+        font-size: 0.68rem;
+        font-weight: 700;
+        line-height: 22px;
+    }}
+    .sb-split-a {{
+        background: {BACHAT_GREEN};
+        color: {INK};
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        padding: 0 4px;
+    }}
+    .sb-split-b {{
+        background: {INFO};
+        color: {WHITE};
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        padding: 0 4px;
+    }}
+
     /* ── Streamlit chrome ─────────────────── */
     #MainMenu {{ visibility: hidden; }}
     footer {{ visibility: hidden; }}
@@ -904,62 +1030,58 @@ def inject_css():
         }}
 
         .main .block-container {{
-            padding-top: 1rem;
-            padding-left: 0.6rem;
-            padding-right: 0.6rem;
+            padding-top: 0.75rem;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
+            padding-bottom: 1.5rem;
             max-width: 100% !important;
             min-width: 0 !important;
         }}
 
-        /* Hero — stack vertically, allow wrapping */
+        /* Hero — compact on mobile */
         .hero {{
             flex-direction: column;
             align-items: flex-start;
-            gap: 0.5rem;
-            padding: 0.9rem 1rem;
+            gap: 0.3rem;
+            padding: 0.65rem 0.8rem;
             border-radius: 10px;
             border-left-width: 3px;
+            margin-bottom: 0.8rem;
         }}
-        .hero-left h1 {{
-            font-size: 1.1rem;
+        .hero-left h1 {{ font-size: 1.05rem; line-height: 1.3; }}
+        .hero-sub-desktop {{ display: none !important; }}
+        .hero-sub-mobile {{
+            display: block !important;
+            font-size: 0.7rem;
             line-height: 1.3;
-            word-break: break-word;
+            color: {SLATE_500};
+            margin: 0.1rem 0 0 0;
         }}
-        .hero-left p {{
-            font-size: 0.72rem;
-            line-height: 1.4;
-            word-break: break-word;
-        }}
-        .hero-pill {{
-            font-size: 0.65rem;
-            padding: 0.3rem 0.6rem;
-            white-space: normal;
-            word-break: break-word;
-            line-height: 1.4;
-        }}
+        .hero-pill {{ display: none !important; }}
 
-        /* All column rows — wrap into 2-col grid */
+        /* All column layouts — wrap into 2-col grid */
         [data-testid="stHorizontalBlock"] {{
             flex-wrap: wrap !important;
-            gap: 0.45rem !important;
+            gap: 0.4rem !important;
         }}
         [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
-            flex: 1 1 calc(50% - 0.45rem) !important;
-            min-width: calc(50% - 0.45rem) !important;
+            flex: 1 1 calc(50% - 0.4rem) !important;
+            min-width: calc(50% - 0.4rem) !important;
             max-width: 100% !important;
             width: auto !important;
         }}
 
         /* Metric cards — compact */
         [data-testid="stMetric"] {{
-            padding: 0.5rem 0.6rem;
+            padding: 0.45rem 0.55rem;
             border-radius: 8px;
         }}
         [data-testid="stMetric"] [data-testid="stMetricValue"] {{
-            font-size: 0.95rem !important;
+            font-size: 0.9rem !important;
         }}
         [data-testid="stMetric"] label {{
-            font-size: 0.62rem !important;
+            font-size: 0.6rem !important;
+            letter-spacing: 0.02em;
         }}
 
         /* Tabs — horizontal scroll */
@@ -971,33 +1093,131 @@ def inject_css():
         }}
         .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{ display: none; }}
         .stTabs [data-baseweb="tab"] {{
-            padding: 0.45rem 0.65rem;
+            padding: 0.45rem 0.6rem;
             font-size: 0.7rem;
             white-space: nowrap;
             flex-shrink: 0;
         }}
 
-        /* Charts */
+        /* Plotly charts — overflow-safe, reduced chrome */
+        [data-testid="stPlotlyChart"] {{
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+        }}
         [data-testid="stPlotlyChart"] > div {{
             border-radius: 8px;
             box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+            min-width: 320px;
         }}
 
         /* Section headers */
-        .sh {{ font-size: 0.85rem; margin: 1rem 0 0.5rem; }}
+        .sh {{
+            font-size: 0.82rem;
+            margin: 0.8rem 0 0.4rem;
+            padding-bottom: 0.3rem;
+        }}
 
         /* Insights panel */
-        .insights-panel {{ padding: 0.7rem 0.8rem; border-radius: 10px; }}
-        .insights-panel h4 {{ font-size: 0.7rem; }}
-        .insight-item {{ font-size: 0.74rem; padding: 0.4rem 0; }}
+        .insights-panel {{
+            padding: 0.6rem 0.7rem;
+            border-radius: 10px;
+            margin-top: 0.3rem !important;
+        }}
+        .insights-panel h4 {{ font-size: 0.68rem; }}
+        .insight-item {{ font-size: 0.72rem; padding: 0.35rem 0; }}
 
-        /* Sidebar sections */
-        .sb-section {{ margin: 0.4rem 0.4rem; padding: 0.6rem 0.65rem 0.45rem; }}
-        .sb-summary {{ margin: 0.4rem 0.4rem 0; padding: 0.55rem 0.65rem; }}
+        /* Validation banners */
+        .val-error, .val-warn {{
+            font-size: 0.74rem;
+            padding: 0.5rem 0.7rem;
+            border-radius: 6px;
+        }}
+
+        /* Sidebar internals */
+        .sb-section {{
+            margin: 0.35rem 0.35rem;
+            padding: 0.55rem 0.6rem 0.4rem;
+            border-radius: 8px;
+        }}
+        .sb-section-title {{ font-size: 0.65rem; }}
+        .sb-summary {{
+            margin: 0.35rem 0.35rem 0;
+            padding: 0.5rem 0.6rem;
+            border-radius: 8px;
+        }}
+        .sb-summary-title {{ font-size: 0.62rem; }}
+        .sb-summary-row {{ font-size: 0.7rem; }}
+
+        /* Dataframes — scroll horizontally */
+        .stDataFrame {{
+            overflow-x: auto !important;
+            -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+        }}
 
         /* Audit / verdict */
-        .audit-box {{ font-size: 0.78rem; padding: 0.7rem 0.9rem; }}
-        .verdict {{ font-size: 0.72rem; padding: 0.3rem 0.7rem; }}
+        .audit-box {{
+            font-size: 0.76rem;
+            padding: 0.6rem 0.8rem;
+            border-radius: 6px;
+        }}
+        .verdict {{
+            font-size: 0.7rem;
+            padding: 0.25rem 0.6rem;
+        }}
+
+        /* Expanders */
+        [data-testid="stExpander"] summary {{
+            font-size: 0.78rem !important;
+        }}
+
+        /* Number inputs, sliders — tighter */
+        section[data-testid="stSidebar"] label {{
+            font-size: 0.72rem !important;
+        }}
+
+        /* Flow card & Quick Stats — mobile */
+        .flow-card {{
+            padding: 0.8rem;
+            border-radius: 10px;
+            margin-top: 0.5rem;
+        }}
+        .flow-card-label {{ font-size: 0.65rem; }}
+        .flow-card-value {{ font-size: 1.3rem !important; }}
+        .flow-card-desc {{ font-size: 0.68rem; }}
+        .quick-stats {{
+            padding: 0.7rem 0.8rem;
+            border-radius: 10px;
+            margin-top: 0.5rem;
+        }}
+        .quick-stats-title {{ font-size: 0.62rem; }}
+        .quick-stats-row {{ font-size: 0.72rem; }}
+
+        /* Captions & st.caption */
+        .stCaption, [data-testid="stCaptionContainer"] {{
+            font-size: 0.68rem !important;
+        }}
+
+        /* Allocation card — mobile */
+        .alloc-card {{
+            padding: 0.6rem 0.7rem;
+            border-radius: 8px;
+        }}
+        .alloc-card-title {{ font-size: 0.6rem; }}
+        .alloc-card-row {{ font-size: 0.72rem; }}
+
+        /* Sidebar info chips & split bar — mobile */
+        .sb-chip {{
+            font-size: 0.7rem;
+            padding: 0.35rem 0.55rem;
+        }}
+        .sb-chip b {{ font-size: 0.82rem; }}
+        .sb-split-track {{
+            height: 18px;
+            font-size: 0.6rem;
+            line-height: 18px;
+        }}
+        .sb-summary-small {{ font-size: 0.65rem; }}
     }}
 
     /* ================================================================
@@ -1005,26 +1225,51 @@ def inject_css():
        ================================================================ */
     @media (max-width: 480px) {{
         .main .block-container {{
-            padding-left: 0.35rem;
-            padding-right: 0.35rem;
+            padding-left: 0.3rem;
+            padding-right: 0.3rem;
         }}
 
-        /* Single-column stack for metrics */
+        /* Single-column stack */
         [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
             flex: 1 1 100% !important;
             min-width: 100% !important;
         }}
 
-        .hero-left h1 {{ font-size: 0.95rem; }}
-        .hero-pill {{ font-size: 0.6rem; }}
+        .hero {{ padding: 0.5rem 0.7rem; }}
+        .hero-left h1 {{ font-size: 0.9rem; }}
 
         .stTabs [data-baseweb="tab"] {{
-            padding: 0.35rem 0.5rem;
-            font-size: 0.65rem;
+            padding: 0.3rem 0.45rem;
+            font-size: 0.62rem;
         }}
 
-        .sb-brand {{ padding: 0.8rem 0.7rem 0.6rem; }}
-        .sb-brand-name {{ font-size: 0.88rem; }}
+        [data-testid="stMetric"] [data-testid="stMetricValue"] {{
+            font-size: 0.85rem !important;
+        }}
+
+        .sb-brand {{ padding: 0.7rem 0.6rem 0.5rem; }}
+        .sb-brand-name {{ font-size: 0.85rem; }}
+        .sb-brand-sub {{ font-size: 0.65rem; }}
+
+        .sh {{ font-size: 0.78rem; }}
+        .insights-panel h4 {{ font-size: 0.62rem; }}
+        .insight-item {{ font-size: 0.68rem; }}
+        .audit-box {{ font-size: 0.72rem; padding: 0.5rem 0.6rem; }}
+
+        .flow-card {{ padding: 0.6rem; }}
+        .flow-card-value {{ font-size: 1.1rem !important; }}
+        .flow-card-desc {{ font-size: 0.62rem; }}
+        .quick-stats {{ padding: 0.55rem 0.65rem; }}
+        .quick-stats-row {{ font-size: 0.68rem; }}
+
+        .alloc-card {{ padding: 0.5rem 0.55rem; }}
+        .alloc-card-title {{ font-size: 0.56rem; }}
+        .alloc-card-row {{ font-size: 0.65rem; }}
+
+        .sb-chip {{ font-size: 0.65rem; padding: 0.3rem 0.45rem; }}
+        .sb-chip b {{ font-size: 0.76rem; }}
+        .sb-split-track {{ height: 16px; font-size: 0.55rem; line-height: 16px; }}
+        .sb-summary-small {{ font-size: 0.6rem; }}
     }}
     </style>
     """, unsafe_allow_html=True)
@@ -1163,12 +1408,9 @@ def render_sidebar() -> BachatConfig:
     annual_rate = cfg.kibor_rate + cfg.spread
     rate_color  = BACHAT_GREEN_DARK if annual_rate >= 10 else WARNING
     st.sidebar.markdown(f"""
-    <div style="background:{WHITE}; border:1px solid {SLATE_200};
-                border-left:3px solid {rate_color};
-                border-radius:6px; padding:0.45rem 0.7rem; margin-top:0.3rem;
-                font-size:0.78rem; color:{SLATE_700};">
+    <div class="sb-chip" style="border-left:3px solid {rate_color};">
         Effective rate:&nbsp;
-        <b style="color:{rate_color}; font-size:0.92rem;">{annual_rate:.2f}%</b>
+        <b style="color:{rate_color};">{annual_rate:.2f}%</b>
         &nbsp;(KIBOR {cfg.kibor_rate:.2f}% {cfg.spread:+.2f}%)
     </div>""", unsafe_allow_html=True)
 
@@ -1210,12 +1452,9 @@ def render_sidebar() -> BachatConfig:
     net_exp_pct = cfg.default_rate * (1 - cfg.recovery_rate / 100)
     exp_color   = BACHAT_GREEN_DARK if net_exp_pct < 5 else (WARNING if net_exp_pct < 12 else DANGER)
     st.sidebar.markdown(f"""
-    <div style="background:{WHITE}; border:1px solid {SLATE_200};
-                border-left:3px solid {exp_color};
-                border-radius:6px; padding:0.45rem 0.7rem; margin-top:0.3rem;
-                font-size:0.78rem; color:{SLATE_700};">
+    <div class="sb-chip" style="border-left:3px solid {exp_color};">
         Net expected loss rate:&nbsp;
-        <b style="color:{exp_color}; font-size:0.92rem;">{net_exp_pct:.1f}%</b>
+        <b style="color:{exp_color};">{net_exp_pct:.1f}%</b>
         &nbsp;({cfg.default_rate:.1f}% × {100-cfg.recovery_rate:.0f}% unrecovered)
     </div>""", unsafe_allow_html=True)
     st.sidebar.markdown('</div>', unsafe_allow_html=True)
@@ -1229,20 +1468,12 @@ def render_sidebar() -> BachatConfig:
         help="Platform/operator share of net profit")
     b_share = 100 - cfg.profit_split_party_a
     st.sidebar.markdown(f"""
-    <div style="background:{WHITE}; border:1px solid {SLATE_200};
-                border-radius:6px; overflow:hidden; margin-top:0.35rem;">
-        <div style="display:flex; height:20px; font-size:0.68rem;
-                    font-weight:700; line-height:20px;">
-            <div style="width:{cfg.profit_split_party_a:.0f}%;
-                        background:{BACHAT_GREEN}; color:{INK};
-                        text-align:center; white-space:nowrap;
-                        overflow:hidden; padding:0 4px;">
+    <div class="sb-split-bar">
+        <div class="sb-split-track">
+            <div class="sb-split-a" style="width:{cfg.profit_split_party_a:.0f}%;">
                 A&nbsp;{cfg.profit_split_party_a:.0f}%
             </div>
-            <div style="width:{b_share:.0f}%;
-                        background:{INFO}; color:{WHITE};
-                        text-align:center; white-space:nowrap;
-                        overflow:hidden; padding:0 4px;">
+            <div class="sb-split-b" style="width:{b_share:.0f}%;">
                 B&nbsp;{b_share:.0f}%
             </div>
         </div>
@@ -1333,7 +1564,7 @@ def render_sidebar() -> BachatConfig:
         </div>
         <div class="sb-summary-row">
             <span>Blocked Slots</span>
-            <b style="font-size:0.72rem">{blocked_str}</b>
+            <b class="sb-summary-small">{blocked_str}</b>
         </div>
         <div class="sb-summary-row">
             <span>Slab(s)</span>
@@ -2084,18 +2315,12 @@ def tab_deposits(cfg: BachatConfig, df: pd.DataFrame):
         net_arrow = "▲" if latest_net >= 0 else "▼"
         plat_share = (total_plat / total_dis * 100) if total_dis else 0
         st.markdown(f"""
-        <div style="background:{WHITE}; border:1px solid {SLATE_200};
-                    border-radius:14px; padding:1.5rem; text-align:center;
-                    margin-top:1rem;">
-            <div style="font-size:0.75rem; font-weight:600; color:{SLATE_500};
-                        text-transform:uppercase; letter-spacing:0.05em;
-                        margin-bottom:0.6rem;">Latest Month Net Flow</div>
-            <div style="font-size:2rem; font-weight:800; color:{net_color};
-                        letter-spacing:-0.02em;">
+        <div class="flow-card">
+            <div class="flow-card-label">Latest Month Net Flow</div>
+            <div class="flow-card-value" style="color:{net_color};">
                 {net_arrow} {fmt_pkr(abs(latest_net))}
             </div>
-            <div style="font-size:0.78rem; color:{SLATE_500}; margin-top:0.5rem;
-                        line-height:1.5;">
+            <div class="flow-card-desc">
                 User deposits minus total pot payouts.<br>
                 Gap = platform's blocked-slot capital.
             </div>
@@ -2103,27 +2328,19 @@ def tab_deposits(cfg: BachatConfig, df: pd.DataFrame):
 
         velocity = contrib.iloc[-1] / (total_dep / len(agg)) * 100 if len(agg) and total_dep else 100
         st.markdown(f"""
-        <div style="background:{SLATE_50}; border:1px solid {SLATE_200};
-                    border-radius:14px; padding:1rem 1.2rem; margin-top:0.8rem;">
-            <div style="font-size:0.7rem; font-weight:700; color:{SLATE_500};
-                        text-transform:uppercase; letter-spacing:0.05em;
-                        margin-bottom:0.5rem;">Quick Stats</div>
-            <div style="display:flex; justify-content:space-between;
-                        font-size:0.82rem; padding:0.3rem 0;
-                        border-bottom:1px solid {SLATE_200};">
-                <span style="color:{SLATE_500};">Platform Capital Share</span>
-                <b style="color:{INK};">{plat_share:.1f}%</b>
+        <div class="quick-stats">
+            <div class="quick-stats-title">Quick Stats</div>
+            <div class="quick-stats-row" style="border-bottom:1px solid {SLATE_200};">
+                <span>Platform Capital Share</span>
+                <b>{plat_share:.1f}%</b>
             </div>
-            <div style="display:flex; justify-content:space-between;
-                        font-size:0.82rem; padding:0.3rem 0;
-                        border-bottom:1px solid {SLATE_200};">
-                <span style="color:{SLATE_500};">Deposit Velocity</span>
-                <b style="color:{INK};">{velocity:.0f}% of avg</b>
+            <div class="quick-stats-row" style="border-bottom:1px solid {SLATE_200};">
+                <span>Deposit Velocity</span>
+                <b>{velocity:.0f}% of avg</b>
             </div>
-            <div style="display:flex; justify-content:space-between;
-                        font-size:0.82rem; padding:0.3rem 0;">
-                <span style="color:{SLATE_500};">Peak Float</span>
-                <b style="color:{INK};">{fmt_pkr(peak_flt)}</b>
+            <div class="quick-stats-row">
+                <span>Peak Float</span>
+                <b>{fmt_pkr(peak_flt)}</b>
             </div>
         </div>""", unsafe_allow_html=True)
 
@@ -2330,28 +2547,21 @@ def tab_pnl(cfg: BachatConfig, df: pd.DataFrame):
             key="pnl_split_donut")
         # Labelled breakdown under donut
         st.markdown(f"""
-        <div style="background:{BACHAT_GREEN_LIGHT}; border:1px solid {BACHAT_GREEN};
-                    border-radius:10px; padding:0.85rem 1rem; margin-top:0.5rem;">
-            <div style="font-size:0.68rem; font-weight:700; text-transform:uppercase;
-                        letter-spacing:0.06em; color:{BACHAT_GREEN_DARK}; margin-bottom:0.6rem;">
-                Profit Allocation
-            </div>
-            <div style="display:flex; justify-content:space-between;
-                        font-size:0.82rem; padding:0.3rem 0;
-                        border-bottom:1px solid rgba(0,160,80,0.2);">
-                <span style="color:{SLATE_700};">
+        <div class="alloc-card">
+            <div class="alloc-card-title">Profit Allocation</div>
+            <div class="alloc-card-row" style="border-bottom:1px solid rgba(0,160,80,0.2);">
+                <span>
                     <b style="color:{BACHAT_GREEN};">●</b>&nbsp;
-                    Party A (Platform)&nbsp;&nbsp;<span style="color:{SLATE_500};">{pct_a:.0f}%</span>
+                    Party A (Platform)&nbsp;&nbsp;<span class="alloc-pct">{pct_a:.0f}%</span>
                 </span>
-                <b style="color:{INK};">{fmt_pkr(party_a_total)}</b>
+                <b>{fmt_pkr(party_a_total)}</b>
             </div>
-            <div style="display:flex; justify-content:space-between;
-                        font-size:0.82rem; padding:0.3rem 0;">
-                <span style="color:{SLATE_700};">
+            <div class="alloc-card-row">
+                <span>
                     <b style="color:{INFO};">●</b>&nbsp;
-                    Party B (Investors)&nbsp;&nbsp;<span style="color:{SLATE_500};">{pct_b:.0f}%</span>
+                    Party B (Investors)&nbsp;&nbsp;<span class="alloc-pct">{pct_b:.0f}%</span>
                 </span>
-                <b style="color:{INK};">{fmt_pkr(party_b_total)}</b>
+                <b>{fmt_pkr(party_b_total)}</b>
             </div>
         </div>""", unsafe_allow_html=True)
 
@@ -2622,18 +2832,21 @@ def main():
 
     annual_rate = cfg.kibor_rate + cfg.spread
     slabs_str   = " · ".join(f"PKR {s:,}/mo" for s in cfg.slab_amounts)
+    dur_str     = ", ".join(f"{d}M" for d in cfg.durations)
     st.markdown(f"""
     <div class="hero">
         <div class="hero-left">
-            <h1>Bachat KOMMITTEE — Pricing &amp; Risk</h1>
-            <p>Slot-conditional defaults · three-principal NII ·
+            <h1>Bachat KOMMITTEE</h1>
+            <p class="hero-sub-desktop">Slot-conditional defaults · three-principal NII ·
                two-pass lifecycle · {cfg.simulation_months}-month horizon ·
                {cfg.fee_collection_mode} fees</p>
+            <p class="hero-sub-mobile">{dur_str} · {cfg.simulation_months}mo ·
+               {cfg.fee_collection_mode} · {annual_rate:.1f}%</p>
         </div>
         <div class="hero-pill">
             KIBOR {cfg.kibor_rate:.2f}% + Spread {cfg.spread:+.2f}%
             = <b>{annual_rate:.2f}%</b> &nbsp;|&nbsp;
-            {", ".join(f"{d}M" for d in cfg.durations)} &nbsp;|&nbsp;
+            {dur_str} &nbsp;|&nbsp;
             {slabs_str}
         </div>
     </div>""", unsafe_allow_html=True)
