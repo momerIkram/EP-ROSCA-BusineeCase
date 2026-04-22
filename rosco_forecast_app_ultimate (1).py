@@ -1003,221 +1003,254 @@ def inject_css():
        RESPONSIVE — Tablet & Mobile (≤ 768px)
        ================================================================ */
     @media (max-width: 768px) {{
-        /* Force sidebar into overlay mode on mobile */
+
+        /* ── SIDEBAR: fixed overlay, hidden by default ── */
         section[data-testid="stSidebar"] {{
             position: fixed !important;
             top: 0 !important;
             left: 0 !important;
             bottom: 0 !important;
-            z-index: 999 !important;
-            width: 85vw !important;
+            z-index: 9999 !important;
+            width: 80vw !important;
             min-width: 0 !important;
-            max-width: 85vw !important;
+            max-width: 80vw !important;
             transform: translateX(-100%) !important;
             transition: transform 0.3s ease !important;
             box-shadow: none !important;
+            background: {WHITE} !important;
         }}
         section[data-testid="stSidebar"][aria-expanded="true"] {{
             transform: translateX(0) !important;
-            box-shadow: 4px 0 24px rgba(0,0,0,0.3) !important;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.35) !important;
         }}
-        /* Ensure main content always gets full width */
-        .main,
+
+        /* ── MAIN CONTENT: always full width, kill sidebar gap ── */
         [data-testid="stAppViewContainer"],
-        [data-testid="stAppViewContainer"] > .main {{
+        [data-testid="stAppViewContainer"] > *,
+        .main {{
+            width: 100vw !important;
+            max-width: 100vw !important;
+            min-width: 0 !important;
+            margin-left: 0 !important;
+            padding-left: 0 !important;
+        }}
+        [data-testid="stSidebarCollapsedControl"] {{
+            position: fixed !important;
+            top: 0.4rem !important;
+            left: 0.4rem !important;
+            z-index: 10000 !important;
+        }}
+        .main .block-container {{
+            padding: 0.75rem 0.6rem 1.5rem 0.6rem !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            box-sizing: border-box !important;
+        }}
+
+        /* ── HERO: compact, no overflow ── */
+        .hero {{
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 0.25rem !important;
+            padding: 0.6rem 0.75rem !important;
+            border-radius: 10px !important;
+            border-left-width: 3px !important;
+            margin-bottom: 0.6rem !important;
+            overflow: hidden !important;
+            word-break: break-word !important;
+        }}
+        .hero-left {{
             width: 100% !important;
             min-width: 0 !important;
         }}
-
-        .main .block-container {{
-            padding-top: 0.75rem;
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
-            padding-bottom: 1.5rem;
-            max-width: 100% !important;
-            min-width: 0 !important;
+        .hero-left h1 {{
+            font-size: 1rem !important;
+            line-height: 1.3 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
         }}
-
-        /* Hero — compact on mobile */
-        .hero {{
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 0.3rem;
-            padding: 0.65rem 0.8rem;
-            border-radius: 10px;
-            border-left-width: 3px;
-            margin-bottom: 0.8rem;
-        }}
-        .hero-left h1 {{ font-size: 1.05rem; line-height: 1.3; }}
         .hero-sub-desktop {{ display: none !important; }}
         .hero-sub-mobile {{
             display: block !important;
-            font-size: 0.7rem;
-            line-height: 1.3;
-            color: {SLATE_500};
-            margin: 0.1rem 0 0 0;
+            font-size: 0.68rem !important;
+            line-height: 1.3 !important;
+            color: {SLATE_500} !important;
+            margin: 0.1rem 0 0 0 !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
         }}
         .hero-pill {{ display: none !important; }}
 
-        /* All column layouts — wrap into 2-col grid */
+        /* ── COLUMNS: wrap into 2-col grid ── */
         [data-testid="stHorizontalBlock"] {{
             flex-wrap: wrap !important;
-            gap: 0.4rem !important;
+            gap: 0.35rem !important;
         }}
         [data-testid="stHorizontalBlock"] > [data-testid="stColumn"] {{
-            flex: 1 1 calc(50% - 0.4rem) !important;
-            min-width: calc(50% - 0.4rem) !important;
+            flex: 1 1 calc(50% - 0.35rem) !important;
+            min-width: calc(50% - 0.35rem) !important;
             max-width: 100% !important;
             width: auto !important;
         }}
 
-        /* Metric cards — compact */
+        /* ── METRIC CARDS: compact, no truncation ── */
         [data-testid="stMetric"] {{
-            padding: 0.45rem 0.55rem;
-            border-radius: 8px;
+            padding: 0.4rem 0.45rem !important;
+            border-radius: 8px !important;
+            overflow: hidden !important;
         }}
         [data-testid="stMetric"] [data-testid="stMetricValue"] {{
-            font-size: 0.9rem !important;
+            font-size: 0.82rem !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
         }}
         [data-testid="stMetric"] label {{
-            font-size: 0.6rem !important;
-            letter-spacing: 0.02em;
+            font-size: 0.55rem !important;
+            letter-spacing: 0.02em !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+        }}
+        [data-testid="stMetric"] [data-testid="stMetricDelta"] {{
+            font-size: 0.55rem !important;
         }}
 
-        /* Tabs — horizontal scroll */
+        /* ── TABS: horizontal scroll ── */
         .stTabs [data-baseweb="tab-list"] {{
-            overflow-x: auto;
+            overflow-x: auto !important;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
             flex-wrap: nowrap !important;
         }}
         .stTabs [data-baseweb="tab-list"]::-webkit-scrollbar {{ display: none; }}
         .stTabs [data-baseweb="tab"] {{
-            padding: 0.45rem 0.6rem;
-            font-size: 0.7rem;
-            white-space: nowrap;
-            flex-shrink: 0;
+            padding: 0.4rem 0.55rem !important;
+            font-size: 0.68rem !important;
+            white-space: nowrap !important;
+            flex-shrink: 0 !important;
         }}
 
-        /* Plotly charts — overflow-safe, reduced chrome */
+        /* ── CHARTS: overflow-safe ── */
         [data-testid="stPlotlyChart"] {{
             overflow-x: auto !important;
             -webkit-overflow-scrolling: touch;
         }}
         [data-testid="stPlotlyChart"] > div {{
-            border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(15,23,42,0.04);
-            min-width: 320px;
+            border-radius: 8px !important;
+            box-shadow: 0 1px 3px rgba(15,23,42,0.04) !important;
+            min-width: 300px !important;
         }}
 
-        /* Section headers */
+        /* ── Section headers ── */
         .sh {{
-            font-size: 0.82rem;
-            margin: 0.8rem 0 0.4rem;
-            padding-bottom: 0.3rem;
+            font-size: 0.82rem !important;
+            margin: 0.7rem 0 0.35rem !important;
+            padding-bottom: 0.25rem !important;
         }}
 
-        /* Insights panel */
+        /* ── Insights panel ── */
         .insights-panel {{
-            padding: 0.6rem 0.7rem;
-            border-radius: 10px;
-            margin-top: 0.3rem !important;
+            padding: 0.55rem 0.65rem !important;
+            border-radius: 10px !important;
         }}
-        .insights-panel h4 {{ font-size: 0.68rem; }}
-        .insight-item {{ font-size: 0.72rem; padding: 0.35rem 0; }}
+        .insights-panel h4 {{ font-size: 0.65rem !important; }}
+        .insight-item {{ font-size: 0.7rem !important; padding: 0.3rem 0 !important; }}
 
-        /* Validation banners */
+        /* ── Validation banners ── */
         .val-error, .val-warn {{
-            font-size: 0.74rem;
-            padding: 0.5rem 0.7rem;
-            border-radius: 6px;
+            font-size: 0.72rem !important;
+            padding: 0.45rem 0.65rem !important;
+            border-radius: 6px !important;
         }}
 
-        /* Sidebar internals */
+        /* ── Sidebar internals ── */
         .sb-section {{
-            margin: 0.35rem 0.35rem;
-            padding: 0.55rem 0.6rem 0.4rem;
-            border-radius: 8px;
+            margin: 0.3rem 0.3rem !important;
+            padding: 0.5rem 0.55rem 0.35rem !important;
+            border-radius: 8px !important;
         }}
-        .sb-section-title {{ font-size: 0.65rem; }}
+        .sb-section-title {{ font-size: 0.62rem !important; }}
         .sb-summary {{
-            margin: 0.35rem 0.35rem 0;
-            padding: 0.5rem 0.6rem;
-            border-radius: 8px;
+            margin: 0.3rem 0.3rem 0 !important;
+            padding: 0.45rem 0.55rem !important;
+            border-radius: 8px !important;
         }}
-        .sb-summary-title {{ font-size: 0.62rem; }}
-        .sb-summary-row {{ font-size: 0.7rem; }}
+        .sb-summary-title {{ font-size: 0.6rem !important; }}
+        .sb-summary-row {{ font-size: 0.68rem !important; }}
 
-        /* Dataframes — scroll horizontally */
+        /* ── Dataframes ── */
         .stDataFrame {{
             overflow-x: auto !important;
             -webkit-overflow-scrolling: touch;
-            border-radius: 8px;
+            border-radius: 8px !important;
         }}
 
-        /* Audit / verdict */
+        /* ── Audit / verdict ── */
         .audit-box {{
-            font-size: 0.76rem;
-            padding: 0.6rem 0.8rem;
-            border-radius: 6px;
+            font-size: 0.74rem !important;
+            padding: 0.55rem 0.7rem !important;
+            border-radius: 6px !important;
         }}
         .verdict {{
-            font-size: 0.7rem;
-            padding: 0.25rem 0.6rem;
-        }}
-
-        /* Expanders */
-        [data-testid="stExpander"] summary {{
-            font-size: 0.78rem !important;
-        }}
-
-        /* Number inputs, sliders — tighter */
-        section[data-testid="stSidebar"] label {{
-            font-size: 0.72rem !important;
-        }}
-
-        /* Flow card & Quick Stats — mobile */
-        .flow-card {{
-            padding: 0.8rem;
-            border-radius: 10px;
-            margin-top: 0.5rem;
-        }}
-        .flow-card-label {{ font-size: 0.65rem; }}
-        .flow-card-value {{ font-size: 1.3rem !important; }}
-        .flow-card-desc {{ font-size: 0.68rem; }}
-        .quick-stats {{
-            padding: 0.7rem 0.8rem;
-            border-radius: 10px;
-            margin-top: 0.5rem;
-        }}
-        .quick-stats-title {{ font-size: 0.62rem; }}
-        .quick-stats-row {{ font-size: 0.72rem; }}
-
-        /* Captions & st.caption */
-        .stCaption, [data-testid="stCaptionContainer"] {{
             font-size: 0.68rem !important;
+            padding: 0.2rem 0.55rem !important;
         }}
 
-        /* Allocation card — mobile */
+        /* ── Expanders ── */
+        [data-testid="stExpander"] summary {{
+            font-size: 0.75rem !important;
+        }}
+
+        /* ── Sidebar form controls ── */
+        section[data-testid="stSidebar"] label {{
+            font-size: 0.7rem !important;
+        }}
+
+        /* ── Flow card & Quick Stats ── */
+        .flow-card {{
+            padding: 0.7rem !important;
+            border-radius: 10px !important;
+            margin-top: 0.4rem !important;
+        }}
+        .flow-card-label {{ font-size: 0.62rem !important; }}
+        .flow-card-value {{ font-size: 1.2rem !important; }}
+        .flow-card-desc {{ font-size: 0.65rem !important; }}
+        .quick-stats {{
+            padding: 0.6rem 0.7rem !important;
+            border-radius: 10px !important;
+            margin-top: 0.4rem !important;
+        }}
+        .quick-stats-title {{ font-size: 0.6rem !important; }}
+        .quick-stats-row {{ font-size: 0.7rem !important; }}
+
+        /* ── Captions ── */
+        .stCaption, [data-testid="stCaptionContainer"] {{
+            font-size: 0.65rem !important;
+        }}
+
+        /* ── Allocation card ── */
         .alloc-card {{
-            padding: 0.6rem 0.7rem;
-            border-radius: 8px;
+            padding: 0.55rem 0.65rem !important;
+            border-radius: 8px !important;
         }}
-        .alloc-card-title {{ font-size: 0.6rem; }}
-        .alloc-card-row {{ font-size: 0.72rem; }}
+        .alloc-card-title {{ font-size: 0.58rem !important; }}
+        .alloc-card-row {{ font-size: 0.7rem !important; }}
 
-        /* Sidebar info chips & split bar — mobile */
+        /* ── Sidebar info chips & split bar ── */
         .sb-chip {{
-            font-size: 0.7rem;
-            padding: 0.35rem 0.55rem;
+            font-size: 0.68rem !important;
+            padding: 0.3rem 0.5rem !important;
         }}
-        .sb-chip b {{ font-size: 0.82rem; }}
+        .sb-chip b {{ font-size: 0.8rem !important; }}
         .sb-split-track {{
-            height: 18px;
-            font-size: 0.6rem;
-            line-height: 18px;
+            height: 18px !important;
+            font-size: 0.58rem !important;
+            line-height: 18px !important;
         }}
-        .sb-summary-small {{ font-size: 0.65rem; }}
+        .sb-summary-small {{ font-size: 0.62rem !important; }}
     }}
 
     /* ================================================================
@@ -1225,8 +1258,7 @@ def inject_css():
        ================================================================ */
     @media (max-width: 480px) {{
         .main .block-container {{
-            padding-left: 0.3rem;
-            padding-right: 0.3rem;
+            padding: 0.5rem 0.35rem 1.2rem 0.35rem !important;
         }}
 
         /* Single-column stack */
@@ -1235,43 +1267,65 @@ def inject_css():
             min-width: 100% !important;
         }}
 
-        .hero {{ padding: 0.5rem 0.7rem; }}
-        .hero-left h1 {{ font-size: 0.9rem; }}
+        .hero {{ padding: 0.5rem 0.6rem !important; }}
+        .hero-left h1 {{ font-size: 0.88rem !important; }}
 
         .stTabs [data-baseweb="tab"] {{
-            padding: 0.3rem 0.45rem;
-            font-size: 0.62rem;
+            padding: 0.3rem 0.4rem !important;
+            font-size: 0.6rem !important;
         }}
 
         [data-testid="stMetric"] [data-testid="stMetricValue"] {{
-            font-size: 0.85rem !important;
+            font-size: 0.78rem !important;
+        }}
+        [data-testid="stMetric"] label {{
+            font-size: 0.5rem !important;
         }}
 
-        .sb-brand {{ padding: 0.7rem 0.6rem 0.5rem; }}
-        .sb-brand-name {{ font-size: 0.85rem; }}
-        .sb-brand-sub {{ font-size: 0.65rem; }}
+        .sb-brand {{ padding: 0.6rem 0.55rem 0.45rem !important; }}
+        .sb-brand-name {{ font-size: 0.82rem !important; }}
+        .sb-brand-sub {{ font-size: 0.62rem !important; }}
 
-        .sh {{ font-size: 0.78rem; }}
-        .insights-panel h4 {{ font-size: 0.62rem; }}
-        .insight-item {{ font-size: 0.68rem; }}
-        .audit-box {{ font-size: 0.72rem; padding: 0.5rem 0.6rem; }}
+        .sh {{ font-size: 0.75rem !important; }}
+        .insights-panel h4 {{ font-size: 0.58rem !important; }}
+        .insight-item {{ font-size: 0.65rem !important; }}
+        .audit-box {{ font-size: 0.7rem !important; padding: 0.45rem 0.55rem !important; }}
 
-        .flow-card {{ padding: 0.6rem; }}
-        .flow-card-value {{ font-size: 1.1rem !important; }}
-        .flow-card-desc {{ font-size: 0.62rem; }}
-        .quick-stats {{ padding: 0.55rem 0.65rem; }}
-        .quick-stats-row {{ font-size: 0.68rem; }}
+        .flow-card {{ padding: 0.5rem !important; }}
+        .flow-card-value {{ font-size: 1rem !important; }}
+        .flow-card-desc {{ font-size: 0.58rem !important; }}
+        .quick-stats {{ padding: 0.5rem 0.55rem !important; }}
+        .quick-stats-row {{ font-size: 0.65rem !important; }}
 
-        .alloc-card {{ padding: 0.5rem 0.55rem; }}
-        .alloc-card-title {{ font-size: 0.56rem; }}
-        .alloc-card-row {{ font-size: 0.65rem; }}
+        .alloc-card {{ padding: 0.45rem 0.5rem !important; }}
+        .alloc-card-title {{ font-size: 0.52rem !important; }}
+        .alloc-card-row {{ font-size: 0.62rem !important; }}
 
-        .sb-chip {{ font-size: 0.65rem; padding: 0.3rem 0.45rem; }}
-        .sb-chip b {{ font-size: 0.76rem; }}
-        .sb-split-track {{ height: 16px; font-size: 0.55rem; line-height: 16px; }}
-        .sb-summary-small {{ font-size: 0.6rem; }}
+        .sb-chip {{ font-size: 0.62rem !important; padding: 0.25rem 0.4rem !important; }}
+        .sb-chip b {{ font-size: 0.72rem !important; }}
+        .sb-split-track {{ height: 16px !important; font-size: 0.52rem !important; line-height: 16px !important; }}
+        .sb-summary-small {{ font-size: 0.58rem !important; }}
     }}
     </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <script>
+    (function(){
+        if(window.innerWidth>768) return;
+        var sb=document.querySelector('section[data-testid="stSidebar"]');
+        if(sb && sb.getAttribute('aria-expanded')==='true'){
+            var btn=document.querySelector('[data-testid="stSidebarCollapsedControl"] button')
+                 || document.querySelector('button[kind="header"]');
+            if(btn) btn.click();
+        }
+        var appView=document.querySelector('[data-testid="stAppViewContainer"]');
+        if(appView){
+            appView.style.marginLeft='0';
+            appView.style.width='100vw';
+        }
+    })();
+    </script>
     """, unsafe_allow_html=True)
 
 
