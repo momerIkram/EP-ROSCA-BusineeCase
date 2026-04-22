@@ -1,5 +1,5 @@
 """
-BACHAT KOMMITTEE — Pricing & Risk Model (v3.0)
+BACHAT KOMMITTEE — Pricing & Risk Model
 ==========================================
 Restores all v1 features dropped in v2, with full validation:
 
@@ -426,8 +426,9 @@ def build_forecast(cfg: BachatConfig) -> pd.DataFrame:
                     "groups_started_monthly": (row_lc["new_users"] +
                                                row_lc["returning_users"]) / N,
                     "groups_running_monthly": gr,
-                    "pot_disbursed_monthly":          pot   * gr,
-                    "user_contributions_monthly":     N * slab * gr,
+                    "pot_disbursed_monthly":          pot * gr,
+                    "user_contributions_monthly":     user_slots * slab * gr,
+                    "platform_capital_monthly":       blocked * slab * gr,
                     "float_outstanding_monthly":      avg_float * gr,
                     "base_nii_monthly":               m_base,
                     "float_nii_monthly":              m_float,
@@ -1600,70 +1601,71 @@ def chart_revenue_combo(agg: pd.DataFrame) -> go.Figure:
 
 
 def chart_deposits_cumulative(agg: pd.DataFrame) -> go.Figure:
-    """Dual-area chart: cumulative deposits collected vs pots disbursed."""
+    """Stacked area: cumulative user deposits + platform capital vs total pot turnover."""
     contrib = agg["user_contributions_monthly"].values if "user_contributions_monthly" in agg.columns else np.zeros(len(agg))
+    plat = agg["platform_capital_monthly"].values if "platform_capital_monthly" in agg.columns else np.zeros(len(agg))
     disbursed = agg["pot_disbursed_monthly"].values if "pot_disbursed_monthly" in agg.columns else np.zeros(len(agg))
-    cum_dep = np.cumsum(contrib)
-    cum_dis = np.cumsum(disbursed)
+
+    cum_user = np.cumsum(contrib)
+    cum_plat = np.cumsum(plat)
+    cum_dis  = np.cumsum(disbursed)
 
     fig = go.Figure()
     fig.add_trace(go.Scatter(
-        x=agg["month"], y=cum_dep, name="Cumulative Deposits",
+        x=agg["month"], y=cum_dis, name="Total Pot Turnover",
+        mode="lines", line=dict(color=PURPLE, width=2.5, shape="spline"),
+        fill="tozeroy", fillcolor=_hex_rgba(PURPLE, 0.08),
+        hovertemplate="Month %{x}<br>Pot Turnover: %{y:,.0f}<extra></extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=agg["month"], y=cum_user, name="User Deposits",
         mode="lines", line=dict(color=BACHAT_GREEN, width=2.5, shape="spline"),
         fill="tozeroy", fillcolor=_hex_rgba(BACHAT_GREEN, 0.12),
-        hovertemplate="Month %{x}<br>Deposits: %{y:,.0f}<extra></extra>",
+        hovertemplate="Month %{x}<br>User Deposits: %{y:,.0f}<extra></extra>",
     ))
     fig.add_trace(go.Scatter(
-        x=agg["month"], y=cum_dis, name="Cumulative Disbursements",
-        mode="lines", line=dict(color=PURPLE, width=2.5, shape="spline"),
-        fill="tozeroy", fillcolor=_hex_rgba(PURPLE, 0.10),
-        hovertemplate="Month %{x}<br>Disbursed: %{y:,.0f}<extra></extra>",
+        x=agg["month"], y=cum_plat, name="Platform Capital",
+        mode="lines", line=dict(color=WARNING, width=2, dash="dash", shape="spline"),
+        hovertemplate="Month %{x}<br>Platform Capital: %{y:,.0f}<extra></extra>",
     ))
-    net = cum_dep - cum_dis
-    fig.add_trace(go.Scatter(
-        x=agg["month"], y=net, name="Net Pool Balance",
-        mode="lines", line=dict(color=INFO, width=2, dash="dash", shape="spline"),
-        hovertemplate="Month %{x}<br>Net Pool: %{y:,.0f}<extra></extra>",
-    ))
-    return _theme(fig, "Cumulative Deposits vs Disbursements", height=380)
+    return _theme(fig, "Cumulative Deposits vs Pot Turnover", height=380)
 
 
 def chart_deposits_monthly(agg: pd.DataFrame) -> go.Figure:
-    """Bar + line combo: monthly deposit inflows vs pot disbursements."""
+    """Stacked bar: user deposits + platform capital, with pot turnover line."""
     fig = make_subplots(specs=[[{"secondary_y": True}]])
     contrib = agg["user_contributions_monthly"] if "user_contributions_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
+    plat = agg["platform_capital_monthly"] if "platform_capital_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
     disbursed = agg["pot_disbursed_monthly"] if "pot_disbursed_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
 
     fig.add_trace(go.Bar(
-        x=agg["month"], y=contrib, name="Deposits In",
-        marker_color=BACHAT_GREEN, opacity=0.80,
-        hovertemplate="Month %{x}<br>Deposits: %{y:,.0f}<extra></extra>",
+        x=agg["month"], y=contrib, name="User Deposits",
+        marker_color=BACHAT_GREEN, opacity=0.85,
+        hovertemplate="Month %{x}<br>User Deposits: %{y:,.0f}<extra></extra>",
     ), secondary_y=False)
     fig.add_trace(go.Bar(
-        x=agg["month"], y=disbursed, name="Pots Paid Out",
-        marker_color=PURPLE, opacity=0.65,
-        hovertemplate="Month %{x}<br>Disbursed: %{y:,.0f}<extra></extra>",
+        x=agg["month"], y=plat, name="Platform Capital",
+        marker_color=WARNING, opacity=0.70,
+        hovertemplate="Month %{x}<br>Platform Capital: %{y:,.0f}<extra></extra>",
     ), secondary_y=False)
-    net_flow = contrib.values - disbursed.values
     fig.add_trace(go.Scatter(
-        x=agg["month"], y=net_flow, name="Net Flow",
-        mode="lines+markers",
-        line=dict(color=INFO, width=2.5),
-        marker=dict(size=4, color=INFO),
-        hovertemplate="Month %{x}<br>Net Flow: %{y:,.0f}<extra></extra>",
+        x=agg["month"], y=disbursed, name="Pot Turnover",
+        mode="lines",
+        line=dict(color=PURPLE, width=2.5),
+        hovertemplate="Month %{x}<br>Pot Turnover: %{y:,.0f}<extra></extra>",
     ), secondary_y=True)
     fig.update_layout(
-        barmode="group", height=400,
+        barmode="stack", height=400,
         margin=dict(l=16, r=16, t=48, b=36),
         template=PLOTLY_TEMPLATE, paper_bgcolor=WHITE, plot_bgcolor=WHITE,
         legend=dict(orientation="h", yanchor="bottom", y=1.02,
                     xanchor="right", x=1.0, font=dict(size=11)),
         hovermode="x unified",
-        title=dict(text="Monthly Deposits & Disbursements",
+        title=dict(text="Monthly Deposits & Platform Capital",
                    font=dict(size=14, color=INK), x=0.0, xanchor="left"),
     )
     fig.update_yaxes(title_text="Amount (PKR)", secondary_y=False, gridcolor=SLATE_100)
-    fig.update_yaxes(title_text="Net Flow (PKR)", secondary_y=True, gridcolor=SLATE_100)
+    fig.update_yaxes(title_text="Pot Turnover (PKR)", secondary_y=True, gridcolor=SLATE_100)
     return fig
 
 
@@ -2042,24 +2044,26 @@ def tab_overview(cfg: BachatConfig, df: pd.DataFrame):
 def tab_deposits(cfg: BachatConfig, df: pd.DataFrame):
     agg = _agg_monthly(df)
 
-    contrib = agg["user_contributions_monthly"] if "user_contributions_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
+    contrib   = agg["user_contributions_monthly"] if "user_contributions_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
     disbursed = agg["pot_disbursed_monthly"] if "pot_disbursed_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
-    flt = agg["float_outstanding_monthly"] if "float_outstanding_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
-    users = agg["active_users"] if "active_users" in agg.columns else pd.Series(np.ones(len(agg)))
+    plat_cap  = agg["platform_capital_monthly"] if "platform_capital_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
+    flt       = agg["float_outstanding_monthly"] if "float_outstanding_monthly" in agg.columns else pd.Series(np.zeros(len(agg)))
+    users     = agg["active_users"] if "active_users" in agg.columns else pd.Series(np.ones(len(agg)))
 
-    total_dep = contrib.sum()
-    total_dis = disbursed.sum()
-    net_pool  = contrib.cumsum().iloc[-1] - disbursed.cumsum().iloc[-1] if len(agg) else 0
-    peak_flt  = flt.max()
-    avg_per_user = total_dep / users.sum() if users.sum() > 0 else 0
+    total_dep     = contrib.sum()
+    total_dis     = disbursed.sum()
+    total_plat    = plat_cap.sum()
+    pool_balance  = (contrib.cumsum().iloc[-1] - disbursed.cumsum().iloc[-1]) if len(agg) else 0
+    peak_flt      = flt.max()
+    avg_per_user  = total_dep / users.sum() if users.sum() > 0 else 0
 
     # ── Headline metrics ─────────────────────────────────────────────────────
     k1, k2, k3, k4, k5 = st.columns(5)
-    k1.metric("Total Deposits",     fmt_pkr(total_dep))
-    k2.metric("Total Disbursed",    fmt_pkr(total_dis))
-    k3.metric("Net Pool Balance",   fmt_pkr(net_pool))
-    k4.metric("Peak Float",         fmt_pkr(peak_flt))
-    k5.metric("Avg Deposit / User", fmt_pkr(avg_per_user))
+    k1.metric("User Deposits",       fmt_pkr(total_dep))
+    k2.metric("Pot Turnover",        fmt_pkr(total_dis))
+    k3.metric("Platform Capital",    fmt_pkr(total_plat))
+    k4.metric("Peak Float",          fmt_pkr(peak_flt))
+    k5.metric("Avg Deposit / User",  fmt_pkr(avg_per_user))
 
     st.markdown("")
 
@@ -2068,7 +2072,7 @@ def tab_deposits(cfg: BachatConfig, df: pd.DataFrame):
                     use_container_width=True, config=_CFG_STATIC,
                     key="_dep_1")
 
-    # ── Monthly flows + net flow indicator ───────────────────────────────────
+    # ── Monthly flows + right panel ──────────────────────────────────────────
     left_col, right_col = st.columns([2, 1])
     with left_col:
         st.plotly_chart(chart_deposits_monthly(agg),
@@ -2078,6 +2082,7 @@ def tab_deposits(cfg: BachatConfig, df: pd.DataFrame):
         latest_net = (contrib.iloc[-1] - disbursed.iloc[-1]) if len(agg) else 0
         net_color = BACHAT_GREEN if latest_net >= 0 else DANGER
         net_arrow = "▲" if latest_net >= 0 else "▼"
+        plat_share = (total_plat / total_dis * 100) if total_dis else 0
         st.markdown(f"""
         <div style="background:{WHITE}; border:1px solid {SLATE_200};
                     border-radius:14px; padding:1.5rem; text-align:center;
@@ -2091,12 +2096,11 @@ def tab_deposits(cfg: BachatConfig, df: pd.DataFrame):
             </div>
             <div style="font-size:0.78rem; color:{SLATE_500}; margin-top:0.5rem;
                         line-height:1.5;">
-                Deposits minus pot payouts.<br>
-                Positive = net inflow to the platform pool.
+                User deposits minus total pot payouts.<br>
+                Gap = platform's blocked-slot capital.
             </div>
         </div>""", unsafe_allow_html=True)
 
-        utilisation = (total_dis / total_dep * 100) if total_dep else 0
         velocity = contrib.iloc[-1] / (total_dep / len(agg)) * 100 if len(agg) and total_dep else 100
         st.markdown(f"""
         <div style="background:{SLATE_50}; border:1px solid {SLATE_200};
@@ -2107,13 +2111,19 @@ def tab_deposits(cfg: BachatConfig, df: pd.DataFrame):
             <div style="display:flex; justify-content:space-between;
                         font-size:0.82rem; padding:0.3rem 0;
                         border-bottom:1px solid {SLATE_200};">
-                <span style="color:{SLATE_500};">Payout Utilisation</span>
-                <b style="color:{INK};">{utilisation:.1f}%</b>
+                <span style="color:{SLATE_500};">Platform Capital Share</span>
+                <b style="color:{INK};">{plat_share:.1f}%</b>
+            </div>
+            <div style="display:flex; justify-content:space-between;
+                        font-size:0.82rem; padding:0.3rem 0;
+                        border-bottom:1px solid {SLATE_200};">
+                <span style="color:{SLATE_500};">Deposit Velocity</span>
+                <b style="color:{INK};">{velocity:.0f}% of avg</b>
             </div>
             <div style="display:flex; justify-content:space-between;
                         font-size:0.82rem; padding:0.3rem 0;">
-                <span style="color:{SLATE_500};">Deposit Velocity</span>
-                <b style="color:{INK};">{velocity:.0f}% of avg</b>
+                <span style="color:{SLATE_500};">Peak Float</span>
+                <b style="color:{INK};">{fmt_pkr(peak_flt)}</b>
             </div>
         </div>""", unsafe_allow_html=True)
 
